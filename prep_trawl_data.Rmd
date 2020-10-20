@@ -1,0 +1,33 @@
+---
+title: "prep_trawl_data"
+author: "Alexa Fredston-Hermann"
+date: "10/20/2020"
+output: html_document
+---
+
+```{r packages, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+
+```
+
+# Pull in North American trawl data from OceanAdapt 
+
+This is too large to keep on GitHub, but can be downloaded from Zenodo here (updated 2020): https://zenodo.org/record/3885625 
+
+
+
+```{r OA, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+OApath <- "~/github/pinskylab-OceanAdapt-c913be5" # specify where this directory is stored on your machine 
+  
+dat_exploded <- readRDS(paste0(OApath, "/data_clean/dat_exploded.rds")) # pull in the entire dataset with zeros representing true absences; think this is based on the list of common species in all-regions-trimmed 
+# calculate true abundance by species and year 
+
+namer_abund <- dat_exploded %>% 
+  filter(!wtcpue==Inf) %>% # 19 values from the Southeast US Summer survey in 1992 have values of Inf for some reason
+  group_by(region, spp, year, stratum, stratumarea) %>% 
+  summarise(stratum_mean = mean(wtcpue)*stratumarea) %>% # get average wtcpue for this species*region*year in each stratum, and multiply by size of stratum; collapses df down to one row per species*year*region*stratum 
+  group_by(region, spp, year) %>% 
+  summarise(sumwt = sum(stratum_mean))
+  
+
+```
