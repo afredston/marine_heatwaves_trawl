@@ -7,6 +7,7 @@ output: html_document
 
 ```{r packages, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
+library(here)
 ```
 
 # Pull in North American trawl data from OceanAdapt 
@@ -32,41 +33,64 @@ namer_abund <- dat_exploded %>%
 
 ```{r nc, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 library(ncdf4)
-library(sf)
+library(raster)
+# library(sf)
 select <- dplyr::select
 
 # set up global 0.25x0.25 grid
-# nlon <- 360/0.25; nlat <- 180/0.25
-# dlon <- 360.0/nlon 
-# dlat <- 180.0/nlat
-# worldlon <- seq(-180.0+(dlon/2),+180.0-(dlon/2),by=dlon)
-# worldlat <- seq(-90.0+(dlat/2),+90.0-(dlat/2),by=dlat)
-# 
-# # get every possible combo of grid cells
-# worlddf <- expand_grid(worldlon, worldlat)
+nlon <- 360/0.25; nlat <- 180/0.25
+dlon <- 360.0/nlon
+dlat <- 180.0/nlat
+worldlon <- seq(-180.0+(dlon/2),+180.0-(dlon/2),by=dlon)
+worldlat <- seq(-90.0+(dlat/2),+90.0-(dlat/2),by=dlat)
 
-# make global gridded raster
-library(raster)
-worldraster <- raster(nrows=180, ncols=360, xmn=-180, xmx=180, ymn=-90, ymx=90, 
-		crs="+proj=longlat +datum=WGS84", resolution=0.25, vals=1)
+# get every possible combo of grid cells
+worlddf <- expand_grid(worldlon, worldlat) 
+colnames(worlddf) <- c('lon','lat')
 
-# make sf object of survey points 
-surveysf <- dat_exploded %>% 
+# get survey coordinates 
+surveycoords <- dat_exploded %>% 
   select(lat, lon) %>% 
   distinct() %>% 
-  st_as_sf(coords=c('lon', 'lat')) %>% 
-  st_cast('MULTIPOINT') %>% 
-  st_union() %>% 
-   st_cast("POLYGON") %>% # convert from points to polygons
-  st_sf() # make sf object for mask; this creates an object without any fields, not sure why
+  mutate(lat_round = floor(lat*4)/4 + 0.125,
+         lon_round = floor(lon*4)/4 + 0.125) %>% 
+  select(lon_round, lat_round) %>% 
+  distinct() %>% 
+  mutate(survey=TRUE)
+
+# merge world coordinates and survey coordinates
+worldsurvey <- worlddf %>% 
+  left_join(surveycoords, by=c('lat'='lat_round','lon'='lon_round'))
+
+# make into a global raster 
+worldraster <- rasterFromXYZ(worldsurvey, res=c(0.25, 0.25), crs="+proj=longlat +datum=WGS84")
+
+ncfile <- here("processed-data","survey_extent.nc")
+
+writeRaster(worldraster, filename=ncfile, format="netCDF")
+
+# make global gridded raster
+# worldraster <- raster(nrows=180, ncols=360, xmn=-180, xmx=180, ymn=-90, ymx=90, 
+#		crs="+proj=longlat +datum=WGS84", resolution=c(0.25, 0.25), vals=1)
+
+# make sf object of survey points 
+
+
+# surveyraster <- rasterFromXYZ(surveycoords, res=c(0.25, 0.25), crs="+proj=longlat +datum=WGS84")
+  # st_as_sf(coords=c('lon', 'lat')) %>% 
+  # st_cast('MULTIPOINT') %>% 
+  # st_union() %>% 
+  #  st_cast("POLYGON") %>% # convert from points to polygons
+  # st_sf() # make sf object for mask; this creates an object without any fields, not sure why
 
 # make CRS the same 
-surveysf <- st_set_crs(surveysf, st_crs(worldraster))
+# surveysf <- st_set_crs(surveysf, st_crs(worldraster))
 
 # set all points in the global gridded raster NOT in the surveys to NA. 
-worldsurvey <- mask(worldraster, surveysf) # this doesn't work, I think because surveysf is empty? but I tried giving it a value surveysf$ID <- NA and that didn't fix it. 
+# worldsurvey <- mask(worldraster, surveyraster) # this doesn't work, I think because surveysf is empty? but I tried giving it a value surveysf$ID <- NA and that didn't fix it. 
 
 plot(worldraster)
-plot(worldsurvey)
+
+# need to make into netcdf... may not need to go through raster 
 
 ```
