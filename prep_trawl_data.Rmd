@@ -32,13 +32,11 @@ namer_abund <- dat_exploded %>%
 # Prepare global netCDF file containing extent of surveys
 
 ```{r nc, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
-library(ncdf4)
-library(raster)
-# library(sf)
-select <- dplyr::select
+library(ncdf4) # see https://pjbartlein.github.io/REarthSysSci/netCDF.html#create-and-write-a-netcdf-file
 
 # set up global 0.25x0.25 grid
-nlon <- 360/0.25; nlat <- 180/0.25
+nlon <- 360/0.25
+nlat <- 180/0.25
 dlon <- 360.0/nlon
 dlat <- 180.0/nlat
 worldlon <- seq(-180.0+(dlon/2),+180.0-(dlon/2),by=dlon)
@@ -48,6 +46,8 @@ worldlat <- seq(-90.0+(dlat/2),+90.0-(dlat/2),by=dlat)
 worlddf <- expand_grid(worldlon, worldlat) 
 colnames(worlddf) <- c('lon','lat')
 
+worlddf$coords <- paste0(worlddf$lon,",",worlddf$lat)
+
 # get survey coordinates 
 surveycoords <- dat_exploded %>% 
   select(lat, lon) %>% 
@@ -56,41 +56,69 @@ surveycoords <- dat_exploded %>%
          lon_round = floor(lon*4)/4 + 0.125) %>% 
   select(lon_round, lat_round) %>% 
   distinct() %>% 
-  mutate(survey=TRUE)
+  mutate(coords=paste0(lon_round,",",lat_round)) %>% 
+  select(coords) %>% 
+  mutate(survey=1)
 
-# merge world coordinates and survey coordinates
+# merge with world coordinates 
 worldsurvey <- worlddf %>% 
-  left_join(surveycoords, by=c('lat'='lat_round','lon'='lon_round'))
+  left_join(surveycoords,by="coords") %>% 
+  select(-coords) %>% 
+  replace_na(list(survey=0)) # replace NAs with FALSE 
 
-# make into a global raster 
-worldraster <- rasterFromXYZ(worldsurvey, res=c(0.25, 0.25), crs="+proj=longlat +datum=WGS84")
-
+# set up nc file
 ncfile <- here("processed-data","survey_extent.nc")
+tunits <- "days since 1970-01-01 00:00:00.0 -0:00" 
+tdummy <- "1546300800" # one time variable: january 1, 2019 -- since most of/all of our data are current through 2018
+  
+londim <- ncdim_def("lon","degrees_east",as.double(worldlon)) 
+latdim <- ncdim_def("lat","degrees_north",as.double(worldlat)) 
+timedim <- ncdim_def("time",tunits,as.double(tdummy))
+tmp_df03 <- worldsurvey # for ease of following the linked example above
+nobs <- dim(tmp_df03)[1]
 
-writeRaster(worldraster, filename=ncfile, format="netCDF")
+# define variables
+fillvalue <- 1e32
+dlname <- "survey_presence"
+surv_def <- ncvar_def("survey","T/F",list(londim,latdim,timedim),fillvalue,dlname,prec="single") # define survey variable
+surv_array3 <- array(fillvalue, dim=c(nlon,nlat)) # create array to hold survey data 
 
-# make global gridded raster
-# worldraster <- raster(nrows=180, ncols=360, xmn=-180, xmx=180, ymn=-90, ymx=90, 
-#		crs="+proj=longlat +datum=WGS84", resolution=c(0.25, 0.25), vals=1)
+# populate array with data 
+for(i in 1:nobs) {
+  
+  # figure out location in the target array of the values in each row of the data frame
+  j <- which.min(abs(worldlon-tmp_df03$lon[i]))
+  k <- which.min(abs(worldlat-tmp_df03$lat[i]))
+  
+  # copy data from the data frame to array
+  surv_array3[j,k] <- (tmp_df03$survey[i])
+}
 
-# make sf object of survey points 
+# create netCDF file and put arrays - will throw an error if file exists
+ncout <- nc_create(ncfile,list(surv_def),force_v4=TRUE)
 
+# put variables
+ncvar_put(ncout,surv_def,surv_array3)
 
-# surveyraster <- rasterFromXYZ(surveycoords, res=c(0.25, 0.25), crs="+proj=longlat +datum=WGS84")
-  # st_as_sf(coords=c('lon', 'lat')) %>% 
-  # st_cast('MULTIPOINT') %>% 
-  # st_union() %>% 
-  #  st_cast("POLYGON") %>% # convert from points to polygons
-  # st_sf() # make sf object for mask; this creates an object without any fields, not sure why
+# put additional attributes into dimension and data variables
+ncatt_put(ncout,"lon","axis","X")
+ncatt_put(ncout,"lat","axis","Y")
+ncatt_put(ncout,"time","axis","T")
 
-# make CRS the same 
-# surveysf <- st_set_crs(surveysf, st_crs(worldraster))
+# write out
+nc_close(ncout)
 
-# set all points in the global gridded raster NOT in the surveys to NA. 
-# worldsurvey <- mask(worldraster, surveyraster) # this doesn't work, I think because surveysf is empty? but I tried giving it a value surveysf$ID <- NA and that didn't fix it. 
-
-plot(worldraster)
-
-# need to make into netcdf... may not need to go through raster 
-
+# netcdf test 
+ncin <- nc_open(ncfile)
+dname <- "survey"
+lon <- ncvar_get(ncin,"lon")
+nlon <- dim(lon)
+lat <- ncvar_get(ncin,"lat")
+nlat <- dim(lat)
+time <- ncvar_get(ncin,"time")
+tunits <- ncatt_get(ncin,"time","units")
+nt <- dim(time)
+tmp_array <- ncvar_get(ncin,dname)
+image(lon, lat, tmp_array)
 ```
+
