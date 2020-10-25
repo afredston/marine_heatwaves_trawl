@@ -109,16 +109,16 @@ ncatt_put(ncout,"time","axis","T")
 nc_close(ncout)
 
 # netcdf test 
-ncin <- nc_open(ncfile)
-dname <- "survey"
-lon <- ncvar_get(ncin,"lon")
-nlon <- dim(lon)
-lat <- ncvar_get(ncin,"lat")
-nlat <- dim(lat)
-time <- ncvar_get(ncin,"time")
-tunits <- ncatt_get(ncin,"time","units")
-nt <- dim(time)
-tmp_array <- ncvar_get(ncin,dname)
-image(lon, lat, tmp_array)
+# ncin <- nc_open(ncfile)
+# dname <- "survey"
+# lon <- ncvar_get(ncin,"lon")
+# nlon <- dim(lon)
+# lat <- ncvar_get(ncin,"lat")
+# nlat <- dim(lat)
+# time <- ncvar_get(ncin,"time")
+# tunits <- ncatt_get(ncin,"time","units")
+# nt <- dim(time)
+# tmp_array <- ncvar_get(ncin,dname)
+# image(lon, lat, tmp_array)
 ```
 
