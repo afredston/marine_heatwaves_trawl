@@ -50,19 +50,27 @@ worlddf$coords <- paste0(worlddf$lon,",",worlddf$lat)
 
 # get survey coordinates 
 surveycoords <- dat_exploded %>% 
-  select(lat, lon) %>% 
+  select(lat, lon, region) %>% 
   distinct() %>% 
   mutate(lat_round = floor(lat*4)/4 + 0.125,
          lon_round = floor(lon*4)/4 + 0.125) %>% 
-  select(lon_round, lat_round) %>% 
+  select(lon_round, lat_round, region) %>% 
   distinct() %>% 
   mutate(coords=paste0(lon_round,",",lat_round)) %>% 
-  select(coords) %>% 
-  mutate(survey=1)
+  select(coords, region) %>% 
+  mutate(regionName = ifelse(region %in% c("Northeast US Spring","Northeast US Fall"), "Northeast",
+         ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
+                ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>% # merge seasons of surveys in the same regions
+  mutate(survey=as.numeric(factor(regionName))) %>%  # make numeric code 
+  select(-region)
+
+surveyIDs <- surveycoords %>% 
+  select(regionName, survey) %>% 
+  distinct() # alphabetical ordering 
 
 # merge with world coordinates 
 worldsurvey <- worlddf %>% 
-  left_join(surveycoords,by="coords") %>% 
+  left_join(surveycoords %>% select(-regionName),by="coords") %>% 
   select(-coords) %>% 
   replace_na(list(survey=0)) # replace NAs with FALSE 
 
@@ -80,7 +88,7 @@ nobs <- dim(tmp_df03)[1]
 # define variables
 fillvalue <- 1e32
 dlname <- "survey_presence"
-surv_def <- ncvar_def("survey","T/F",list(londim,latdim,timedim),fillvalue,dlname,prec="single") # define survey variable
+surv_def <- ncvar_def("survey","IDs",list(londim,latdim,timedim),fillvalue,dlname,prec="single") # define survey variable
 surv_array3 <- array(fillvalue, dim=c(nlon,nlat)) # create array to hold survey data 
 
 # populate array with data 
