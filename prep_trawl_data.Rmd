@@ -29,6 +29,14 @@ namer_abund <- dat_exploded %>%
 
 ```
 
+# Pull in Europe data
+
+This was prepared by Aurore Maureaud and downloaded from here: https://github.com/AquaAuma/CleanTrawlNAmEUr/blob/main/data/SurveyCPUEs26102020.RData
+
+```{r europe, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+load(here("processed-data","SurveyCPUEs26102020.Rdata"))
+```
+
 # Prepare global netCDF file containing extent of surveys
 
 ```{r nc, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
@@ -49,7 +57,7 @@ colnames(worlddf) <- c('lon','lat')
 worlddf$coords <- paste0(worlddf$lon,",",worlddf$lat)
 
 # get survey coordinates 
-surveycoords <- dat_exploded %>% 
+surveycoordsUS <- dat_exploded %>% 
   select(lat, lon, region) %>% 
   distinct() %>% 
   mutate(lat_round = floor(lat*4)/4 + 0.125,
@@ -59,18 +67,35 @@ surveycoords <- dat_exploded %>%
   mutate(coords=paste0(lon_round,",",lat_round)) %>% 
   select(coords, region) %>% 
   mutate(regionName = ifelse(region %in% c("Northeast US Spring","Northeast US Fall"), "Northeast",
-         ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
-                ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>% # merge seasons of surveys in the same regions
-  mutate(survey=as.numeric(factor(regionName))) %>%  # make numeric code 
-  select(-region)
+                             ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
+                                    ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>%   # merge seasons of surveys in the same regions
+  select(-region) %>% 
+  rename(region = regionName)
 
-surveyIDs <- surveycoords %>% 
-  select(regionName, survey) %>% 
+# repeat for Europe - note that I think some coordinates are duplicated among surveys 
+surveycoordsEur <- surveycpue %>% 
+  select(region, lat, long) %>%
+  distinct() %>% 
+  mutate(lat_round = floor(lat*4)/4 + 0.125,
+         lon_round = floor(long*4)/4 + 0.125) %>% 
+  select(lon_round, lat_round, region) %>% 
+  distinct() %>% 
+  mutate(coords=paste0(lon_round,",",lat_round)) %>% 
+  select(coords, region) 
+
+# combine Europe and US
+surveycoords <- rbind(surveycoordsEur, surveycoordsUS)%>% 
+  mutate(survey=as.numeric(factor(region)))
+
+# save which region corresponds to which code
+surveyIDs <- surveycoords %>%   
+  select(region, survey) %>% 
   distinct() # alphabetical ordering 
+write_csv(surveyIDs, path=here("processed-data","trawl_survey_codes.csv"))
 
 # merge with world coordinates 
 worldsurvey <- worlddf %>% 
-  left_join(surveycoords %>% select(-regionName),by="coords") %>% 
+  left_join(surveycoords %>% select(-region),by="coords") %>% 
   select(-coords) %>% 
   replace_na(list(survey=0)) # replace NAs with FALSE 
 
@@ -78,7 +103,7 @@ worldsurvey <- worlddf %>%
 ncfile <- here("processed-data","survey_extent.nc")
 tunits <- "days since 1970-01-01 00:00:00.0 -0:00" 
 tdummy <- "1546300800" # one time variable: january 1, 2019 -- since most of/all of our data are current through 2018
-  
+
 londim <- ncdim_def("lon","degrees_east",as.double(worldlon)) 
 latdim <- ncdim_def("lat","degrees_north",as.double(worldlat)) 
 timedim <- ncdim_def("time",tunits,as.double(tdummy))

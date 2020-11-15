@@ -1,0 +1,19 @@
+region,survey
+NorBTS,10
+BITS,2
+EVHOE,4
+FR-CGFS,5
+IE-IGFS,8
+NIGFS,9
+NS-IBTS,12
+PT-IBTS,13
+ROCKALL,14
+SWC-IBTS,17
+Aleutian Islands,1
+Eastern Bering Sea,3
+Gulf of Alaska,6
+Northeast,11
+West Coast,18
+Gulf of Mexico,7
+Southeast,16
+Scotian Shelf,15
