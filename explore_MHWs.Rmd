@@ -1,0 +1,134 @@
+---
+title: "Exploring MHW effects on fish abundance in trawl surveys"
+author: "Alexa Fredston"
+date: "11/20/2020"
+output:
+  rmarkdown::pdf_document:
+    fig_caption: yes        
+    includes:  
+      in_header: my_header.tex
+---
+
+# Exploring marine heatwaves 
+
+## North America
+
+```{r packages, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(lubridate) # for standardizing date format of MHW data
+```
+
+```{r data, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
+mhwRaw <- read_delim(here("processed-data","MHW_95P_surveys_for_malin.csv"), ";") # file from Thomas - download and move to processed-data folder
+
+mhwTidy <- mhwRaw %>% 
+  rename("dateRaw"=X1) %>% 
+  pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
+  mutate(date = dmy(dateRaw)) %>% # standardize date formats
+  select(-dateRaw) %>% 
+  mutate(year = year(date)) %>% 
+  group_by(region, year) %>% 
+  mutate(anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
+         anomSev = sum(sstAnom, na.rm=TRUE), # add up total anomaly values
+         anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
+         )  %>% 
+  ungroup()
+
+mhwSummary <- mhwTidy %>% 
+  select(region, year, anomDays, anomIntC) %>% 
+  distinct() %>% 
+  mutate(anomIntC = replace_na(anomIntC, 0)) # replace NA values from calculating anomIntC with 0s
+
+```
+
+### Characterizing MHWs in North America
+
+How frequent and severe have heatwaves been in North America since 1982 (the start of the MHW data)? 
+
+```{r namer-mhw-freq,  fig.cap="Frequency of MHW Events in North America", fig.height=5, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+namerRegs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
+
+ggMhwNamerFreq <- mhwSummary %>% 
+  filter(region %in% namerRegs) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=anomDays)) +
+  theme_bw() + 
+  labs(x="MHW Days per Year", y="Frequency") +
+  facet_wrap(~region) + 
+  NULL
+
+ggMhwNamerFreq
+```
+
+
+```{r namer-mhw-anom, fig.cap="Anomaly of MHW Events in North America", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+ggMhwNamerAnom <- mhwTidy %>% 
+  filter(region %in% namerRegs) %>% 
+  ggplot(aes(x=date)) +
+  geom_line(aes(y=anomIntC, color="Cumulative Mean Intensity")) +
+  geom_line(aes(y=sstAnom, color="Single-Day Anomaly")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean Intensity" = "darkblue", "Single-Day Anomaly" = "darkgreen")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly") +
+  theme_bw() + 
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  NULL
+
+ggMhwNamerAnom
+```
+
+### MHWs vs. CPUE
+
+Let's look at annual cumulative mean intensity (sum of SST anomalies in the calendar year / number of MHW-days in the calendar year) vs. trends in aggregate abundance (total CPUE across all species) for the whole region. The two metrics of CPUE change used are proportion change CPUE vs. last year ((cpueThisYear - cpueLastYear)/cpueLastYear), and proportion change CPUE relative to the long-term mean ((cpueThisYear - cpueSeriesMean)/cpueSeriesMean). 
+
+```{r namer-mhw-cpue, fig.cap="MHW Cumulative Mean Intensity vs. Change in Total CPUE", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+namer_abund <- read_csv(here("processed-data","biomass_time_namer.csv"))
+
+namerSummary <- namer_abund %>% 
+  group_by(region, year) %>% 
+  summarise(wt = sum(sumwt)) %>% 
+  mutate(wt.mt = wt/1000) %>% 
+  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+         region = gsub("_us_spring","", region),
+         region = gsub("_us_summer","", region),
+         region = gsub("_us_fall","", region),
+         region = gsub("_us_winter","", region),
+         region = gsub("_triennial","", region),
+         region = gsub("_annual","",region)) %>% 
+  group_by(region, year) %>% 
+  summarise(wtMt = mean(wt.mt)) %>%  # only for regions with multiple seasons, use the mean CPUE across surveys
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year; will be 3 years ago in WCTRI)
+         wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
+         wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
+  ) 
+         
+ggMhwNamerCpue <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+  
+ggMhwNamerCpue
+```
+
+
