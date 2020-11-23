@@ -32,7 +32,7 @@ mhwTidy <- mhwRaw %>%
   mutate(anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
          anomSev = sum(sstAnom, na.rm=TRUE), # add up total anomaly values
          anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
-         )  %>% 
+  )  %>% 
   ungroup()
 
 mhwSummary <- mhwTidy %>% 
@@ -86,7 +86,7 @@ ggMhwNamerAnom
 
 Let's look at annual cumulative mean intensity (sum of SST anomalies in the calendar year / number of MHW-days in the calendar year) vs. trends in aggregate abundance (total CPUE across all species) for the whole region. The two metrics of CPUE change used are proportion change CPUE vs. last year ((cpueThisYear - cpueLastYear)/cpueLastYear), and proportion change CPUE relative to the long-term mean ((cpueThisYear - cpueSeriesMean)/cpueSeriesMean). 
 
-```{r namer-mhw-cpue, fig.cap="MHW Cumulative Mean Intensity vs. Change in Total CPUE", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+```{r namer-mhw-cpue-time, fig.cap="MHW Cumulative Mean Intensity and Change in Total CPUE Over Time", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
 namer_abund <- read_csv(here("processed-data","biomass_time_namer.csv"))
 
 namerSummary <- namer_abund %>% 
@@ -109,7 +109,7 @@ namerSummary <- namer_abund %>%
          wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
          wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
   ) 
-         
+
 ggMhwNamerCpue <- namerSummary %>% 
   filter(year>=1982) %>% 
   left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
@@ -127,8 +127,85 @@ ggMhwNamerCpue <- namerSummary %>%
     legend.position="bottom"
   ) +
   NULL
-  
+
 ggMhwNamerCpue
 ```
 
+Rather than comparing both MHW intensity and CPUE trends over time, we can just plot cumulative mean intensity against the CPUE trend in that year:
 
+```{r namer-mhw-vs-cpue, fig.cap="MHW Cumulative Mean Intensity vs. Change in Total CPUE", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+ggMhwNamerCpue2 <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  facet_wrap(~region) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggMhwNamerCpue2
+```
+
+Let's look at the five species with the most biomass in each region. For plotting purposes, I omitted points with more than a 5x change in CPUE, which happened occasionally (up to 50x change, which is unlikely to be real).
+
+```{r namer-mhw-spp, fig.cap="MHW Cumulative Mean Intensity vs. Single-Species Change in Total CPUE", fig.height=8, fig.scale=1.2, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+# get highest-biomass spp in each region 
+topspp <- namer_abund %>% 
+  mutate(wt.mt = sumwt/1000) %>% 
+  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+         region = gsub("_us_spring","", region),
+         region = gsub("_us_summer","", region),
+         region = gsub("_us_fall","", region),
+         region = gsub("_us_winter","", region),
+         region = gsub("_triennial","", region),
+         region = gsub("_annual","",region)) %>% 
+  group_by(region, spp, year) %>% 
+  summarise(wtMt = mean(wt.mt)) %>% 
+  group_by(region, spp) %>% 
+  summarise(wtTotal = sum(wtMt)) %>% 
+  group_by(region) %>% 
+  arrange(-wtTotal) %>% 
+  slice_head(n=5) %>%  # change this for different no. spp/reg
+  mutate(sppReg = paste0(region, spp))
+
+ggMhwNamerCpue2 <- namer_abund %>% # redoing the same workflow as to create namerSummary, but without summing across species this time 
+  filter(year>=1982) %>% 
+  mutate(wt.mt = sumwt/1000) %>% 
+  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+         region = gsub("_us_spring","", region),
+         region = gsub("_us_summer","", region),
+         region = gsub("_us_fall","", region),
+         region = gsub("_us_winter","", region),
+         region = gsub("_triennial","", region),
+         region = gsub("_annual","",region)) %>% 
+  group_by(region, spp, year) %>% 
+  summarise(wtMt = mean(wt.mt)) %>%  # only for regions with multiple seasons, use the mean CPUE across surveys
+  group_by(region, spp) %>% 
+  arrange(year) %>% 
+  mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year; will be 3 years ago in WCTRI)
+         wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
+         wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
+  ) %>% 
+  mutate(sppReg = paste0(region, spp)) %>% 
+  filter(sppReg %in% topspp$sppReg,
+         wtMtDiffProp < 5) %>% # Keep only spp*region combos of interest
+  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  facet_wrap(~sppReg, ncol=5) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom",
+    strip.text = element_text(size = 5)
+  ) +
+  NULL
+
+ggMhwNamerCpue2
+```
