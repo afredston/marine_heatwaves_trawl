@@ -22,6 +22,8 @@ library(lubridate) # for standardizing date format of MHW data
 ```{r data, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 mhwRaw <- read_delim(here("processed-data","MHW_95P_surveys_for_malin.csv"), ";") # file from Thomas - download and move to processed-data folder
 
+mhwYrRaw <- read_delim(here("processed-data","mhws_90P_surveys_yearly.csv"), ";") 
+
 mhwTidy <- mhwRaw %>% 
   rename("dateRaw"=X1) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
@@ -34,6 +36,10 @@ mhwTidy <- mhwRaw %>%
          anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
   )  %>% 
   ungroup()
+
+mhwYrTidy <- mhwYrRaw %>% 
+  rename("year"=X1) %>% 
+  pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstYrAnom") # convert to "long" format
 
 mhwSummary <- mhwTidy %>% 
   select(region, year, anomDays, anomIntC) %>% 
@@ -208,4 +214,82 @@ ggMhwNamerCpue2 <- namer_abund %>% # redoing the same workflow as to create name
   NULL
 
 ggMhwNamerCpue2
+```
+
+### Evaluating a yearly MHW index
+
+At Thomas's suggestion, let's try using a yearly definition of MHWs rather than a daily one, to match the time scale of the trawl data. In the histograms below I've imputed zeros for NA values (no MHW) just to see the data distribution.
+
+```{r namer-mhw-yearly, fig.cap="Distributions of Yearly MHW Estimates Across Regions", fig.height=6, fig.scale=1.2, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+namerRegs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
+
+ggMhwYrNamerFreq <- mhwYrTidy %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% # replace all na values with zeros
+  filter(region %in% namerRegs) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=sstYrAnom)) +
+  theme_bw() + 
+  labs(x="Yearly Anomaly", y="Frequency") +
+  facet_wrap(~region) + 
+  NULL
+
+ggMhwYrNamerFreq
+```
+
+This approach calculated exactly 3 MHW-years per region, I think because we took the 90th percentile of the same number of years: 
+
+```{r namer-mhw-yearly-stats, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+mhwYrTidy %>% 
+  filter(!is.na(sstYrAnom)) %>% 
+  group_by(region) %>% 
+  summarise(mhw_years=n())
+```
+
+Let's see what happened to CPUE in those regions in those years; these are the same plots as above but now MHW years are indicated with an asterisk. In plots with fewer than three asterisks, there aren't trawl data available in the MHW year. 
+
+```{r namer-mhw-yearly-cpue, fig.cap="Yearly MHWs and Change in Total CPUE Over Time", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+namer_abund <- read_csv(here("processed-data","biomass_time_namer.csv"))
+
+namerSummary <- namer_abund %>% 
+  group_by(region, year) %>% 
+  summarise(wt = sum(sumwt)) %>% 
+  mutate(wt.mt = wt/1000) %>% 
+  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+         region = gsub("_us_spring","", region),
+         region = gsub("_us_summer","", region),
+         region = gsub("_us_fall","", region),
+         region = gsub("_us_winter","", region),
+         region = gsub("_triennial","", region),
+         region = gsub("_annual","",region)) %>% 
+  group_by(region, year) %>% 
+  summarise(wtMt = mean(wt.mt)) %>%  # only for regions with multiple seasons, use the mean CPUE across surveys
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year; will be 3 years ago in WCTRI)
+         wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
+         wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
+  ) 
+
+ggMhwYrNamerCpue <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Yearly MHW Index" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggMhwYrNamerCpue
 ```
