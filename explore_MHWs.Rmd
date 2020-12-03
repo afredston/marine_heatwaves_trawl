@@ -293,3 +293,45 @@ ggMhwYrNamerCpue <- namerSummary %>%
 
 ggMhwYrNamerCpue
 ```
+
+How does catch vary in MHW years vs. non-MHW years?
+
+```{r namer-mhw-yearly-boxplot1, fig.cap="CPUE Proportional Anomaly in MHW vs. non-MHW years", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+ggMhwYrNamerCpueBox1 <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtAnomProp)) + 
+  facet_wrap(~region) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+
+ggMhwYrNamerCpueBox1
+```
+
+Here are the same plots using proportional difference from the last year instead of CPUE anomaly. 
+
+
+```{r namer-mhw-yearly-boxplot2, fig.cap="CPUE Proportional Year-Over-Year Difference in MHW vs. non-MHW years", fig.height=8, eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE}
+
+ggMhwYrNamerCpueBox2 <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtDiffProp)) + 
+  facet_wrap(~region) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+
+ggMhwYrNamerCpueBox2
+```
+
