@@ -134,6 +134,26 @@ ggMhwNamerCpue <- namerSummary %>%
   ) +
   NULL
 
+
+ggMhwNamerCpue_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region, ncol=4) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+ggsave(ggMhwNamerCpue_save, filename=here("results","line_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
+
 ggMhwNamerCpue
 ```
 
@@ -152,6 +172,22 @@ ggMhwNamerCpue2 <- namerSummary %>%
     legend.position="bottom"
   ) +
   NULL
+
+ggMhwNamerCpue2_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~region, ncol=4) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+ggsave(ggMhwNamerCpue2_save, filename=here("results","scatter_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
+
 
 ggMhwNamerCpue2
 ```
@@ -291,6 +327,27 @@ ggMhwYrNamerCpue <- namerSummary %>%
   ) +
   NULL
 
+
+ggMhwYrNamerCpue_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Yearly MHW Index" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region, ncol=4) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggsave(ggMhwYrNamerCpue_save, filename=here('results','line_plots_MHW_yr_CPUE_north_america.png'), dpi=160, width=8, height=4)
+
 ggMhwYrNamerCpue
 ```
 
@@ -331,6 +388,21 @@ ggMhwYrNamerCpueBox2 <- namerSummary %>%
     legend.position="none"
   ) +
   NULL
+
+
+ggMhwYrNamerCpueBox2_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtDiffProp)) + 
+  facet_wrap(~region, ncol=4) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+ggsave(ggMhwYrNamerCpueBox2_save, filename=here("results","boxplot_MHW_yr_CPUE_north_america.png"),dpi=160,width=8,height=4)
 
 ggMhwYrNamerCpueBox2
 ```
