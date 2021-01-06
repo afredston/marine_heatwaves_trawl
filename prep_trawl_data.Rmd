@@ -20,10 +20,12 @@ dat_exploded <- readRDS(paste0(OApath, "/data_clean/dat_exploded.rds")) # pull i
 # calculate true abundance by species and year 
 namer_abund <- dat_exploded %>% 
   filter(!wtcpue==Inf) %>% # 19 values from the Southeast US Summer survey in 1992 have values of Inf for some reason
+  mutate(region = str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'="",' Triennial'="", ' Annual'=""))) %>% # get rid of seasons so that the different seasonal surveys in each region look like replicates of one regional survey
   group_by(region, spp, year, stratum, stratumarea) %>% 
   summarise(stratum_mean = mean(wtcpue)*stratumarea) %>% # get average wtcpue for this species*region*year in each stratum, and multiply by size of stratum; collapses df down to one row per species*year*region*stratum 
   group_by(region, spp, year) %>% 
   summarise(sumwt = sum(stratum_mean)) # add up stratum weights 
+  
 ```
 
 # Pull in Europe data
