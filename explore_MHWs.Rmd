@@ -11,6 +11,23 @@ output:
 
 # Exploring marine heatwaves 
 
+## Marine heatwave info
+
+### From Thomas Frölicher:
+
+The SST is obtained from the NOAA/NCEI 1/4 degree daily optimum interpolation sea surface temperature (OISST) Analysis, Version 2.1 (Banzon et al. 2020, Reynolds et al. 2007). 
+
+Marine heatwaves (extreme SST anomalies) are defined with respect to a seasonally varying 95 percentile after detrending the SST dataset with a linear trend. The mean seasonal cycle has been additionally smoothed using a 30-day running mean to remove noise on a daily scale associated with the relative short SST record (similar approach as used in Le Grix et al.: https://bg.copernicus.org/preprints/bg-2020-412/). I averaged the SST over the individual survey areas.  Here, in contrast to William’s paper, I linearly detrended the data, whereas William used a 7-year running mean. I don’t think that this heavily influences our results. Please see below in more detail the different steps applied to the SST data:
+
+1. delete leap days
+2. calculate climatological seasonal cycle 
+3. smooth climatological seasonal cycle with 30-day running mean
+4. calculate SST anomalies relative to smoothed seasonal cycle 
+5. detrend SST anomalies with linear trend
+6. calculate SST averages over survey area
+7. calculate 95P for each survey area
+8. calculate anomalies to 95P for each survey area
+
 ## North America
 
 ```{r include=FALSE}
@@ -41,14 +58,15 @@ mhwTidy <- mhwRaw %>%
   )  %>% 
   ungroup()
 
-mhwYrTidy <- mhwYrRaw %>% 
+mhwYrTidyPrep <- mhwYrRaw %>% 
   rename("year"=X1) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstYrAnom") # convert to "long" format
 
-mhwSummary <- mhwTidy %>% 
-  select(region, year, anomDays, anomIntC) %>% 
+mhwYrTidy <- mhwTidy %>% 
+  select(region, year, anomDays, anomIntC, anomSev) %>% 
   distinct() %>% 
-  mutate(anomIntC = replace_na(anomIntC, 0)) # replace NA values from calculating anomIntC with 0s
+  mutate(anomIntC = replace_na(anomIntC, 0)) %>%  # replace NA values from calculating anomIntC with 0s
+  left_join(mhwYrTidyPrep) # add in yearly MHW data 
 
 namerRegs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
 ```
@@ -101,12 +119,152 @@ topspp <- namerSppSummary %>%
 
 ```
 
+### Newer plots
+
+Let's plot several marine heatwave indices against several CPUE indices, to see how similar patterns are across metrics. I'm also looking for whether we see effects of major known MHW events: 2012 in the Northeast, the 2014-2015 "warm blob" on the West Coast, and the 2014-2016 heatwave and partially sea ice-free period in the Eastern Bering Sea. (The other such event in the Eastern Bering Sea was 2001-2005, which also appears to show up here.)
+
+In addition to summing all CPUE (which will be driven by common species) I've calculated proportional change first at the single-species level and then averaged across all species in a region. This gives all species equal weight while also standardizing and centering catch values. This is shown below both as an absolute value (magnitude of change only) and from averaging across true units of single-species values. 
+
+
+```{r namer-mhw-cpue-metrics, fig.cap="MHW Metrics vs. Sum CPUE Change", fig.height=7}
+
+sppdat <- namerSppSummary %>% 
+  group_by(region) %>% 
+  filter(year > min(year)) %>% 
+  group_by(region, year) %>% 
+  summarise(wtMtAnomPropMean = mean(wtMtAnomProp, na.rm=TRUE),
+            wtMtAnomPropMeanAbs = mean(abs(wtMtAnomProp), na.rm=TRUE)) 
+
+namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982) %>% 
+  left_join(sppdat) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=anomDays/100, color="Number of SST Anomaly-Days Divided by 100")) +
+  geom_line(aes(y=anomSev/100, color="MHW Severity (year sum) Divided by 100")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  geom_line(aes(y=wtMtAnomPropMean, color="Mean Single-Species CPUE Z-Score")) +
+  geom_line(aes(y=wtMtAnomPropMeanAbs, color="Mean Absolute Single-Species CPUE Z-Score")) +
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue",
+                                           "Number of SST Anomaly-Days Divided by 100" = "turquoise1",
+                                           "MHW Severity (year sum) Divided by 100" = "royalblue1",
+                                           "Yearly MHW Index" = "darkblue",
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange",
+                                           
+                                           "Mean Single-Species CPUE Z-Score" = "palevioletred2",
+                                           "Mean Absolute Single-Species CPUE Z-Score" = "mediumvioletred")) +
+  facet_wrap(~region, ncol=3) +
+  labs(x="Year") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  guides(color=guide_legend(nrow=4,byrow=TRUE)) +
+  NULL
+
+ggsummary <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982) %>% 
+  left_join(sppdat) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=anomDays/100, color="Number of SST Anomaly-Days Divided by 100")) +
+  geom_line(aes(y=anomSev/100, color="MHW Severity (year sum) Divided by 100")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  geom_line(aes(y=wtMtAnomPropMean, color="Mean Single-Species CPUE Z-Score")) +
+  geom_line(aes(y=wtMtAnomPropMeanAbs, color="Mean Absolute Single-Species CPUE Z-Score")) +
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue",
+                                           "Number of SST Anomaly-Days Divided by 100" = "turquoise1",
+                                           "MHW Severity (year sum) Divided by 100" = "royalblue1",
+                                           "Yearly MHW Index" = "darkblue",
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange",
+                                           
+                                           "Mean Single-Species CPUE Z-Score" = "palevioletred2",
+                                           "Mean Absolute Single-Species CPUE Z-Score" = "mediumvioletred")) +
+  facet_wrap(~region, ncol=4) +
+  labs(x="Year") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  guides(color=guide_legend(nrow=4,byrow=TRUE)) +
+  NULL
+
+ggsave(ggsummary, filename=here("results","line_plots_all_CPUE_MHW.png"), dpi=300, width=8, height=5)
+```
+
+```{r namer-mhw-years-cpue-scatter, fig.cap="Biomass Change vs MHW-Years", fig.height=7}
+
+namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  mutate(mhwYesNo = ifelse(is.na(sstYrAnom), "No","Yes")) %>% 
+  ggplot(aes(x=year, y=wtMtDiffProp, color=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("black","red")) + 
+    scale_fill_manual(values=c("black","red")) + 
+  geom_point(size=3) +
+  theme_bw() + 
+  labs(x="Year",y="Prop. Change CPUE vs. Last Year")
+
+ggscatter <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  mutate(mhwYesNo = ifelse(is.na(sstYrAnom), "No","Yes")) %>% 
+  ggplot(aes(x=year, y=wtMtDiffProp, color=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("black","red")) + 
+    scale_fill_manual(values=c("black","red")) + 
+  geom_point(size=3) +
+  theme_bw() + 
+  labs(x="Year",y="Prop. Change CPUE vs. Last Year")
+
+ggsave(ggscatter, filename=here("results","scatter_plots_all_CPUE_MHW.png"), dpi=300, width=8, height=5)
+
+```
+
+
+```{r namer-mhw-years-cpue-hist, fig.cap="Biomass Change vs MHW-Years", fig.height=7}
+
+namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  mutate(mhwYesNo = ifelse(is.na(sstYrAnom), "No","Yes")) %>% 
+  ggplot(aes(x=wtMtDiffProp, group=mhwYesNo, color=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("black","red")) + 
+    scale_fill_manual(values=c("black","red")) + 
+  geom_histogram() +
+  theme_bw()
+
+gghist <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  mutate(mhwYesNo = ifelse(is.na(sstYrAnom), "No","Yes")) %>% 
+  ggplot(aes(x=wtMtDiffProp, group=mhwYesNo, color=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("black","red")) + 
+    scale_fill_manual(values=c("black","red")) + 
+  geom_histogram() +
+  theme_bw()
+
+ggsave(gghist, filename=here("results","histograms_all_CPUE_MHW.png"), dpi=300, width=8, height=5)
+
+```
+
+
+
+# Older plots / models
+
 ### Characterizing MHWs in North America
 
 How frequent and severe have heatwaves been in North America since 1982 (the start of the MHW data)? 
 
 ```{r namer-mhw-freq,  fig.cap="Frequency of MHW Events in North America", fig.height=5}
-ggMhwNamerFreq <- mhwSummary %>% 
+ggMhwNamerFreq <- mhwYrTidy %>% 
   filter(region %in% namerRegs) %>% 
   ggplot() + 
   geom_histogram(aes(x=anomDays)) +
@@ -146,7 +304,7 @@ Let's look at annual cumulative mean intensity (sum of SST anomalies in the cale
 ```{r namer-mhw-cpue-time, fig.cap="MHW Cumulative Mean Intensity and Change in Total CPUE Over Time", fig.height=8}
 ggMhwNamerCpue <- namerSummary %>% 
   filter(year>=1982) %>% 
-  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
   ggplot(aes(x=year)) + 
   geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
   geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
@@ -165,7 +323,7 @@ ggMhwNamerCpue <- namerSummary %>%
 
 ggMhwNamerCpue_save <- namerSummary %>% 
   filter(year>=1982) %>% 
-  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
   ggplot(aes(x=year)) + 
   geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
   geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
@@ -188,9 +346,9 @@ ggMhwNamerCpue
 Rather than comparing both MHW intensity and CPUE trends over time, we can just plot cumulative mean intensity against the CPUE trend in that year:
 
 ```{r namer-mhw-vs-cpue, fig.cap="MHW Cumulative Mean Intensity vs. Change in Total CPUE", fig.height=8}
-ggMhwNamerCpue2 <- namerSummary %>% 
+ggMhwNamerCpue3 <- namerSummary %>% 
   filter(year>=1982) %>% 
-  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
   ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
   geom_point() +
   geom_smooth(method="lm") +
@@ -202,9 +360,9 @@ ggMhwNamerCpue2 <- namerSummary %>%
   ) +
   NULL
 
-ggMhwNamerCpue2_save <- namerSummary %>% 
+ggMhwNamerCpue3_save <- namerSummary %>% 
   filter(year>=1982) %>% 
-  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
   ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
   geom_point() +
   geom_smooth(method="lm") +
@@ -215,10 +373,10 @@ ggMhwNamerCpue2_save <- namerSummary %>%
     legend.position="bottom"
   ) +
   NULL
-ggsave(ggMhwNamerCpue2_save, filename=here("results","scatter_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
+ggsave(ggMhwNamerCpue3_save, filename=here("results","scatter_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
 
 
-ggMhwNamerCpue2
+ggMhwNamerCpue3
 ```
 
 
@@ -228,7 +386,7 @@ ggMhwNamerCpue2 <- namerSppSummary %>%
   mutate(sppReg = paste0(region, spp)) %>% 
   filter(sppReg %in% topspp$sppReg,
          wtMtDiffProp < 5) %>% # Keep only spp*region combos of interest
-  left_join (mhwSummary %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
   ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
   geom_point() +
   geom_smooth(method="lm") +
@@ -438,19 +596,19 @@ namerSppLm %>%
   scale_color_manual(values=c('p <= 0.05'='#3A4ED0','p > 0.05'='grey85')) +
   geom_hline(yintercept=0, color="black") +
   labs(x=NULL, y="Proportional Biomass Change \n                 ") +
-#  scale_y_continuous(breaks=seq(-30, 20, 10), limits=c(-35, 20)) + 
+  #  scale_y_continuous(breaks=seq(-30, 20, 10), limits=c(-35, 20)) + 
   coord_flip() + # after this point x and y are reversed 
   facet_wrap(~region, ncol=length(unique(namerSppMhw$region)), scales = "free_x") + 
   theme_bw() +
   theme(legend.position = "none",
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-   #     text=element_text(family="sans",size=12,color="black"),
-  #      axis.title=element_text(family="sans",size=14,color="black"),
-  #      axis.text=element_text(family="sans",size=12,color="black"),
+        #     text=element_text(family="sans",size=12,color="black"),
+        #      axis.title=element_text(family="sans",size=14,color="black"),
+        #      axis.text=element_text(family="sans",size=12,color="black"),
         axis.title.y = element_blank(),
-  axis.text.y = element_blank()
-  #      plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")
+        axis.text.y = element_blank()
+        #      plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")
   ) +
   NULL
 
@@ -470,7 +628,7 @@ namerSppLm %>%
   scale_color_manual(values=c('p <= 0.05'='#3A4ED0','p > 0.05'='grey85')) +
   geom_hline(yintercept=0, color="black") +
   labs(x=NULL, y="Proportional Biomass Change \n                 ") +
-    scale_y_continuous(limits=c(-50, 50), breaks=seq(-50, 50, 25)) + 
+  scale_y_continuous(limits=c(-50, 50), breaks=seq(-50, 50, 25)) + 
   coord_flip() + # after this point x and y are reversed 
   facet_wrap(~region, ncol=length(unique(namerSppMhw$region))) + 
   theme_bw() +
@@ -478,7 +636,7 @@ namerSppLm %>%
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         axis.title.y = element_blank(),
-  axis.text.y = element_blank()
+        axis.text.y = element_blank()
   ) +
   NULL
 
