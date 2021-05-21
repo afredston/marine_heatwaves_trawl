@@ -5,6 +5,10 @@ date: "10/20/2020"
 output: html_document
 ---
 
+IT IS VERY IMPORTANT TO CHECK THAT THERE ARE NO WINTER SURVEYS, AND IF THERE ARE, REVISE THE WAY THE START MONTH IS ESTIMATED. SURVEYS THAT STRADDLE THE NEW YEAR WOULD END UP WITH THE WRONG "START MONTH" FROM EG min(12, 1, 2). 
+
+need to think more about gomx, the months run from 1 to 12, but it's a summer and fall survey...
+
 ```{r packages, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(here)
@@ -17,6 +21,15 @@ This is too large to keep on GitHub, but can be downloaded from Zenodo here (upd
 ```{r OA, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
 OApath <- "~/github/pinskylab-OceanAdapt-c913be5" # specify where this directory is stored on your machine 
 dat_exploded <- readRDS(paste0(OApath, "/data_clean/dat_exploded.rds")) # pull in the entire dataset with zeros representing true absences; think this is based on the list of common species in all-regions-trimmed 
+
+namer_survey_months <- read_csv(here("processed-data","compiled_haul_data.csv")) %>% 
+  mutate(month = lubridate::month(datetime)) %>% # suggest checking that there are no december entries here, and if there are, ensure that they're fall surveys not winter, so they don't represent start months! for NAmer this is the case for GoMx and NEUS
+  group_by(region) %>% 
+  summarise(startmonth=min(month)) %>% 
+  mutate(region = str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'="",' Triennial'="", ' Annual'=""))) %>% 
+  group_by(region) %>% 
+  summarise(startmonth=min(startmonth))
+
 # calculate true abundance by species and year 
 namer_abund <- dat_exploded %>% 
   filter(!wtcpue==Inf) %>% # 19 values from the Southeast US Summer survey in 1992 have values of Inf for some reason
@@ -24,8 +37,9 @@ namer_abund <- dat_exploded %>%
   group_by(region, spp, year, stratum, stratumarea) %>% 
   summarise(stratum_mean = mean(wtcpue)*stratumarea) %>% # get average wtcpue for this species*region*year in each stratum, and multiply by size of stratum; collapses df down to one row per species*year*region*stratum 
   group_by(region, spp, year) %>% 
-  summarise(sumwt = sum(stratum_mean)) # add up stratum weights 
-  
+  summarise(sumwt = sum(stratum_mean)) %>% # add up stratum weights 
+  left_join(namer_survey_months)
+
 ```
 
 # Pull in Europe data
