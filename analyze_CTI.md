@@ -4,6 +4,11 @@ Alexa Fredston
 5/21/2021
 
 ![CTI Change vs. MHWs](analyze_CTI_files/figure-gfm/CTI-lineplots-1.png)
+![Distribution of CTIs in MHW-Years vs. non-MHW
+Years](analyze_CTI_files/figure-gfm/boxplot-1.png)
+
+![Distribution of Regional CTIs in MHW-Years vs. non-MHW
+Years](analyze_CTI_files/figure-gfm/reg%20boxplot-1.png)
 
     ## 
     ## Call:
@@ -104,3 +109,17 @@ Alexa Fredston
     ## Residual standard error: 0.07018 on 181 degrees of freedom
     ## Multiple R-squared:  0.08912,    Adjusted R-squared:  0.01363 
     ## F-statistic: 1.181 on 15 and 181 DF,  p-value: 0.2903
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: ctiAnomProp ~ anomIntC + (1 | region)
+    ##    Data: ctiNamerSummary
+    ## REML criterion at convergence: -476.0199
+    ## Random effects:
+    ##  Groups   Name        Std.Dev. 
+    ##  region   (Intercept) 4.057e-17
+    ##  Residual             7.004e-02
+    ## Number of obs: 197, groups:  region, 8
+    ## Fixed Effects:
+    ## (Intercept)     anomIntC  
+    ##    0.009422    -0.049252  
+    ## optimizer (nloptwrap) convergence code: 0 (OK) ; 0 optimizer warnings; 1 lme4 warnings

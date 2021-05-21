@@ -70,21 +70,35 @@ scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "dark
   guides(color=guide_legend(nrow=4,byrow=TRUE)) +
   NULL
 ```
+```{r boxplot, fig.cap="Distribution of CTIs in MHW-Years vs. non-MHW Years"}
+ctiNamerSummary %>% 
+  group_by(ref_year) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes" ,"no")) %>% 
+  ggplot(aes(x=mhwYesNo, y=CTI)) +
+  geom_boxplot() + 
+  theme_bw()
+```
 
-```{r lm1}
+```{r reg boxplot, fig.cap="Distribution of Regional CTIs in MHW-Years vs. non-MHW Years"}
+ctiNamerSummary %>% 
+  group_by(ref_year) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes" ,"no")) %>% 
+  ggplot(aes(x=mhwYesNo, y=CTI)) +
+  geom_boxplot() + 
+  facet_wrap(~region, scales="free_y") +
+  theme_bw()
+```
+
+
+```{r lm}
 summary(lm(ctiDiffProp ~ anomIntC, data=ctiNamerSummary))
-```
 
-```{r lm2}
 summary(lm(ctiAnomProp ~ anomIntC, data=ctiNamerSummary))
-```
 
-
-```{r lm3}
 summary(lm(ctiDiffProp ~ anomIntC + anomIntC * region, data=ctiNamerSummary))
-```
 
-
-```{r lm4}
 summary(lm(ctiAnomProp ~ anomIntC + anomIntC * region, data=ctiNamerSummary))
+
+library(lme4)
+lmer(ctiAnomProp ~ anomIntC + (1 | region), data=ctiNamerSummary)
 ```
