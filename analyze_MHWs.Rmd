@@ -323,7 +323,7 @@ ggsave(gghist, filename=here("results","histograms_all_CPUE_MHW.png"), dpi=300, 
 
 ### Species-level
 
-```{r namer-spp-anom-mhw-scatter}
+```{r namer-spp-anom-mhw-scatter, fig.cap="Species Proportional CPUE Anomaly vs. MHW Intensity", fig.height=5}
 left_join(namerSppSummary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
@@ -336,7 +336,7 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 
 
-```{r namer-spp-diff-mhw-scatter}
+```{r namer-spp-diff-mhw-scatter, fig.cap="Species Proportional CPUE Year-Over-Year Change vs. MHW Intensity", fig.height=5}
 left_join(namerSppSummary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
@@ -350,7 +350,7 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 
 
-```{r namer-spp-diff-mhwYesNo-boxplot}
+```{r namer-spp-diff-mhwYesNo-boxplot, fig.cap="Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years", fig.height=5}
 left_join(namerSppSummary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0

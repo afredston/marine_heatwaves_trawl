@@ -41,11 +41,14 @@ MHW-Years](analyze_MHWs_files/figure-gfm/namer-mhw-years-cpue-hist-1.png)
 
 ### Species-level
 
-![](analyze_MHWs_files/figure-gfm/namer-spp-anom-mhw-scatter-1.png)<!-- -->
+![Species Proportional CPUE Anomaly vs. MHW
+Intensity](analyze_MHWs_files/figure-gfm/namer-spp-anom-mhw-scatter-1.png)
 
-![](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhw-scatter-1.png)<!-- -->
+![Species Proportional CPUE Year-Over-Year Change vs. MHW
+Intensity](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhw-scatter-1.png)
 
-![](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhwYesNo-boxplot-1.png)<!-- -->
+![Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW
+Years](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhwYesNo-boxplot-1.png)
 
 ## Models
 
