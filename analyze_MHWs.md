@@ -52,6 +52,100 @@ Years](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhwYesNo-boxplot-1.png)
 
 ## Models
 
+### Region as random effect
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: wtMtDiffProp ~ anomIntC + 1 | region
+    ##    Data: .
+    ## 
+    ## REML criterion at convergence: 194.8
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -1.7963 -0.5948 -0.1820  0.3820  6.0116 
+    ## 
+    ## Random effects:
+    ##  Groups   Name        Variance  Std.Dev.  Corr
+    ##  region   (Intercept) 0.000e+00 0.000e+00     
+    ##           anomIntC    4.158e-11 6.448e-06  NaN
+    ##  Residual             1.580e-01 3.975e-01     
+    ## Number of obs: 192, groups:  region, 8
+    ## 
+    ## Fixed effects:
+    ##             Estimate Std. Error t value
+    ## (Intercept)  0.06975    0.02868   2.432
+    ## optimizer (nloptwrap) convergence code: 0 (OK)
+    ## boundary (singular) fit: see ?isSingular
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: wtMtAnomProp ~ anomIntC + 1 | region
+    ##    Data: .
+    ## 
+    ## REML criterion at convergence: 139.7
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -1.9003 -0.6234 -0.1635  0.4072  4.0209 
+    ## 
+    ## Random effects:
+    ##  Groups   Name        Variance  Std.Dev.  Corr 
+    ##  region   (Intercept) 3.250e-10 1.803e-05      
+    ##           anomIntC    6.226e-09 7.891e-05 -1.00
+    ##  Residual             1.163e-01 3.410e-01      
+    ## Number of obs: 197, groups:  region, 8
+    ## 
+    ## Fixed effects:
+    ##             Estimate Std. Error t value
+    ## (Intercept)  0.00611    0.02429   0.252
+    ## optimizer (nloptwrap) convergence code: 0 (OK)
+    ## boundary (singular) fit: see ?isSingular
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: wtMtDiffProp ~ mhwYesNo + 1 | region
+    ##    Data: .
+    ## 
+    ## REML criterion at convergence: 194.8
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -1.7963 -0.5948 -0.1820  0.3820  6.0116 
+    ## 
+    ## Random effects:
+    ##  Groups   Name        Variance  Std.Dev.  Corr
+    ##  region   (Intercept) 0.000e+00 0.000e+00     
+    ##           mhwYesNoyes 1.141e-20 1.068e-10  NaN
+    ##  Residual             1.580e-01 3.975e-01     
+    ## Number of obs: 192, groups:  region, 8
+    ## 
+    ## Fixed effects:
+    ##             Estimate Std. Error t value
+    ## (Intercept)  0.06975    0.02868   2.432
+    ## optimizer (nloptwrap) convergence code: 0 (OK)
+    ## boundary (singular) fit: see ?isSingular
+
+    ## Linear mixed model fit by REML ['lmerMod']
+    ## Formula: wtMtAnomProp ~ mhwYesNo + 1 | region
+    ##    Data: .
+    ## 
+    ## REML criterion at convergence: 139.7
+    ## 
+    ## Scaled residuals: 
+    ##     Min      1Q  Median      3Q     Max 
+    ## -1.9003 -0.6234 -0.1635  0.4072  4.0209 
+    ## 
+    ## Random effects:
+    ##  Groups   Name        Variance  Std.Dev.  Corr 
+    ##  region   (Intercept) 6.150e-11 7.842e-06      
+    ##           mhwYesNoyes 7.862e-11 8.867e-06 -1.00
+    ##  Residual             1.163e-01 3.410e-01      
+    ## Number of obs: 197, groups:  region, 8
+    ## 
+    ## Fixed effects:
+    ##             Estimate Std. Error t value
+    ## (Intercept)  0.00611    0.02429   0.252
+    ## optimizer (nloptwrap) convergence code: 0 (OK)
+    ## boundary (singular) fit: see ?isSingular
+
 ### MHW yes/no
 
     ## 
@@ -452,7 +546,1010 @@ Years](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhwYesNo-boxplot-1.png)
     ## Multiple R-squared:  0.05726,    Adjusted R-squared:  -0.02309 
     ## F-statistic: 0.7126 on 15 and 176 DF,  p-value: 0.7697
 
-### Species-level models
+### Species-level models using region\*year predictors
+
+    ## 
+    ## Call:
+    ## lm(formula = wtMtDiffProp ~ anomIntC + anomIntC * ref_year, data = .)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ##  -205.9    -5.3    -2.3    -0.9 20496.2 
+    ## 
+    ## Coefficients: (192 not defined because of singularities)
+    ##                                             Estimate Std. Error t value
+    ## (Intercept)                                  6.91820   16.37995   0.422
+    ## anomIntC                                   -21.96600  139.74059  -0.157
+    ## ref_yearaleutian_islands-5-1991             -0.66801   28.18486  -0.024
+    ## ref_yearaleutian_islands-5-1994              9.49522   39.35433   0.241
+    ## ref_yearaleutian_islands-5-1997              1.73048   31.58701   0.055
+    ## ref_yearaleutian_islands-5-2000              4.23393   24.12690   0.175
+    ## ref_yearaleutian_islands-5-2002             -1.54495   30.88047  -0.050
+    ## ref_yearaleutian_islands-5-2004              0.53256   31.15859   0.017
+    ## ref_yearaleutian_islands-5-2006             36.42088   38.38657   0.949
+    ## ref_yearaleutian_islands-5-2010             -5.36648   24.08906  -0.223
+    ## ref_yearaleutian_islands-5-2012              4.24069   53.61892   0.079
+    ## ref_yearaleutian_islands-5-2014             11.19989   72.83442   0.154
+    ## ref_yearaleutian_islands-5-2016              2.29002   40.58381   0.056
+    ## ref_yearaleutian_islands-5-2018              1.94731   34.00417   0.057
+    ## ref_yeareastern_bering_sea-5-1983            4.02825   26.41188   0.153
+    ## ref_yeareastern_bering_sea-5-1984           55.65198   50.61799   1.099
+    ## ref_yeareastern_bering_sea-5-1985           17.25163   56.91865   0.303
+    ## ref_yeareastern_bering_sea-5-1986            3.34896   24.40289   0.137
+    ## ref_yeareastern_bering_sea-5-1987           10.57126   23.30117   0.454
+    ## ref_yeareastern_bering_sea-5-1988           15.16890   23.07080   0.657
+    ## ref_yeareastern_bering_sea-5-1989           -5.24193   24.24275  -0.216
+    ## ref_yeareastern_bering_sea-5-1990           31.28337   24.48552   1.278
+    ## ref_yeareastern_bering_sea-5-1991           -5.18414   24.56993  -0.211
+    ## ref_yeareastern_bering_sea-5-1992           -3.57090   24.83441  -0.144
+    ## ref_yeareastern_bering_sea-5-1993           -5.42415   24.97340  -0.217
+    ## ref_yeareastern_bering_sea-5-1994            1.07144   25.32435   0.042
+    ## ref_yeareastern_bering_sea-5-1995           -6.34028   24.97340  -0.254
+    ## ref_yeareastern_bering_sea-5-1996           -4.35354   24.88022  -0.175
+    ## ref_yeareastern_bering_sea-5-1997           -4.02016   24.56993  -0.164
+    ## ref_yeareastern_bering_sea-5-1998            6.93417   71.61680   0.097
+    ## ref_yeareastern_bering_sea-5-1999           -4.73754   24.44399  -0.194
+    ## ref_yeareastern_bering_sea-5-2000           -4.18723   24.32199  -0.172
+    ## ref_yeareastern_bering_sea-5-2001           19.28829   23.35325   0.826
+    ## ref_yeareastern_bering_sea-5-2002           -2.68087   22.48831  -0.119
+    ## ref_yeareastern_bering_sea-5-2003            1.82332   23.69145   0.077
+    ## ref_yeareastern_bering_sea-5-2004            4.74978   38.26319   0.124
+    ## ref_yeareastern_bering_sea-5-2005           53.64492   68.53286   0.783
+    ## ref_yeareastern_bering_sea-5-2006            6.38323   64.89871   0.098
+    ## ref_yeareastern_bering_sea-5-2007            1.41971   24.36223   0.058
+    ## ref_yeareastern_bering_sea-5-2008           -5.93173   24.48552  -0.242
+    ## ref_yeareastern_bering_sea-5-2009           -5.72828   24.48552  -0.234
+    ## ref_yeareastern_bering_sea-5-2010          198.00090   24.44399   8.100
+    ## ref_yeareastern_bering_sea-5-2011          121.26835   24.44399   4.961
+    ## ref_yeareastern_bering_sea-5-2012            1.75587   24.48552   0.072
+    ## ref_yeareastern_bering_sea-5-2013           -3.90399   24.52750  -0.159
+    ## ref_yeareastern_bering_sea-5-2014           -5.61683   24.32199  -0.231
+    ## ref_yeareastern_bering_sea-5-2015           10.55834   88.72761   0.119
+    ## ref_yeareastern_bering_sea-5-2016            3.39722   36.71920   0.093
+    ## ref_yeareastern_bering_sea-5-2017           14.49923  128.51180   0.113
+    ## ref_yeareastern_bering_sea-5-2018            1.83473   24.48552   0.075
+    ## ref_yeargulf_of_alaska-5-1987               -3.92798   23.13285  -0.170
+    ## ref_yeargulf_of_alaska-5-1990               -1.51051   24.36223  -0.062
+    ## ref_yeargulf_of_alaska-5-1993                0.68795   23.53149   0.029
+    ## ref_yeargulf_of_alaska-5-1996                0.46055   22.58356   0.020
+    ## ref_yeargulf_of_alaska-5-1999               -4.76034   22.26383  -0.214
+    ## ref_yeargulf_of_alaska-5-2003                9.73927   25.36780   0.384
+    ## ref_yeargulf_of_alaska-5-2005                8.38998   57.24815   0.147
+    ## ref_yeargulf_of_alaska-5-2007               14.48507   48.00508   0.302
+    ## ref_yeargulf_of_alaska-5-2009               -5.16348   22.26383  -0.232
+    ## ref_yeargulf_of_alaska-5-2011               -4.20926   22.26383  -0.189
+    ## ref_yeargulf_of_alaska-5-2013               -2.38001   22.32948  -0.107
+    ## ref_yeargulf_of_alaska-5-2015                0.75422   26.15495   0.029
+    ## ref_yeargulf_of_alaska-5-2017                4.79565   61.49004   0.078
+    ## ref_yeargulf_of_mexico-1-2009               46.85609   26.57640   1.763
+    ## ref_yeargulf_of_mexico-1-2010               -0.07262   26.88292  -0.003
+    ## ref_yeargulf_of_mexico-1-2011                4.00527   50.18808   0.080
+    ## ref_yeargulf_of_mexico-1-2012               -2.54850   21.36644  -0.119
+    ## ref_yeargulf_of_mexico-1-2013               16.90020  121.26209   0.139
+    ## ref_yeargulf_of_mexico-1-2014               -5.37951   20.73478  -0.259
+    ## ref_yeargulf_of_mexico-1-2015               -4.89568   20.69984  -0.237
+    ## ref_yeargulf_of_mexico-1-2016                0.58725   38.38758   0.015
+    ## ref_yeargulf_of_mexico-1-2017                0.66463   24.41918   0.027
+    ## ref_yearnortheast-2-1983                    -1.33487   34.30979  -0.039
+    ## ref_yearnortheast-2-1984                    -0.28579   33.59833  -0.009
+    ## ref_yearnortheast-2-1985                     2.62917   43.70832   0.060
+    ## ref_yearnortheast-2-1986                    -2.67498   30.86429  -0.087
+    ## ref_yearnortheast-2-1987                    -2.08383   32.12948  -0.065
+    ## ref_yearnortheast-2-1988                    -2.40526   28.86435  -0.083
+    ## ref_yearnortheast-2-1989                    -1.24771   27.78867  -0.045
+    ## ref_yearnortheast-2-1990                    -2.32719   30.34652  -0.077
+    ## ref_yearnortheast-2-1991                     2.77395   37.93591   0.073
+    ## ref_yearnortheast-2-1992                     9.24078   85.28767   0.108
+    ## ref_yearnortheast-2-1993                    -6.55399   29.07401  -0.225
+    ## ref_yearnortheast-2-1994                     7.95443   27.74486   0.287
+    ## ref_yearnortheast-2-1995                     2.92935   38.18682   0.077
+    ## ref_yearnortheast-2-1996                    -6.52728   28.66190  -0.228
+    ## ref_yearnortheast-2-1997                    -5.28206   27.77528  -0.190
+    ## ref_yearnortheast-2-1998                    -4.20013   28.96825  -0.145
+    ## ref_yearnortheast-2-1999                    -2.01744   28.86435  -0.070
+    ## ref_yearnortheast-2-2000                    -2.69049   30.29022  -0.089
+    ## ref_yearnortheast-2-2001                    -0.62043   39.10474  -0.016
+    ## ref_yearnortheast-2-2002                     8.43546   35.77532   0.236
+    ## ref_yearnortheast-2-2003                    20.00944   55.97480   0.357
+    ## ref_yearnortheast-2-2004                    -6.71620   28.76225  -0.234
+    ## ref_yearnortheast-2-2005                    -5.51629   28.96825  -0.190
+    ## ref_yearnortheast-2-2006                     1.07051   36.14990   0.030
+    ## ref_yearnortheast-2-2007                     2.85557   55.94505   0.051
+    ## ref_yearnortheast-2-2008                    -4.89612   28.76225  -0.170
+    ## ref_yearnortheast-2-2009                     0.77033   29.26405   0.026
+    ## ref_yearnortheast-2-2010                    -2.71895   32.02444  -0.085
+    ## ref_yearnortheast-2-2011                     9.65222   88.45321   0.109
+    ## ref_yearnortheast-2-2012                     6.76878   76.08137   0.089
+    ## ref_yearnortheast-2-2013                     7.99492   81.45225   0.098
+    ## ref_yearnortheast-2-2014                     5.50549   66.00931   0.083
+    ## ref_yearnortheast-2-2015                     0.35359   32.37338   0.011
+    ## ref_yearnortheast-2-2016                     3.28269   57.99339   0.057
+    ## ref_yearnortheast-2-2017                    -1.53779   40.18247  -0.038
+    ## ref_yearnortheast-2-2018                     0.35107   31.79418   0.011
+    ## ref_yearscotian_shelf-6-1983                -0.81744   52.04662  -0.016
+    ## ref_yearscotian_shelf-6-1984                 4.40242   57.73150   0.076
+    ## ref_yearscotian_shelf-6-1985                 8.44312   92.30795   0.091
+    ## ref_yearscotian_shelf-6-1987                -5.49016   40.99296  -0.134
+    ## ref_yearscotian_shelf-6-1988                -4.52757   40.54373  -0.112
+    ## ref_yearscotian_shelf-6-1989                 0.56742   54.92646   0.010
+    ## ref_yearscotian_shelf-6-1990                -6.56373   40.99296  -0.160
+    ## ref_yearscotian_shelf-6-1991                 3.90019   49.85666   0.078
+    ## ref_yearscotian_shelf-6-1992                -6.69031   40.99296  -0.163
+    ## ref_yearscotian_shelf-6-1993                -5.99929   41.45586  -0.145
+    ## ref_yearscotian_shelf-6-1994                -5.51864   40.54891  -0.136
+    ## ref_yearscotian_shelf-6-1995                12.73872  102.81461   0.124
+    ## ref_yearscotian_shelf-6-1996                -7.01898   40.54891  -0.173
+    ## ref_yearscotian_shelf-6-1997                -6.31931   40.54891  -0.156
+    ## ref_yearscotian_shelf-6-1998                -6.42035   42.44363  -0.151
+    ## ref_yearscotian_shelf-6-1999                -0.54855   48.37762  -0.011
+    ## ref_yearscotian_shelf-6-2000                 8.72976   95.96941   0.091
+    ## ref_yearscotian_shelf-6-2001                -6.29835   40.54891  -0.155
+    ## ref_yearscotian_shelf-6-2002                -6.78048   40.54891  -0.167
+    ## ref_yearscotian_shelf-6-2003                -5.09702   40.94503  -0.124
+    ## ref_yearscotian_shelf-6-2004                 1.46086   57.87442   0.025
+    ## ref_yearscotian_shelf-6-2005                -4.51577   40.54891  -0.111
+    ## ref_yearscotian_shelf-6-2006                 1.80537   59.10697   0.031
+    ## ref_yearscotian_shelf-6-2007                -6.58160   41.45586  -0.159
+    ## ref_yearscotian_shelf-6-2008                -6.00703   40.54891  -0.148
+    ## ref_yearscotian_shelf-6-2009                -2.44084   39.87167  -0.061
+    ## ref_yearscotian_shelf-6-2010                 6.48565   48.92412   0.133
+    ## ref_yearscotian_shelf-6-2011                12.74309  115.69112   0.110
+    ## ref_yearscotian_shelf-6-2012                 7.99274   95.04472   0.084
+    ## ref_yearscotian_shelf-6-2013                 1.67691   58.08310   0.029
+    ## ref_yearscotian_shelf-6-2014                 4.11697   70.52918   0.058
+    ## ref_yearscotian_shelf-6-2015                -2.61691   42.56411  -0.061
+    ## ref_yearscotian_shelf-6-2016                -2.36907   42.69909  -0.055
+    ## ref_yearscotian_shelf-6-2017                 1.25141   46.10987   0.027
+    ## ref_yearsoutheast-4-1990                     2.78570   52.04905   0.054
+    ## ref_yearsoutheast-4-1991                    -2.53215   28.34229  -0.089
+    ## ref_yearsoutheast-4-1992                    -5.08017   25.14507  -0.202
+    ## ref_yearsoutheast-4-1993                     4.23451   59.39616   0.071
+    ## ref_yearsoutheast-4-1994                    -0.42454   35.09183  -0.012
+    ## ref_yearsoutheast-4-1995                    -2.78958   25.79542  -0.108
+    ## ref_yearsoutheast-4-1996                    -6.29664   26.74835  -0.235
+    ## ref_yearsoutheast-4-1997                     8.82370   90.91615   0.097
+    ## ref_yearsoutheast-4-1998                    -4.87826   26.88965  -0.181
+    ## ref_yearsoutheast-4-1999                     7.13334   77.49156   0.092
+    ## ref_yearsoutheast-4-2000                    -4.82387   25.01364  -0.193
+    ## ref_yearsoutheast-4-2001                     1.07155   36.75802   0.029
+    ## ref_yearsoutheast-4-2002                     0.25871   33.31910   0.008
+    ## ref_yearsoutheast-4-2003                    -3.52370   25.56723  -0.138
+    ## ref_yearsoutheast-4-2004                    -4.73329   25.38262  -0.186
+    ## ref_yearsoutheast-4-2005                    -3.46003   25.75672  -0.134
+    ## ref_yearsoutheast-4-2006                     0.55916   42.59994   0.013
+    ## ref_yearsoutheast-4-2007                    -5.55269   26.67918  -0.208
+    ## ref_yearsoutheast-4-2008                    -3.13330   26.46359  -0.118
+    ## ref_yearsoutheast-4-2009                    -4.34370   26.74835  -0.162
+    ## ref_yearsoutheast-4-2010                    -5.89151   26.88965  -0.219
+    ## ref_yearsoutheast-4-2011                     0.37372   29.24985   0.013
+    ## ref_yearsoutheast-4-2012                    14.03354   73.72237   0.190
+    ## ref_yearsoutheast-4-2013                     1.58840   38.84616   0.041
+    ## ref_yearsoutheast-4-2014                    -6.52460   26.81850  -0.243
+    ## ref_yearsoutheast-4-2015                     1.84298   26.12648   0.071
+    ## ref_yearsoutheast-4-2016                     4.03795   59.86880   0.067
+    ## ref_yearsoutheast-4-2017                     3.05468   26.57477   0.115
+    ## ref_yearsoutheast-4-2018                     0.85729   48.96738   0.018
+    ## ref_yearwest_coast-5-1986                   -5.77353   27.41772  -0.211
+    ## ref_yearwest_coast-5-1989                   -4.36860   27.57900  -0.158
+    ## ref_yearwest_coast-5-1992                    0.77891   33.06716   0.024
+    ## ref_yearwest_coast-5-1995                   -0.50722   34.13946  -0.015
+    ## ref_yearwest_coast-5-1998                    8.30929   70.43599   0.118
+    ## ref_yearwest_coast-5-2001                   -2.42806   27.41772  -0.089
+    ## ref_yearwest_coast-5-2003                  137.69626   29.07401   4.736
+    ## ref_yearwest_coast-5-2004                    4.13087   21.85594   0.189
+    ## ref_yearwest_coast-5-2005                   -3.04698   23.42313  -0.130
+    ## ref_yearwest_coast-5-2006                   -2.38661   23.16475  -0.103
+    ## ref_yearwest_coast-5-2007                    7.08945   23.13592   0.306
+    ## ref_yearwest_coast-5-2008                    3.55670   46.34418   0.077
+    ## ref_yearwest_coast-5-2009                    0.60597   23.13592   0.026
+    ## ref_yearwest_coast-5-2010                   -2.49603   22.96808  -0.109
+    ## ref_yearwest_coast-5-2011                    5.78355   23.07900   0.251
+    ## ref_yearwest_coast-5-2012                   -0.58896   23.02307  -0.026
+    ## ref_yearwest_coast-5-2013                    1.86858   23.02307   0.081
+    ## ref_yearwest_coast-5-2014                    4.64412   33.56083   0.138
+    ## ref_yearwest_coast-5-2015                    9.30542   67.41732   0.138
+    ## ref_yearwest_coast-5-2016                    2.39837   44.06003   0.054
+    ## ref_yearwest_coast-5-2017                    0.67225   38.42126   0.017
+    ## ref_yearwest_coast-5-2018                         NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-1991          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-1994          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-1997          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2000          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2002          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2004          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2006          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2010          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2012          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2014          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2016          NA         NA      NA
+    ## anomIntC:ref_yearaleutian_islands-5-2018          NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1983        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1984        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1985        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1986        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1987        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1988        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1989        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1990        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1991        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1992        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1993        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1994        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1995        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1996        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1997        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1998        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-1999        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2000        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2001        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2002        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2003        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2004        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2005        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2006        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2007        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2008        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2009        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2010        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2011        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2012        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2013        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2014        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2015        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2016        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2017        NA         NA      NA
+    ## anomIntC:ref_yeareastern_bering_sea-5-2018        NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-1987            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-1990            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-1993            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-1996            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-1999            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2003            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2005            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2007            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2009            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2011            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2013            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2015            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_alaska-5-2017            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2009            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2010            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2011            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2012            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2013            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2014            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2015            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2016            NA         NA      NA
+    ## anomIntC:ref_yeargulf_of_mexico-1-2017            NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1983                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1984                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1985                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1986                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1987                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1988                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1989                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1990                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1991                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1992                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1993                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1994                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1995                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1996                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1997                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1998                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-1999                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2000                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2001                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2002                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2003                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2004                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2005                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2006                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2007                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2008                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2009                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2010                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2011                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2012                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2013                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2014                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2015                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2016                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2017                 NA         NA      NA
+    ## anomIntC:ref_yearnortheast-2-2018                 NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1983             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1984             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1985             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1987             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1988             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1989             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1990             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1991             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1992             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1993             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1994             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1995             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1996             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1997             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1998             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-1999             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2000             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2001             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2002             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2003             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2004             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2005             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2006             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2007             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2008             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2009             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2010             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2011             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2012             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2013             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2014             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2015             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2016             NA         NA      NA
+    ## anomIntC:ref_yearscotian_shelf-6-2017             NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1990                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1991                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1992                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1993                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1994                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1995                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1996                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1997                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1998                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-1999                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2000                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2001                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2002                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2003                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2004                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2005                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2006                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2007                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2008                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2009                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2010                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2011                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2012                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2013                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2014                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2015                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2016                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2017                 NA         NA      NA
+    ## anomIntC:ref_yearsoutheast-4-2018                 NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-1986                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-1989                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-1992                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-1995                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-1998                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2001                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2003                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2004                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2005                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2006                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2007                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2008                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2009                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2010                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2011                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2012                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2013                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2014                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2015                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2016                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2017                NA         NA      NA
+    ## anomIntC:ref_yearwest_coast-5-2018                NA         NA      NA
+    ##                                            Pr(>|t|)    
+    ## (Intercept)                                  0.6728    
+    ## anomIntC                                     0.8751    
+    ## ref_yearaleutian_islands-5-1991              0.9811    
+    ## ref_yearaleutian_islands-5-1994              0.8093    
+    ## ref_yearaleutian_islands-5-1997              0.9563    
+    ## ref_yearaleutian_islands-5-2000              0.8607    
+    ## ref_yearaleutian_islands-5-2002              0.9601    
+    ## ref_yearaleutian_islands-5-2004              0.9864    
+    ## ref_yearaleutian_islands-5-2006              0.3427    
+    ## ref_yearaleutian_islands-5-2010              0.8237    
+    ## ref_yearaleutian_islands-5-2012              0.9370    
+    ## ref_yearaleutian_islands-5-2014              0.8778    
+    ## ref_yearaleutian_islands-5-2016              0.9550    
+    ## ref_yearaleutian_islands-5-2018              0.9543    
+    ## ref_yeareastern_bering_sea-5-1983            0.8788    
+    ## ref_yeareastern_bering_sea-5-1984            0.2716    
+    ## ref_yeareastern_bering_sea-5-1985            0.7618    
+    ## ref_yeareastern_bering_sea-5-1986            0.8908    
+    ## ref_yeareastern_bering_sea-5-1987            0.6501    
+    ## ref_yeareastern_bering_sea-5-1988            0.5109    
+    ## ref_yeareastern_bering_sea-5-1989            0.8288    
+    ## ref_yeareastern_bering_sea-5-1990            0.2014    
+    ## ref_yeareastern_bering_sea-5-1991            0.8329    
+    ## ref_yeareastern_bering_sea-5-1992            0.8857    
+    ## ref_yeareastern_bering_sea-5-1993            0.8281    
+    ## ref_yeareastern_bering_sea-5-1994            0.9663    
+    ## ref_yeareastern_bering_sea-5-1995            0.7996    
+    ## ref_yeareastern_bering_sea-5-1996            0.8611    
+    ## ref_yeareastern_bering_sea-5-1997            0.8700    
+    ## ref_yeareastern_bering_sea-5-1998            0.9229    
+    ## ref_yeareastern_bering_sea-5-1999            0.8463    
+    ## ref_yeareastern_bering_sea-5-2000            0.8633    
+    ## ref_yeareastern_bering_sea-5-2001            0.4088    
+    ## ref_yeareastern_bering_sea-5-2002            0.9051    
+    ## ref_yeareastern_bering_sea-5-2003            0.9387    
+    ## ref_yeareastern_bering_sea-5-2004            0.9012    
+    ## ref_yeareastern_bering_sea-5-2005            0.4338    
+    ## ref_yeareastern_bering_sea-5-2006            0.9216    
+    ## ref_yeareastern_bering_sea-5-2007            0.9535    
+    ## ref_yeareastern_bering_sea-5-2008            0.8086    
+    ## ref_yeareastern_bering_sea-5-2009            0.8150    
+    ## ref_yeareastern_bering_sea-5-2010          5.73e-16 ***
+    ## ref_yeareastern_bering_sea-5-2011          7.06e-07 ***
+    ## ref_yeareastern_bering_sea-5-2012            0.9428    
+    ## ref_yeareastern_bering_sea-5-2013            0.8735    
+    ## ref_yeareastern_bering_sea-5-2014            0.8174    
+    ## ref_yeareastern_bering_sea-5-2015            0.9053    
+    ## ref_yeareastern_bering_sea-5-2016            0.9263    
+    ## ref_yeareastern_bering_sea-5-2017            0.9102    
+    ## ref_yeareastern_bering_sea-5-2018            0.9403    
+    ## ref_yeargulf_of_alaska-5-1987                0.8652    
+    ## ref_yeargulf_of_alaska-5-1990                0.9506    
+    ## ref_yeargulf_of_alaska-5-1993                0.9767    
+    ## ref_yeargulf_of_alaska-5-1996                0.9837    
+    ## ref_yeargulf_of_alaska-5-1999                0.8307    
+    ## ref_yeargulf_of_alaska-5-2003                0.7010    
+    ## ref_yeargulf_of_alaska-5-2005                0.8835    
+    ## ref_yeargulf_of_alaska-5-2007                0.7629    
+    ## ref_yeargulf_of_alaska-5-2009                0.8166    
+    ## ref_yeargulf_of_alaska-5-2011                0.8500    
+    ## ref_yeargulf_of_alaska-5-2013                0.9151    
+    ## ref_yeargulf_of_alaska-5-2015                0.9770    
+    ## ref_yeargulf_of_alaska-5-2017                0.9378    
+    ## ref_yeargulf_of_mexico-1-2009                0.0779 .  
+    ## ref_yeargulf_of_mexico-1-2010                0.9978    
+    ## ref_yeargulf_of_mexico-1-2011                0.9364    
+    ## ref_yeargulf_of_mexico-1-2012                0.9051    
+    ## ref_yeargulf_of_mexico-1-2013                0.8892    
+    ## ref_yeargulf_of_mexico-1-2014                0.7953    
+    ## ref_yeargulf_of_mexico-1-2015                0.8130    
+    ## ref_yeargulf_of_mexico-1-2016                0.9878    
+    ## ref_yeargulf_of_mexico-1-2017                0.9783    
+    ## ref_yearnortheast-2-1983                     0.9690    
+    ## ref_yearnortheast-2-1984                     0.9932    
+    ## ref_yearnortheast-2-1985                     0.9520    
+    ## ref_yearnortheast-2-1986                     0.9309    
+    ## ref_yearnortheast-2-1987                     0.9483    
+    ## ref_yearnortheast-2-1988                     0.9336    
+    ## ref_yearnortheast-2-1989                     0.9642    
+    ## ref_yearnortheast-2-1990                     0.9389    
+    ## ref_yearnortheast-2-1991                     0.9417    
+    ## ref_yearnortheast-2-1992                     0.9137    
+    ## ref_yearnortheast-2-1993                     0.8217    
+    ## ref_yearnortheast-2-1994                     0.7743    
+    ## ref_yearnortheast-2-1995                     0.9389    
+    ## ref_yearnortheast-2-1996                     0.8199    
+    ## ref_yearnortheast-2-1997                     0.8492    
+    ## ref_yearnortheast-2-1998                     0.8847    
+    ## ref_yearnortheast-2-1999                     0.9443    
+    ## ref_yearnortheast-2-2000                     0.9292    
+    ## ref_yearnortheast-2-2001                     0.9873    
+    ## ref_yearnortheast-2-2002                     0.8136    
+    ## ref_yearnortheast-2-2003                     0.7207    
+    ## ref_yearnortheast-2-2004                     0.8154    
+    ## ref_yearnortheast-2-2005                     0.8490    
+    ## ref_yearnortheast-2-2006                     0.9764    
+    ## ref_yearnortheast-2-2007                     0.9593    
+    ## ref_yearnortheast-2-2008                     0.8648    
+    ## ref_yearnortheast-2-2009                     0.9790    
+    ## ref_yearnortheast-2-2010                     0.9323    
+    ## ref_yearnortheast-2-2011                     0.9131    
+    ## ref_yearnortheast-2-2012                     0.9291    
+    ## ref_yearnortheast-2-2013                     0.9218    
+    ## ref_yearnortheast-2-2014                     0.9335    
+    ## ref_yearnortheast-2-2015                     0.9913    
+    ## ref_yearnortheast-2-2016                     0.9549    
+    ## ref_yearnortheast-2-2017                     0.9695    
+    ## ref_yearnortheast-2-2018                     0.9912    
+    ## ref_yearscotian_shelf-6-1983                 0.9875    
+    ## ref_yearscotian_shelf-6-1984                 0.9392    
+    ## ref_yearscotian_shelf-6-1985                 0.9271    
+    ## ref_yearscotian_shelf-6-1987                 0.8935    
+    ## ref_yearscotian_shelf-6-1988                 0.9111    
+    ## ref_yearscotian_shelf-6-1989                 0.9918    
+    ## ref_yearscotian_shelf-6-1990                 0.8728    
+    ## ref_yearscotian_shelf-6-1991                 0.9376    
+    ## ref_yearscotian_shelf-6-1992                 0.8704    
+    ## ref_yearscotian_shelf-6-1993                 0.8849    
+    ## ref_yearscotian_shelf-6-1994                 0.8917    
+    ## ref_yearscotian_shelf-6-1995                 0.9014    
+    ## ref_yearscotian_shelf-6-1996                 0.8626    
+    ## ref_yearscotian_shelf-6-1997                 0.8762    
+    ## ref_yearscotian_shelf-6-1998                 0.8798    
+    ## ref_yearscotian_shelf-6-1999                 0.9910    
+    ## ref_yearscotian_shelf-6-2000                 0.9275    
+    ## ref_yearscotian_shelf-6-2001                 0.8766    
+    ## ref_yearscotian_shelf-6-2002                 0.8672    
+    ## ref_yearscotian_shelf-6-2003                 0.9009    
+    ## ref_yearscotian_shelf-6-2004                 0.9799    
+    ## ref_yearscotian_shelf-6-2005                 0.9113    
+    ## ref_yearscotian_shelf-6-2006                 0.9756    
+    ## ref_yearscotian_shelf-6-2007                 0.8739    
+    ## ref_yearscotian_shelf-6-2008                 0.8822    
+    ## ref_yearscotian_shelf-6-2009                 0.9512    
+    ## ref_yearscotian_shelf-6-2010                 0.8945    
+    ## ref_yearscotian_shelf-6-2011                 0.9123    
+    ## ref_yearscotian_shelf-6-2012                 0.9330    
+    ## ref_yearscotian_shelf-6-2013                 0.9770    
+    ## ref_yearscotian_shelf-6-2014                 0.9535    
+    ## ref_yearscotian_shelf-6-2015                 0.9510    
+    ## ref_yearscotian_shelf-6-2016                 0.9558    
+    ## ref_yearscotian_shelf-6-2017                 0.9783    
+    ## ref_yearsoutheast-4-1990                     0.9573    
+    ## ref_yearsoutheast-4-1991                     0.9288    
+    ## ref_yearsoutheast-4-1992                     0.8399    
+    ## ref_yearsoutheast-4-1993                     0.9432    
+    ## ref_yearsoutheast-4-1994                     0.9903    
+    ## ref_yearsoutheast-4-1995                     0.9139    
+    ## ref_yearsoutheast-4-1996                     0.8139    
+    ## ref_yearsoutheast-4-1997                     0.9227    
+    ## ref_yearsoutheast-4-1998                     0.8560    
+    ## ref_yearsoutheast-4-1999                     0.9267    
+    ## ref_yearsoutheast-4-2000                     0.8471    
+    ## ref_yearsoutheast-4-2001                     0.9767    
+    ## ref_yearsoutheast-4-2002                     0.9938    
+    ## ref_yearsoutheast-4-2003                     0.8904    
+    ## ref_yearsoutheast-4-2004                     0.8521    
+    ## ref_yearsoutheast-4-2005                     0.8931    
+    ## ref_yearsoutheast-4-2006                     0.9895    
+    ## ref_yearsoutheast-4-2007                     0.8351    
+    ## ref_yearsoutheast-4-2008                     0.9058    
+    ## ref_yearsoutheast-4-2009                     0.8710    
+    ## ref_yearsoutheast-4-2010                     0.8266    
+    ## ref_yearsoutheast-4-2011                     0.9898    
+    ## ref_yearsoutheast-4-2012                     0.8490    
+    ## ref_yearsoutheast-4-2013                     0.9674    
+    ## ref_yearsoutheast-4-2014                     0.8078    
+    ## ref_yearsoutheast-4-2015                     0.9438    
+    ## ref_yearsoutheast-4-2016                     0.9462    
+    ## ref_yearsoutheast-4-2017                     0.9085    
+    ## ref_yearsoutheast-4-2018                     0.9860    
+    ## ref_yearwest_coast-5-1986                    0.8332    
+    ## ref_yearwest_coast-5-1989                    0.8741    
+    ## ref_yearwest_coast-5-1992                    0.9812    
+    ## ref_yearwest_coast-5-1995                    0.9881    
+    ## ref_yearwest_coast-5-1998                    0.9061    
+    ## ref_yearwest_coast-5-2001                    0.9294    
+    ## ref_yearwest_coast-5-2003                  2.19e-06 ***
+    ## ref_yearwest_coast-5-2004                    0.8501    
+    ## ref_yearwest_coast-5-2005                    0.8965    
+    ## ref_yearwest_coast-5-2006                    0.9179    
+    ## ref_yearwest_coast-5-2007                    0.7593    
+    ## ref_yearwest_coast-5-2008                    0.9388    
+    ## ref_yearwest_coast-5-2009                    0.9791    
+    ## ref_yearwest_coast-5-2010                    0.9135    
+    ## ref_yearwest_coast-5-2011                    0.8021    
+    ## ref_yearwest_coast-5-2012                    0.9796    
+    ## ref_yearwest_coast-5-2013                    0.9353    
+    ## ref_yearwest_coast-5-2014                    0.8899    
+    ## ref_yearwest_coast-5-2015                    0.8902    
+    ## ref_yearwest_coast-5-2016                    0.9566    
+    ## ref_yearwest_coast-5-2017                    0.9860    
+    ## ref_yearwest_coast-5-2018                        NA    
+    ## anomIntC:ref_yearaleutian_islands-5-1991         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-1994         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-1997         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2000         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2002         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2004         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2006         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2010         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2012         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2014         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2016         NA    
+    ## anomIntC:ref_yearaleutian_islands-5-2018         NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1983       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1984       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1985       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1986       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1987       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1988       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1989       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1990       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1991       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1992       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1993       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1994       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1995       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1996       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1997       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1998       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-1999       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2000       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2001       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2002       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2003       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2004       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2005       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2006       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2007       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2008       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2009       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2010       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2011       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2012       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2013       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2014       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2015       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2016       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2017       NA    
+    ## anomIntC:ref_yeareastern_bering_sea-5-2018       NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-1987           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-1990           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-1993           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-1996           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-1999           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2003           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2005           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2007           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2009           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2011           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2013           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2015           NA    
+    ## anomIntC:ref_yeargulf_of_alaska-5-2017           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2009           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2010           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2011           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2012           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2013           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2014           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2015           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2016           NA    
+    ## anomIntC:ref_yeargulf_of_mexico-1-2017           NA    
+    ## anomIntC:ref_yearnortheast-2-1983                NA    
+    ## anomIntC:ref_yearnortheast-2-1984                NA    
+    ## anomIntC:ref_yearnortheast-2-1985                NA    
+    ## anomIntC:ref_yearnortheast-2-1986                NA    
+    ## anomIntC:ref_yearnortheast-2-1987                NA    
+    ## anomIntC:ref_yearnortheast-2-1988                NA    
+    ## anomIntC:ref_yearnortheast-2-1989                NA    
+    ## anomIntC:ref_yearnortheast-2-1990                NA    
+    ## anomIntC:ref_yearnortheast-2-1991                NA    
+    ## anomIntC:ref_yearnortheast-2-1992                NA    
+    ## anomIntC:ref_yearnortheast-2-1993                NA    
+    ## anomIntC:ref_yearnortheast-2-1994                NA    
+    ## anomIntC:ref_yearnortheast-2-1995                NA    
+    ## anomIntC:ref_yearnortheast-2-1996                NA    
+    ## anomIntC:ref_yearnortheast-2-1997                NA    
+    ## anomIntC:ref_yearnortheast-2-1998                NA    
+    ## anomIntC:ref_yearnortheast-2-1999                NA    
+    ## anomIntC:ref_yearnortheast-2-2000                NA    
+    ## anomIntC:ref_yearnortheast-2-2001                NA    
+    ## anomIntC:ref_yearnortheast-2-2002                NA    
+    ## anomIntC:ref_yearnortheast-2-2003                NA    
+    ## anomIntC:ref_yearnortheast-2-2004                NA    
+    ## anomIntC:ref_yearnortheast-2-2005                NA    
+    ## anomIntC:ref_yearnortheast-2-2006                NA    
+    ## anomIntC:ref_yearnortheast-2-2007                NA    
+    ## anomIntC:ref_yearnortheast-2-2008                NA    
+    ## anomIntC:ref_yearnortheast-2-2009                NA    
+    ## anomIntC:ref_yearnortheast-2-2010                NA    
+    ## anomIntC:ref_yearnortheast-2-2011                NA    
+    ## anomIntC:ref_yearnortheast-2-2012                NA    
+    ## anomIntC:ref_yearnortheast-2-2013                NA    
+    ## anomIntC:ref_yearnortheast-2-2014                NA    
+    ## anomIntC:ref_yearnortheast-2-2015                NA    
+    ## anomIntC:ref_yearnortheast-2-2016                NA    
+    ## anomIntC:ref_yearnortheast-2-2017                NA    
+    ## anomIntC:ref_yearnortheast-2-2018                NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1983            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1984            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1985            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1987            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1988            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1989            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1990            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1991            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1992            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1993            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1994            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1995            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1996            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1997            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1998            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-1999            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2000            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2001            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2002            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2003            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2004            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2005            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2006            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2007            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2008            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2009            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2010            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2011            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2012            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2013            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2014            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2015            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2016            NA    
+    ## anomIntC:ref_yearscotian_shelf-6-2017            NA    
+    ## anomIntC:ref_yearsoutheast-4-1990                NA    
+    ## anomIntC:ref_yearsoutheast-4-1991                NA    
+    ## anomIntC:ref_yearsoutheast-4-1992                NA    
+    ## anomIntC:ref_yearsoutheast-4-1993                NA    
+    ## anomIntC:ref_yearsoutheast-4-1994                NA    
+    ## anomIntC:ref_yearsoutheast-4-1995                NA    
+    ## anomIntC:ref_yearsoutheast-4-1996                NA    
+    ## anomIntC:ref_yearsoutheast-4-1997                NA    
+    ## anomIntC:ref_yearsoutheast-4-1998                NA    
+    ## anomIntC:ref_yearsoutheast-4-1999                NA    
+    ## anomIntC:ref_yearsoutheast-4-2000                NA    
+    ## anomIntC:ref_yearsoutheast-4-2001                NA    
+    ## anomIntC:ref_yearsoutheast-4-2002                NA    
+    ## anomIntC:ref_yearsoutheast-4-2003                NA    
+    ## anomIntC:ref_yearsoutheast-4-2004                NA    
+    ## anomIntC:ref_yearsoutheast-4-2005                NA    
+    ## anomIntC:ref_yearsoutheast-4-2006                NA    
+    ## anomIntC:ref_yearsoutheast-4-2007                NA    
+    ## anomIntC:ref_yearsoutheast-4-2008                NA    
+    ## anomIntC:ref_yearsoutheast-4-2009                NA    
+    ## anomIntC:ref_yearsoutheast-4-2010                NA    
+    ## anomIntC:ref_yearsoutheast-4-2011                NA    
+    ## anomIntC:ref_yearsoutheast-4-2012                NA    
+    ## anomIntC:ref_yearsoutheast-4-2013                NA    
+    ## anomIntC:ref_yearsoutheast-4-2014                NA    
+    ## anomIntC:ref_yearsoutheast-4-2015                NA    
+    ## anomIntC:ref_yearsoutheast-4-2016                NA    
+    ## anomIntC:ref_yearsoutheast-4-2017                NA    
+    ## anomIntC:ref_yearsoutheast-4-2018                NA    
+    ## anomIntC:ref_yearwest_coast-5-1986               NA    
+    ## anomIntC:ref_yearwest_coast-5-1989               NA    
+    ## anomIntC:ref_yearwest_coast-5-1992               NA    
+    ## anomIntC:ref_yearwest_coast-5-1995               NA    
+    ## anomIntC:ref_yearwest_coast-5-1998               NA    
+    ## anomIntC:ref_yearwest_coast-5-2001               NA    
+    ## anomIntC:ref_yearwest_coast-5-2003               NA    
+    ## anomIntC:ref_yearwest_coast-5-2004               NA    
+    ## anomIntC:ref_yearwest_coast-5-2005               NA    
+    ## anomIntC:ref_yearwest_coast-5-2006               NA    
+    ## anomIntC:ref_yearwest_coast-5-2007               NA    
+    ## anomIntC:ref_yearwest_coast-5-2008               NA    
+    ## anomIntC:ref_yearwest_coast-5-2009               NA    
+    ## anomIntC:ref_yearwest_coast-5-2010               NA    
+    ## anomIntC:ref_yearwest_coast-5-2011               NA    
+    ## anomIntC:ref_yearwest_coast-5-2012               NA    
+    ## anomIntC:ref_yearwest_coast-5-2013               NA    
+    ## anomIntC:ref_yearwest_coast-5-2014               NA    
+    ## anomIntC:ref_yearwest_coast-5-2015               NA    
+    ## anomIntC:ref_yearwest_coast-5-2016               NA    
+    ## anomIntC:ref_yearwest_coast-5-2017               NA    
+    ## anomIntC:ref_yearwest_coast-5-2018               NA    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 231.6 on 25348 degrees of freedom
+    ## Multiple R-squared:  0.009207,   Adjusted R-squared:  0.001741 
+    ## F-statistic: 1.233 on 191 and 25348 DF,  p-value: 0.01592
+
+    ## # A tibble: 4 x 5
+    ##   term                              estimate std.error statistic  p.value
+    ##   <chr>                                <dbl>     <dbl>     <dbl>    <dbl>
+    ## 1 ref_yeareastern_bering_sea-5-2010    198.       24.4      8.10 5.73e-16
+    ## 2 ref_yeareastern_bering_sea-5-2011    121.       24.4      4.96 7.06e- 7
+    ## 3 ref_yeargulf_of_mexico-1-2009         46.9      26.6      1.76 7.79e- 2
+    ## 4 ref_yearwest_coast-5-2003            138.       29.1      4.74 2.19e- 6
+
+    ## 
+    ## Call:
+    ## lm(formula = wtMtDiffProp ~ ref_year, data = .)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ##  -205.9    -5.3    -2.3    -0.9 20496.2 
+    ## 
+    ## Coefficients:
+    ##                                     Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)                         2.313862  24.283253   0.095   0.9241    
+    ## ref_yearaleutian_islands-5-1991     3.936327  33.402998   0.118   0.9062    
+    ## ref_yearaleutian_islands-5-1994     7.736156  31.192404   0.248   0.8041    
+    ## ref_yearaleutian_islands-5-1997     1.466003  30.449370   0.048   0.9616    
+    ## ref_yearaleutian_islands-5-2000     8.838261  30.057957   0.294   0.7687    
+    ## ref_yearaleutian_islands-5-2002    -1.728131  30.088647  -0.057   0.9542    
+    ## ref_yearaleutian_islands-5-2004     0.266535  29.997550   0.009   0.9929    
+    ## ref_yearaleutian_islands-5-2006    34.676262  30.057957   1.154   0.2487    
+    ## ref_yearaleutian_islands-5-2010    -0.762149  30.027593  -0.025   0.9798    
+    ## ref_yearaleutian_islands-5-2012    -0.264100  29.997550  -0.009   0.9930    
+    ## ref_yearaleutian_islands-5-2014     3.466313  30.057957   0.115   0.9082    
+    ## ref_yearaleutian_islands-5-2016     0.144039  30.182728   0.005   0.9962    
+    ## ref_yearaleutian_islands-5-2018     1.108429  30.214777   0.037   0.9707    
+    ## ref_yeareastern_bering_sea-5-1983   8.632588  31.921166   0.270   0.7868    
+    ## ref_yeareastern_bering_sea-5-1984  51.747389  30.741573   1.683   0.0923 .  
+    ## ref_yeareastern_bering_sea-5-1985  12.214962  30.380450   0.402   0.6876    
+    ## ref_yeareastern_bering_sea-5-1986   7.953290  30.279942   0.263   0.7928    
+    ## ref_yeareastern_bering_sea-5-1987  12.884329  30.313070   0.425   0.6708    
+    ## ref_yeareastern_bering_sea-5-1988  19.047931  30.279942   0.629   0.5293    
+    ## ref_yeareastern_bering_sea-5-1989  -0.637600  30.151027  -0.021   0.9831    
+    ## ref_yeareastern_bering_sea-5-1990  35.887706  30.346571   1.183   0.2370    
+    ## ref_yeareastern_bering_sea-5-1991  -0.579802  30.414714  -0.019   0.9848    
+    ## ref_yeareastern_bering_sea-5-1992   1.033432  30.628770   0.034   0.9731    
+    ## ref_yeareastern_bering_sea-5-1993  -0.819821  30.741573  -0.027   0.9787    
+    ## ref_yeareastern_bering_sea-5-1994   2.616024  30.665925   0.085   0.9320    
+    ## ref_yeareastern_bering_sea-5-1995  -1.735949  30.741573  -0.056   0.9550    
+    ## ref_yeareastern_bering_sea-5-1996   0.250798  30.665925   0.008   0.9935    
+    ## ref_yeareastern_bering_sea-5-1997   0.584175  30.414714   0.019   0.9847    
+    ## ref_yeareastern_bering_sea-5-1998  -0.584974  30.247180  -0.019   0.9846    
+    ## ref_yeareastern_bering_sea-5-1999  -0.133210  30.313070  -0.004   0.9965    
+    ## ref_yeareastern_bering_sea-5-2000   0.417101  30.214777   0.014   0.9890    
+    ## ref_yeareastern_bering_sea-5-2001  21.726459  30.484425   0.713   0.4760    
+    ## ref_yeareastern_bering_sea-5-2002   0.492027  30.182728   0.016   0.9870    
+    ## ref_yeareastern_bering_sea-5-2003   3.857898  30.247180   0.128   0.8985    
+    ## ref_yeareastern_bering_sea-5-2004   3.052981  30.214777   0.101   0.9195    
+    ## ref_yeareastern_bering_sea-5-2005  46.645181  30.346571   1.537   0.1243    
+    ## ref_yeareastern_bering_sea-5-2006  -0.008949  30.346571   0.000   0.9998    
+    ## ref_yeareastern_bering_sea-5-2007   6.024043  30.247180   0.199   0.8421    
+    ## ref_yeareastern_bering_sea-5-2008  -1.327401  30.346571  -0.044   0.9651    
+    ## ref_yeareastern_bering_sea-5-2009  -1.123942  30.346571  -0.037   0.9705    
+    ## ref_yeareastern_bering_sea-5-2010 202.605235  30.313070   6.684 2.38e-11 ***
+    ## ref_yeareastern_bering_sea-5-2011 125.872679  30.313070   4.152 3.30e-05 ***
+    ## ref_yeareastern_bering_sea-5-2012   6.360201  30.346571   0.210   0.8340    
+    ## ref_yeareastern_bering_sea-5-2013   0.700343  30.380450   0.023   0.9816    
+    ## ref_yeareastern_bering_sea-5-2014  -1.012498  30.214777  -0.034   0.9733    
+    ## ref_yeareastern_bering_sea-5-2015   0.240118  30.346571   0.008   0.9937    
+    ## ref_yeareastern_bering_sea-5-2016   2.031428  30.380450   0.067   0.9467    
+    ## ref_yeareastern_bering_sea-5-2017  -2.221871  30.279942  -0.073   0.9415    
+    ## ref_yeareastern_bering_sea-5-2018   6.439066  30.346571   0.212   0.8320    
+    ## ref_yeargulf_of_alaska-5-1987      -0.751794  30.665925  -0.025   0.9804    
+    ## ref_yeargulf_of_alaska-5-1990       3.093821  30.247180   0.102   0.9185    
+    ## ref_yeargulf_of_alaska-5-1993       5.292284  29.582171   0.179   0.8580    
+    ## ref_yeargulf_of_alaska-5-1996       5.064886  28.833845   0.176   0.8606    
+    ## ref_yeargulf_of_alaska-5-1999      -0.156002  28.584115  -0.005   0.9956    
+    ## ref_yeargulf_of_alaska-5-2003      10.515784  28.601035   0.368   0.7131    
+    ## ref_yeargulf_of_alaska-5-2005       3.138450  28.567328   0.110   0.9125    
+    ## ref_yeargulf_of_alaska-5-2007      10.810909  28.584115   0.378   0.7053    
+    ## ref_yeargulf_of_alaska-5-2009      -0.559148  28.584115  -0.020   0.9844    
+    ## ref_yeargulf_of_alaska-5-2011       0.395073  28.584115   0.014   0.9890    
+    ## ref_yeargulf_of_alaska-5-2013       2.224321  28.635279   0.078   0.9381    
+    ## ref_yeargulf_of_alaska-5-2015       1.363076  28.723330   0.047   0.9622    
+    ## ref_yeargulf_of_alaska-5-2017      -1.160102  28.635279  -0.041   0.9677    
+    ## ref_yeargulf_of_mexico-1-2009      47.084824  27.618381   1.705   0.0882 .  
+    ## ref_yeargulf_of_mexico-1-2010       0.037221  27.392275   0.001   0.9989    
+    ## ref_yeargulf_of_mexico-1-2011      -0.159101  27.392275  -0.006   0.9954    
+    ## ref_yeargulf_of_mexico-1-2012      -1.039989  27.401080  -0.038   0.9697    
+    ## ref_yeargulf_of_mexico-1-2013       1.228638  27.401080   0.045   0.9642    
+    ## ref_yeargulf_of_mexico-1-2014      -0.775172  27.409936  -0.028   0.9774    
+    ## ref_yeargulf_of_mexico-1-2015      -0.291349  27.383520  -0.011   0.9915    
+    ## ref_yeargulf_of_mexico-1-2016      -1.528917  27.392275  -0.056   0.9555    
+    ## ref_yeargulf_of_mexico-1-2017       1.349707  27.436807   0.049   0.9608    
+    ## ref_yearnortheast-2-1983           -1.351297  34.248259  -0.039   0.9685    
+    ## ref_yearnortheast-2-1984           -0.183907  33.978292  -0.005   0.9957    
+    ## ref_yearnortheast-2-1985            0.479871  34.248259   0.014   0.9888    
+    ## ref_yearnortheast-2-1986           -1.718713  34.066602  -0.050   0.9598    
+    ## ref_yearnortheast-2-1987           -1.506596  34.156575  -0.044   0.9648    
+    ## ref_yearnortheast-2-1988            2.199076  33.978292   0.065   0.9484    
+    ## ref_yearnortheast-2-1989            2.761019  33.891599   0.081   0.9351    
+    ## ref_yearnortheast-2-1990           -1.290944  33.806478  -0.038   0.9695    
+    ## ref_yearnortheast-2-1991            1.775002  33.806478   0.053   0.9581    
+    ## ref_yearnortheast-2-1992           -0.297715  33.891599  -0.009   0.9930    
+    ## ref_yearnortheast-2-1993           -1.949652  34.156575  -0.057   0.9545    
+    ## ref_yearnortheast-2-1994           10.406712  33.978292   0.306   0.7594    
+    ## ref_yearnortheast-2-1995            1.891011  33.891599   0.056   0.9555    
+    ## ref_yearnortheast-2-1996           -1.922944  33.806478  -0.057   0.9546    
+    ## ref_yearnortheast-2-1997           -1.376637  33.978292  -0.041   0.9677    
+    ## ref_yearnortheast-2-1998            0.404202  34.066602   0.012   0.9905    
+    ## ref_yearnortheast-2-1999            2.586894  33.978292   0.076   0.9393    
+    ## ref_yearnortheast-2-2000           -1.489959  34.156575  -0.044   0.9652    
+    ## ref_yearnortheast-2-2001           -1.775422  34.341706  -0.052   0.9588    
+    ## ref_yearnortheast-2-2002            8.064729  34.341706   0.235   0.8143    
+    ## ref_yearnortheast-2-2003           15.480260  33.806478   0.458   0.6470    
+    ## ref_yearnortheast-2-2004           -2.111870  33.891599  -0.062   0.9503    
+    ## ref_yearnortheast-2-2005           -0.911956  34.066602  -0.027   0.9786    
+    ## ref_yearnortheast-2-2006            0.484703  33.806478   0.014   0.9886    
+    ## ref_yearnortheast-2-2007           -1.668254  33.806478  -0.049   0.9606    
+    ## ref_yearnortheast-2-2008           -0.291782  33.891599  -0.009   0.9931    
+    ## ref_yearnortheast-2-2009            2.263707  33.891599   0.067   0.9467    
+    ## ref_yearnortheast-2-2010           -2.221911  33.806478  -0.066   0.9476    
+    ## ref_yearnortheast-2-2011           -0.421006  33.722886  -0.012   0.9900    
+    ## ref_yearnortheast-2-2012           -1.231747  33.891599  -0.036   0.9710    
+    ## ref_yearnortheast-2-2013           -0.911470  33.806478  -0.027   0.9785    
+    ## ref_yearnortheast-2-2014           -0.756035  34.156575  -0.022   0.9823    
+    ## ref_yearnortheast-2-2015            0.748503  33.806478   0.022   0.9823    
+    ## ref_yearnortheast-2-2016           -1.616096  33.722886  -0.048   0.9618    
+    ## ref_yearnortheast-2-2017           -2.547272  36.260433  -0.070   0.9440    
+    ## ref_yearnortheast-2-2018            0.973035  33.978292   0.029   0.9772    
+    ## ref_yearscotian_shelf-6-1983       -1.916762  48.768448  -0.039   0.9686    
+    ## ref_yearscotian_shelf-6-1984        0.948780  44.334952   0.021   0.9829    
+    ## ref_yearscotian_shelf-6-1985       -1.436491  45.165934  -0.032   0.9746    
+    ## ref_yearscotian_shelf-6-1987       -0.885831  44.741437  -0.020   0.9842    
+    ## ref_yearscotian_shelf-6-1988       -1.837487  45.165934  -0.041   0.9675    
+    ## ref_yearscotian_shelf-6-1989       -2.267365  44.334952  -0.051   0.9592    
+    ## ref_yearscotian_shelf-6-1990       -1.959395  44.741437  -0.044   0.9651    
+    ## ref_yearscotian_shelf-6-1991        2.837920  46.561013   0.061   0.9514    
+    ## ref_yearscotian_shelf-6-1992       -2.085980  44.741437  -0.047   0.9628    
+    ## ref_yearscotian_shelf-6-1993       -1.394957  45.165934  -0.031   0.9754    
+    ## ref_yearscotian_shelf-6-1994       -0.914302  44.334952  -0.021   0.9835    
+    ## ref_yearscotian_shelf-6-1995        1.012021  44.741437   0.023   0.9820    
+    ## ref_yearscotian_shelf-6-1996       -2.414644  44.334952  -0.054   0.9566    
+    ## ref_yearscotian_shelf-6-1997       -1.714972  44.334952  -0.039   0.9691    
+    ## ref_yearscotian_shelf-6-1998       -1.816017  46.074234  -0.039   0.9686    
+    ## ref_yearscotian_shelf-6-1999       -1.774402  44.334952  -0.040   0.9681    
+    ## ref_yearscotian_shelf-6-2000       -1.854201  44.334952  -0.042   0.9666    
+    ## ref_yearscotian_shelf-6-2001       -1.694018  44.334952  -0.038   0.9695    
+    ## ref_yearscotian_shelf-6-2002       -2.176142  44.334952  -0.049   0.9609    
+    ## ref_yearscotian_shelf-6-2003       -2.126601  45.609728  -0.047   0.9628    
+    ## ref_yearscotian_shelf-6-2004       -2.023559  44.334952  -0.046   0.9636    
+    ## ref_yearscotian_shelf-6-2005        0.088562  44.334952   0.002   0.9984    
+    ## ref_yearscotian_shelf-6-2006       -1.941775  44.334952  -0.044   0.9651    
+    ## ref_yearscotian_shelf-6-2007       -1.977266  45.165934  -0.044   0.9651    
+    ## ref_yearscotian_shelf-6-2008       -1.402698  44.334952  -0.032   0.9748    
+    ## ref_yearscotian_shelf-6-2009       -0.129210  44.334952  -0.003   0.9977    
+    ## ref_yearscotian_shelf-6-2010        5.436366  45.609728   0.119   0.9051    
+    ## ref_yearscotian_shelf-6-2011       -1.185209  44.334952  -0.027   0.9787    
+    ## ref_yearscotian_shelf-6-2012       -2.431578  44.334952  -0.055   0.9563    
+    ## ref_yearscotian_shelf-6-2013       -1.852313  44.334952  -0.042   0.9667    
+    ## ref_yearscotian_shelf-6-2014       -1.903208  44.334952  -0.043   0.9658    
+    ## ref_yearscotian_shelf-6-2015       -1.944736  44.334952  -0.044   0.9650    
+    ## ref_yearscotian_shelf-6-2016       -1.753309  44.334952  -0.040   0.9685    
+    ## ref_yearscotian_shelf-6-2017        0.676832  44.334952   0.015   0.9878    
+    ## ref_yearsoutheast-4-1990           -1.201495  32.317593  -0.037   0.9703    
+    ## ref_yearsoutheast-4-1991           -1.449540  32.142683  -0.045   0.9640    
+    ## ref_yearsoutheast-4-1992           -1.586020  32.142683  -0.049   0.9606    
+    ## ref_yearsoutheast-4-1993           -1.066050  32.142683  -0.033   0.9735    
+    ## ref_yearsoutheast-4-1994           -1.085597  32.317593  -0.034   0.9732    
+    ## ref_yearsoutheast-4-1995           -0.539391  32.200119  -0.017   0.9866    
+    ## ref_yearsoutheast-4-1996           -1.692310  32.200119  -0.053   0.9581    
+    ## ref_yearsoutheast-4-1997           -1.742825  32.258416  -0.054   0.9569    
+    ## ref_yearsoutheast-4-1998           -0.273928  32.317593  -0.008   0.9932    
+    ## ref_yearsoutheast-4-1999           -1.216672  32.317593  -0.038   0.9700    
+    ## ref_yearsoutheast-4-2000           -1.470679  32.086087  -0.046   0.9634    
+    ## ref_yearsoutheast-4-2001            0.008575  32.142683   0.000   0.9998    
+    ## ref_yearsoutheast-4-2002            0.011712  32.317593   0.000   0.9997    
+    ## ref_yearsoutheast-4-2003           -1.032635  32.258416  -0.032   0.9745    
+    ## ref_yearsoutheast-4-2004           -0.865181  32.086087  -0.027   0.9785    
+    ## ref_yearsoutheast-4-2005           -1.232541  32.142683  -0.038   0.9694    
+    ## ref_yearsoutheast-4-2006           -1.674730  32.258416  -0.052   0.9586    
+    ## ref_yearsoutheast-4-2007           -0.948353  32.142683  -0.030   0.9765    
+    ## ref_yearsoutheast-4-2008           -1.339896  32.086087  -0.042   0.9667    
+    ## ref_yearsoutheast-4-2009            0.260632  32.200119   0.008   0.9935    
+    ## ref_yearsoutheast-4-2010           -1.287178  32.317593  -0.040   0.9682    
+    ## ref_yearsoutheast-4-2011            1.205503  32.258416   0.037   0.9702    
+    ## ref_yearsoutheast-4-2012            6.299435  32.142683   0.196   0.8446    
+    ## ref_yearsoutheast-4-2013            0.086804  32.142683   0.003   0.9978    
+    ## ref_yearsoutheast-4-2014           -1.920266  32.258416  -0.060   0.9525    
+    ## ref_yearsoutheast-4-2015            3.844716  32.142683   0.120   0.9048    
+    ## ref_yearsoutheast-4-2016           -1.354904  32.030315  -0.042   0.9663    
+    ## ref_yearsoutheast-4-2017            4.795939  32.086087   0.149   0.8812    
+    ## ref_yearsoutheast-4-2018           -2.562952  32.377671  -0.079   0.9369    
+    ## ref_yearwest_coast-5-1986          -1.169193  32.758278  -0.036   0.9715    
+    ## ref_yearwest_coast-5-1989           0.235736  32.893389   0.007   0.9943    
+    ## ref_yearwest_coast-5-1992           0.752071  32.962606   0.023   0.9818    
+    ## ref_yearwest_coast-5-1995          -0.801812  32.962606  -0.024   0.9806    
+    ## ref_yearwest_coast-5-1998           1.184625  32.893389   0.036   0.9713    
+    ## ref_yearwest_coast-5-2001           2.176274  32.758278   0.066   0.9470    
+    ## ref_yearwest_coast-5-2003         142.300594  34.156575   4.166 3.11e-05 ***
+    ## ref_yearwest_coast-5-2004           7.013090  29.660301   0.236   0.8131    
+    ## ref_yearwest_coast-5-2005          -1.304342  29.531345  -0.044   0.9648    
+    ## ref_yearwest_coast-5-2006           2.217721  29.291281   0.076   0.9396    
+    ## ref_yearwest_coast-5-2007          11.693787  29.268487   0.400   0.6895    
+    ## ref_yearwest_coast-5-2008           0.239379  29.201341   0.008   0.9935    
+    ## ref_yearwest_coast-5-2009           5.210300  29.268487   0.178   0.8587    
+    ## ref_yearwest_coast-5-2010           2.108304  29.135994   0.072   0.9423    
+    ## ref_yearwest_coast-5-2011          10.387882  29.223520   0.355   0.7222    
+    ## ref_yearwest_coast-5-2012           4.015369  29.179362   0.138   0.8905    
+    ## ref_yearwest_coast-5-2013           6.472912  29.179362   0.222   0.8244    
+    ## ref_yearwest_coast-5-2014           3.720788  29.245901   0.127   0.8988    
+    ## ref_yearwest_coast-5-2015           2.409235  29.223520   0.082   0.9343    
+    ## ref_yearwest_coast-5-2016          -0.522903  29.114598  -0.018   0.9857    
+    ## ref_yearwest_coast-5-2017          -1.182081  29.360943  -0.040   0.9679    
+    ## ref_yearwest_coast-5-2018           4.604334  29.291281   0.157   0.8751    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 231.6 on 25348 degrees of freedom
+    ## Multiple R-squared:  0.009207,   Adjusted R-squared:  0.001741 
+    ## F-statistic: 1.233 on 191 and 25348 DF,  p-value: 0.01592
 
     ## 
     ## Call:
@@ -515,6 +1612,8 @@ Years](analyze_MHWs_files/figure-gfm/namer-spp-diff-mhwYesNo-boxplot-1.png)
     ## Residual standard error: 231.8 on 25524 degrees of freedom
     ## Multiple R-squared:  0.0007428,  Adjusted R-squared:  0.0001556 
     ## F-statistic: 1.265 on 15 and 25524 DF,  p-value: 0.215
+
+Other models with region as an interaction:
 
     ## 
     ## Call:

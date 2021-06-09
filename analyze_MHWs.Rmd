@@ -19,6 +19,7 @@ library(tidyverse)
 library(here)
 library(lubridate) # for standardizing date format of MHW data
 library(kableExtra)
+library(broom)
 ```
 
 ```{r data, results=FALSE}
@@ -217,6 +218,40 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 ## Models
 
+### Region as random effect
+
+```{r lme_wtMtDiffProp_anomIntC}
+library(lme4)
+lme_wtMtDiffProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  lmer(wtMtDiffProp ~ anomIntC + 1|region, data=.)
+
+summary(lme_wtMtDiffProp_anomIntC)
+```
+
+
+```{r lme_wtMtAnomProp_anomIntC}
+lme_wtMtAnomProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  lmer(wtMtAnomProp ~ anomIntC + 1|region, data=.)
+
+summary(lme_wtMtAnomProp_anomIntC)
+```
+
+```{r lme_wtMtDiffProp_mhwYesNo}
+lme_wtMtDiffProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  lmer(wtMtDiffProp ~ mhwYesNo + 1|region, data=.)
+
+summary(lme_wtMtDiffProp_mhwYesNo)
+```
+
+```{r lme_wtMtAnomProp_mhwYesNo}
+lme_wtMtAnomProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  lmer(wtMtAnomProp ~ mhwYesNo + 1|region, data=.)
+
+summary(lme_wtMtAnomProp_mhwYesNo)
+```
+
 ### MHW yes/no
 
 
@@ -338,8 +373,30 @@ lm_wtMtDiffProp_anomSev_region <- inner_join(namerSummary, mhwSurvSummary) %>%
 summary(lm_wtMtDiffProp_anomSev_region)
 ```
 
-### Species-level models
+### Species-level models using region*year predictors
 
+```{r lm_spp_wtMtDiffProp_anomIntC_ref_year}
+lm_spp_wtMtDiffProp_anomIntC_ref_year <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtDiffProp),
+         wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
+  lm(wtMtDiffProp ~ anomIntC + anomIntC * ref_year, data=.)
+
+summary(lm_spp_wtMtDiffProp_anomIntC_ref_year)
+
+tidy(lm_spp_wtMtDiffProp_anomIntC_ref_year) %>% 
+  filter(p.value < 0.10)
+```
+
+
+```{r lm_spp_wtMtDiffProp_ref_year}
+lm_spp_wtMtDiffProp_ref_year <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtDiffProp),
+         wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
+  lm(wtMtDiffProp ~ ref_year, data=.)
+
+summary(lm_spp_wtMtDiffProp_ref_year)
+
+```
 
 ```{r lm_spp_wtMtDiffProp_anomIntC_region}
 lm_spp_wtMtDiffProp_anomIntC_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
@@ -350,7 +407,6 @@ lm_spp_wtMtDiffProp_anomIntC_region <- inner_join(namerSppSummary, mhwSurvSummar
 summary(lm_spp_wtMtDiffProp_anomIntC_region)
 ```
 
-
 ```{r lm_spp_wtMtDiffProp_anomDays_region}
 lm_spp_wtMtDiffProp_anomDays_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
@@ -358,7 +414,10 @@ lm_spp_wtMtDiffProp_anomDays_region <- inner_join(namerSppSummary, mhwSurvSummar
   lm(wtMtDiffProp ~ anomDays + anomDays * region, data=.)
 
 summary(lm_spp_wtMtDiffProp_anomDays_region)
+
 ```
+
+Other models with region as an interaction:
 
 ```{r lm_spp_wtMtDiffProp_anomSev_region}
 lm_spp_wtMtDiffProp_anomSev_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
