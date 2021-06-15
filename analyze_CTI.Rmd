@@ -44,6 +44,8 @@ ctiNamerSummary <- namerSummary %>%
          ctiDiffProp = ctiDiff / lag(CTI),
          ctiAnom = CTI - mean(CTI),
          ctiAnomProp = ctiAnom / mean(CTI))
+
+write_csv(ctiNamerSummary, here('processed-data','survey_CTI_with_MHWs.csv'))
 ```
 
 ```{r CTI-lineplots, fig.cap="CTI Change vs. MHWs", fig.height=7}
