@@ -44,10 +44,17 @@ namer_abund <- dat_exploded %>%
 
 # Pull in Europe data
 
-This was prepared by Aurore Maureaud and downloaded from here: https://github.com/AquaAuma/CleanTrawlNAmEUr/blob/main/data/SurveyCPUEs26102020.RData
+This was prepared by Aurore Maureaud and downloaded from here: https://drive.google.com/drive/u/0/folders/1CGY8oI6DbpdHYAMV_8ztetxSrhUPpu3F 
 
 ```{r europe, eval=TRUE, echo=FALSE, results=FALSE, message=FALSE, warning=FALSE}
-load(here("processed-data","SurveyCPUEs26102020.Rdata"))
+nor <- read_csv(here("raw-data","NOR-BTS_clean_May2021.csv"))
+
+nor_abund <- nor %>% 
+  mutate(region = country) %>% 
+  rename('spp'='accepted_name') %>% 
+  group_by(region, spp, year) %>% 
+  summarise(sumwt = sum(wgt_cpue)) # this is the mean spp weight in the net, not in the whole region -- need to multiply by sampling area!
+
 ```
 
 # Write out processed biomass data

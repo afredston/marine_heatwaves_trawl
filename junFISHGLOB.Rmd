@@ -46,10 +46,10 @@ library(here)
 style_duo_accent(
   primary_color = "#EBB59F",
  # primary_color = "#008080",
-  secondary_color = "#0B1B32",
-  text_color = "#0B1B32",
-  inverse_header_color = "#0B1B32",
-  title_slide_text_color="#0B1B32",
+  secondary_color = "#001f3d",
+  text_color = "#001f3d",
+  inverse_header_color = "#001f3d",
+  title_slide_text_color="#001f3d",
   link_color = "#EBB59F",
 # link_color = "#008080",
   header_font_google = google_font("Cardo"),
@@ -235,7 +235,7 @@ theme_bw() +
 
 ---
 
-```{r namer-mhw-years-cpue-scatter-diff, fig.cap="Biomass Change vs MHW-Years",results='hide'}
+```{r namer-mhw-years-cpue-scatter-diff, fig.cap="Biomass Change vs MHW-Years",results='hide', eval=FALSE}
 
 outlierdiff <- namerSummary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
@@ -276,6 +276,7 @@ theme_bw() +
   labs(x="Cumulative Mean Intensity of MHW",y="Prop. Change CPUE vs. Time-Series Mean")
 ```
 
+
 ---
 
 ```{r namer-spp-diff-mhwYesNo-log-boxplot, fig.cap="Log Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years"}
@@ -292,10 +293,39 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 ```
 
+
 ---
 
 
-```{r namer-spp-anom-mhwYesNo-log-boxplot, fig.cap="Log Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years"}
+```{r namer-spp-anom-coef-boxplot, fig.cap="Distribution of Coefficients for Single-Species Linear Models of Biomass Change on MHW Intensity"}
+lm_spp_anom <- left_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtDiffProp),
+         wtMtDiffProp < Inf) %>% 
+  group_by(spp, region) %>% 
+  nest() %>% 
+  mutate(
+    model = purrr::map(data, ~lm(wtMtAnomProp ~ anomIntC, data = .x)), 
+    tidymodel = purrr::map(model, tidy)
+  ) %>% 
+  unnest(tidymodel)  %>% 
+  filter(!term=="(Intercept)") %>%
+  select(-data) %>%
+  ungroup()%>% 
+  select(-model)
+
+lm_spp_anom %>% 
+  ggplot() +
+  geom_density(aes(x=estimate)) + 
+  facet_wrap(~region) +
+  theme_bw() + 
+  labs(x="Coefficient of Change in Species Biomass ~ MHW Intensity", y="Density") +
+  NULL
+```
+
+---
+
+
+```{r namer-spp-anom-mhwYesNo-log-boxplot, fig.cap="Log Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years", eval=FALSE}
 left_join(namerSppSummary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
@@ -348,6 +378,7 @@ theme_bw()
 * Focus in on "famous MHWs"
 * Incorporate all trawl surveys! (May switch to different index of biomass)
 * Test categorical MHW bins (like hurricanes)?
+* Taxonomic checks?
 
 ## Thanks!
 

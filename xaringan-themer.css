@@ -43,22 +43,22 @@
   --header-h3-font-size: 1.75rem;
 
   /* Colors */
-  --text-color: #0B1B32;
+  --text-color: #001f3d;
   --header-color: #EBB59F;
   --background-color: #FFFFFF;
   --link-color: #EBB59F;
-  --text-bold-color: #0B1B32;
+  --text-bold-color: #001f3d;
   --code-highlight-color: rgba(255,255,0,0.5);
   --inverse-text-color: #FFFFFF;
-  --inverse-background-color: #0B1B32;
-  --inverse-header-color: #0B1B32;
+  --inverse-background-color: #001f3d;
+  --inverse-header-color: #001f3d;
   --inverse-link-color: #EBB59F;
   --title-slide-background-color: #EBB59F;
-  --title-slide-text-color: #0B1B32;
+  --title-slide-text-color: #001f3d;
   --header-background-color: #EBB59F;
   --header-background-text-color: #FFFFFF;
   --primary: #EBB59F;
-  --secondary: #0B1B32;
+  --secondary: #001f3d;
   --white: #FFFFFF;
   --black: #000000;
 }
@@ -101,7 +101,7 @@ h1, h2, h3 {
 }
 .remark-inline-code {
   font-size: var(--code-inline-font-size);
-  color: #0B1B32;
+  color: #001f3d;
 }
 .remark-slide-number {
   color: #EBB59F;
@@ -174,7 +174,7 @@ img, video, iframe {
   max-width: 100%;
 }
 blockquote {
-  border-left: solid 5px #0B1B3280;
+  border-left: solid 5px #001f3d80;
   padding-left: 1em;
 }
 .remark-slide table {
@@ -189,7 +189,7 @@ th, td {
   padding: 5px;
 }
 .remark-slide thead, .remark-slide tfoot, .remark-slide tr:nth-child(even) {
-  background: #CED1D6;
+  background: #CCD2D8;
 }
 table.dataTable tbody {
   background-color: var(--background-color);
@@ -199,7 +199,7 @@ table.dataTable.display tbody tr.odd {
   background-color: var(--background-color);
 }
 table.dataTable.display tbody tr.even {
-  background-color: #CED1D6;
+  background-color: #CCD2D8;
 }
 table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
   background-color: rgba(255, 255, 255, 0.5);
