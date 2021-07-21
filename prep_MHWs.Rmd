@@ -5,27 +5,36 @@ date: "5/21/2021"
 output: html_document
 ---
 
-```{r packages, results=FALSE}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results=FALSE, eval=TRUE)
+```
+
+```{r packages}
 library(tidyverse)
 library(here)
 library(lubridate) # for standardizing date format of MHW data
 ```
 
-```{r rawdata, results=FALSE}
+```{r rawdata}
 mhwRaw <- read_delim(here("processed-data","MHW_95P_surveys_for_malin.csv"), ";") # file from Thomas - download and move to processed-data folder
 mhwYrRaw <- read_delim(here("processed-data","mhws_90P_surveys_yearly.csv"), ";") 
-namer_abund <- read_csv(here("processed-data","biomass_time_namer.csv"))
+namer_cpue <- read_csv(here("processed-data","biomass_time_namer.csv"))
+nor_cpue <- read_csv(here("processed-data","biomass_time_norway.csv"))
+cpuedat <- bind_rows(namer_cpue, nor_cpue)
+
+maxyr <- max(cpuedat$year)
 ```
 
 ```{r datematch, results=FALSE}
 # The goal of this part of code is to match each survey (noting that they start at different times of year in different regions, and don't all happen each year) to MHW data from only the 365 days preceding the survey in that region. It took me some time to hammer out this solution (and needed help from @GracoRoza and @KivaOken) and it could probably be rewritten to be shorter.
 
-namerRegs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
+# regs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
 
 # step 1: get a dataframe of the survey start months
-survey_start_times <- namer_abund%>%
+survey_start_times <- cpuedat %>%
   filter(year>=1982) %>% # start of MHW data
-  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+  mutate(region=gsub("-","",region), # reformat to be consistent with MHW region IDs
+    region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>%
   mutate(month_year = paste0(startmonth,"-",year)) %>%
   select(region, year, month_year) %>%
@@ -50,7 +59,7 @@ survey_start_times <- namer_abund%>%
 
 # step 2: expand this out to all possible months, tracking which reference year they belong to
 # get all month*year combinations for each survey and denote which reference year (12-month period custom to each region based on when survey began) each belongs to 
-survey_years <- expand.grid(month=seq(1, 12, 1), year=seq(1982, 2018, 1), region=namerRegs) %>% # get a factorial combo of every possible month*year; have to start in 1982 even though we can't use surveys before 1983 because we need to match to env data from 1982
+survey_years <- expand.grid(month=seq(1, 12, 1), year=seq(1982, maxyr, 1), region=unique(survey_start_times$region)) %>% # get a factorial combo of every possible month*year; have to start in 1982 even though we can't use surveys before 1983 because we need to match to env data from 1982
   mutate(region_month_year = paste0(region,"-",month,"-",year)) %>% # create unique identifier
   mutate(ref_year = ifelse(region_month_year %in% survey_start_times$ref_year, region_month_year, NA),
          month_year = paste0(month,"-",year)) %>% 
@@ -66,7 +75,7 @@ mhwSurv <- mhwRaw %>%
   rename("dateRaw"=X1) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
   mutate(sstAnom=replace_na(sstAnom, 0)) %>%  # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros for easier arithmetic
-  filter(region %in% namerRegs) %>% 
+  filter(region %in% unique(survey_start_times$region)) %>% 
   mutate(date = dmy(dateRaw)) %>% # standardize date formats
   select(-dateRaw) %>% 
   mutate(year = year(date),
@@ -85,13 +94,14 @@ mhwSurv <- mhwRaw %>%
 #Make different summary datasets of survey data + MHW data
 
 # stats pooled across all species 
-namerSummary <- namer_abund %>% 
+region_summary <- cpuedat %>% 
   filter(year>=1982) %>% # start of MHW data
-  mutate(region = gsub(" ","_",str_to_lower(region)), # reformat to be consistent with MHW region IDs
+  mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
+    region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>% 
   left_join(survey_start_times, by=c('region','year')) %>% 
   group_by(ref_year, region, year) %>% 
-  summarise(wt = sum(sumwt)) %>% # get total weight across all species for the region*year
+  summarise(wt = sum(wtcpue_mean)) %>% # get total weight across all species for the region*year
   mutate(wtMt = wt/1000) %>% # convert to metric tons from kg
   group_by(region) %>% 
   arrange(year) %>% 
@@ -102,12 +112,13 @@ namerSummary <- namer_abund %>%
   ) 
 
 # species-level stats
-namerSppSummary <- namer_abund %>% 
-  filter(year>=1982) %>% 
-  mutate(region = gsub(" ","_",str_to_lower(region)),
+region_spp_summary <- cpuedat %>% 
+  filter(year>=1982) %>% # start of MHW data
+  mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
+    region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>% 
-  mutate(wtMt = sumwt/1000) %>% 
-  select(-sumwt) %>% 
+  mutate(wtMt = wtcpue_mean/1000) %>% 
+  select(-wtcpue_mean) %>% 
   left_join(survey_start_times, by=c('region','year')) %>% 
   group_by(region, spp) %>% 
   arrange(year) %>% 
@@ -120,7 +131,7 @@ namerSppSummary <- namer_abund %>%
   ) 
 
 # get highest-biomass spp in each region 
-topspp <- namerSppSummary %>% 
+topspp <- region_spp_summary %>% 
   group_by(region, spp) %>% 
   summarise(wtTotal = sum(wtMt)) %>% 
   group_by(region) %>% 
@@ -165,8 +176,8 @@ mhwYrTidy <- mhwYrRaw %>%
 ```{r save}
 write_csv(mhwSurvSummary, here("processed-data","survey_MHW_summary_stats.csv"))
 write_csv(mhwYrTidy, here("processed-data","MHW_calendar_year_anomaly.csv"))
-write_csv(namerSummary, here("processed-data","survey_region_biomass_with_MHWs.csv"))
-write_csv(namerSppSummary, here("processed-data","survey_species_biomass_with_MHWs.csv"))
+write_csv(region_summary, here("processed-data","survey_region_biomass_with_MHWs.csv"))
+write_csv(region_spp_summary, here("processed-data","survey_species_biomass_with_MHWs.csv"))
 write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
 
 ```
