@@ -25,8 +25,8 @@ library(broom)
 ```{r data, results=FALSE}
 mhwSurvSummary <- read_csv(here("processed-data","survey_MHW_summary_stats.csv"))
 mhwYrTidy <- read_csv(here("processed-data","MHW_calendar_year_anomaly.csv"))
-namerSummary <-read_csv(here("processed-data","survey_region_biomass_with_MHWs.csv"))
-namerSppSummary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
+region_summary <-read_csv(here("processed-data","survey_region_biomass_with_MHWs.csv"))
+region_species_summary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 ```
 
@@ -39,14 +39,14 @@ Let's plot several marine heatwave indices against several CPUE indices, to see 
 In addition to summing all CPUE (which will be driven by common species) I've calculated proportional change first at the single-species level and then averaged across all species in a region. This gives all species equal weight while also standardizing and centering catch values. This is shown below both as an absolute value (magnitude of change only) and from averaging across true units of single-species values. 
 
 ```{r namer-mhw-cpue-metrics, fig.cap="MHW Metrics vs. Sum CPUE Change", fig.height=7}
-sppdat <- namerSppSummary %>% 
+sppdat <- region_spp_summary %>% 
   group_by(region) %>% 
   filter(year > min(year)) %>% 
   group_by(region, year, ref_year) %>% 
   summarise(wtMtAnomPropMean = mean(wtMtAnomProp, na.rm=TRUE),
             wtMtAnomPropMeanAbs = mean(abs(wtMtAnomProp), na.rm=TRUE)) 
 
-namerSummary %>% 
+region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data for plotting hot years
@@ -79,7 +79,7 @@ namerSummary %>%
   NULL
 
 # same plot just formatted slightly differently for writing out 
-ggsummary <- namerSummary %>% 
+ggsummary <- region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data for plotting hot years
@@ -116,7 +116,7 @@ ggsave(ggsummary, filename=here("results","line_plots_all_CPUE_MHW.png"), dpi=30
 
 ```{r namer-mhw-years-cpue-scatter, fig.cap="Biomass Change vs MHW-Years", fig.height=7}
 
-namerSummary %>% 
+region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data 
@@ -128,7 +128,7 @@ namerSummary %>%
   theme_bw() + 
   labs(x="Year",y="Prop. Change CPUE vs. Last Year")
 
-ggscatter <- namerSummary %>% 
+ggscatter <- region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data 
@@ -147,7 +147,7 @@ ggsave(ggscatter, filename=here("results","scatter_plots_all_CPUE_MHW.png"), dpi
 
 ```{r namer-mhw-years-cpue-hist, fig.cap="Biomass Change vs MHW-Years", fig.height=7}
 
-namerSummary %>% 
+region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data for plotting hot years
@@ -158,7 +158,7 @@ namerSummary %>%
   geom_histogram() +
   theme_bw()
 
-gghist <- namerSummary %>% 
+gghist <- region_summary %>% 
   left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
   filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
   left_join(mhwYrTidy) %>% # get calendar year data for plotting hot years 
@@ -176,7 +176,7 @@ ggsave(gghist, filename=here("results","histograms_all_CPUE_MHW.png"), dpi=300, 
 ### Species-level
 
 ```{r namer-spp-anom-mhw-scatter, fig.cap="Species Proportional CPUE Anomaly vs. MHW Intensity", fig.height=5}
-left_join(namerSppSummary, mhwSurvSummary) %>% 
+left_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   ggplot() + 
@@ -189,7 +189,7 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 
 ```{r namer-spp-diff-mhw-scatter, fig.cap="Species Proportional CPUE Year-Over-Year Change vs. MHW Intensity", fig.height=5}
-left_join(namerSppSummary, mhwSurvSummary) %>% 
+left_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   ggplot() + 
@@ -203,10 +203,9 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 
 ```{r namer-spp-diff-mhwYesNo-boxplot, fig.cap="Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years", fig.height=5}
-left_join(namerSppSummary, mhwSurvSummary) %>% 
+left_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
   filter(!is.na(mhwYesNo)) %>% 
   ggplot() + 
   geom_boxplot(aes(x=mhwYesNo, y=wtMtDiffProp)) +
@@ -222,7 +221,7 @@ left_join(namerSppSummary, mhwSurvSummary) %>%
 
 ```{r lme_wtMtDiffProp_anomIntC}
 library(lme4)
-lme_wtMtDiffProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lme_wtMtDiffProp_anomIntC <- inner_join(region_summary, mhwSurvSummary) %>% 
   lmer(wtMtDiffProp ~ anomIntC + 1|region, data=.)
 
 summary(lme_wtMtDiffProp_anomIntC)
@@ -230,23 +229,21 @@ summary(lme_wtMtDiffProp_anomIntC)
 
 
 ```{r lme_wtMtAnomProp_anomIntC}
-lme_wtMtAnomProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lme_wtMtAnomProp_anomIntC <- inner_join(region_summary, mhwSurvSummary) %>% 
   lmer(wtMtAnomProp ~ anomIntC + 1|region, data=.)
 
 summary(lme_wtMtAnomProp_anomIntC)
 ```
 
 ```{r lme_wtMtDiffProp_mhwYesNo}
-lme_wtMtDiffProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lme_wtMtDiffProp_mhwYesNo <- inner_join(region_summary, mhwSurvSummary) %>% 
   lmer(wtMtDiffProp ~ mhwYesNo + 1|region, data=.)
 
 summary(lme_wtMtDiffProp_mhwYesNo)
 ```
 
 ```{r lme_wtMtAnomProp_mhwYesNo}
-lme_wtMtAnomProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lme_wtMtAnomProp_mhwYesNo <- inner_join(region_summary, mhwSurvSummary) %>% 
   lmer(wtMtAnomProp ~ mhwYesNo + 1|region, data=.)
 
 summary(lme_wtMtAnomProp_mhwYesNo)
@@ -256,8 +253,7 @@ summary(lme_wtMtAnomProp_mhwYesNo)
 
 
 ```{r lm_wtMtDiffProp_mhwYesNo}
-lm_wtMtDiffProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_wtMtDiffProp_mhwYesNo <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ mhwYesNo, data=.)
 
 summary(lm_wtMtDiffProp_mhwYesNo)
@@ -265,8 +261,7 @@ summary(lm_wtMtDiffProp_mhwYesNo)
 
 
 ```{r lm_wtMtAnomProp_mhwYesNo}
-lm_wtMtAnomProp_mhwYesNo <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_wtMtAnomProp_mhwYesNo <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ mhwYesNo, data=.)
 
 summary(lm_wtMtAnomProp_mhwYesNo)
@@ -274,16 +269,14 @@ summary(lm_wtMtAnomProp_mhwYesNo)
 
 
 ```{r lm_wtMtAnomProp_mhwYesNo_region}
-lm_wtMtAnomProp_mhwYesNo_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_wtMtAnomProp_mhwYesNo_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ mhwYesNo + mhwYesNo * region, data=.)
 
 summary(lm_wtMtAnomProp_mhwYesNo_region)
 ```
 
 ```{r lm_wtMtDiffProp_mhwYesNo_region}
-lm_wtMtDiffProp_mhwYesNo_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
-  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_wtMtDiffProp_mhwYesNo_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ mhwYesNo + mhwYesNo * region, data=.)
 
 summary(lm_wtMtDiffProp_mhwYesNo_region)
@@ -291,8 +284,7 @@ summary(lm_wtMtDiffProp_mhwYesNo_region)
 
 
 ```{r lm_spp_wtMtDiffProp_mhwYesNo_region}
-lm_spp_wtMtDiffProp_mhwYesNo_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
-    mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_spp_wtMtDiffProp_mhwYesNo_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ mhwYesNo + mhwYesNo * region, data=.)
@@ -300,8 +292,7 @@ lm_spp_wtMtDiffProp_mhwYesNo_region <- inner_join(namerSppSummary, mhwSurvSummar
 summary(lm_spp_wtMtDiffProp_mhwYesNo_region)
 ```
 ```{r lm_spp_wtMtAnomProp_mhwYesNo_region}
-lm_spp_wtMtAnomProp_mhwYesNo_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
-    mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+lm_spp_wtMtAnomProp_mhwYesNo_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtAnomProp ~ mhwYesNo + mhwYesNo * region, data=.)
@@ -313,7 +304,7 @@ summary(lm_spp_wtMtAnomProp_mhwYesNo_region)
 ### Net change in biomass 
 
 ```{r lm_wtMtDiffProp_anomIntC}
-lm_wtMtDiffProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtDiffProp_anomIntC <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ anomIntC, data=.)
 
 summary(lm_wtMtDiffProp_anomIntC)
@@ -321,14 +312,14 @@ summary(lm_wtMtDiffProp_anomIntC)
 
 
 ```{r lm_wtMtAnomProp_anomIntC}
-lm_wtMtAnomProp_anomIntC <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtAnomProp_anomIntC <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ anomIntC, data=.)
 
 summary(lm_wtMtAnomProp_anomIntC)
 ```
 
 ```{r lm_wtMtDiffProp_anomIntC_region}
-lm_wtMtDiffProp_anomIntC_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtDiffProp_anomIntC_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ anomIntC + anomIntC * region, data=.)
 
 summary(lm_wtMtDiffProp_anomIntC_region)
@@ -336,7 +327,7 @@ summary(lm_wtMtDiffProp_anomIntC_region)
 
 
 ```{r lm_wtMtAnomProp_anomIntC_region}
-lm_wtMtAnomProp_anomIntC_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtAnomProp_anomIntC_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ anomIntC + anomIntC * region, data=.)
 
 summary(lm_wtMtAnomProp_anomIntC_region)
@@ -344,7 +335,7 @@ summary(lm_wtMtAnomProp_anomIntC_region)
 
 
 ```{r lm_wtMtAnomProp_anomDays_region}
-lm_wtMtAnomProp_anomDays_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtAnomProp_anomDays_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ anomDays + anomDays * region, data=.)
 
 summary(lm_wtMtAnomProp_anomDays_region)
@@ -352,14 +343,14 @@ summary(lm_wtMtAnomProp_anomDays_region)
 
 
 ```{r lm_wtMtDiffProp_anomDays_region}
-lm_wtMtDiffProp_anomDays_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtDiffProp_anomDays_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ anomDays + anomDays * region, data=.)
 
 summary(lm_wtMtDiffProp_anomDays_region)
 ```
 
 ```{r lm_wtMtAnomProp_anomSev_region}
-lm_wtMtAnomProp_anomSev_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtAnomProp_anomSev_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtAnomProp ~ anomSev + anomSev * region, data=.)
 
 summary(lm_wtMtAnomProp_anomSev_region)
@@ -367,7 +358,7 @@ summary(lm_wtMtAnomProp_anomSev_region)
 
 
 ```{r lm_wtMtDiffProp_anomSev_region}
-lm_wtMtDiffProp_anomSev_region <- inner_join(namerSummary, mhwSurvSummary) %>% 
+lm_wtMtDiffProp_anomSev_region <- inner_join(region_summary, mhwSurvSummary) %>% 
   lm(wtMtDiffProp ~ anomSev + anomSev * region, data=.)
 
 summary(lm_wtMtDiffProp_anomSev_region)
@@ -376,7 +367,7 @@ summary(lm_wtMtDiffProp_anomSev_region)
 ### Species-level models using region*year predictors
 
 ```{r lm_spp_wtMtDiffProp_anomIntC_ref_year}
-lm_spp_wtMtDiffProp_anomIntC_ref_year <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtDiffProp_anomIntC_ref_year <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ anomIntC + anomIntC * ref_year, data=.)
@@ -389,7 +380,7 @@ tidy(lm_spp_wtMtDiffProp_anomIntC_ref_year) %>%
 
 
 ```{r lm_spp_wtMtDiffProp_ref_year}
-lm_spp_wtMtDiffProp_ref_year <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtDiffProp_ref_year <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ ref_year, data=.)
@@ -399,7 +390,7 @@ summary(lm_spp_wtMtDiffProp_ref_year)
 ```
 
 ```{r lm_spp_wtMtDiffProp_anomIntC_region}
-lm_spp_wtMtDiffProp_anomIntC_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtDiffProp_anomIntC_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ anomIntC + anomIntC * region, data=.)
@@ -408,7 +399,7 @@ summary(lm_spp_wtMtDiffProp_anomIntC_region)
 ```
 
 ```{r lm_spp_wtMtDiffProp_anomDays_region}
-lm_spp_wtMtDiffProp_anomDays_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtDiffProp_anomDays_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ anomDays + anomDays * region, data=.)
@@ -420,7 +411,7 @@ summary(lm_spp_wtMtDiffProp_anomDays_region)
 Other models with region as an interaction:
 
 ```{r lm_spp_wtMtDiffProp_anomSev_region}
-lm_spp_wtMtDiffProp_anomSev_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtDiffProp_anomSev_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtDiffProp),
          wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtDiffProp ~ anomSev + anomSev * region, data=.)
@@ -430,7 +421,7 @@ summary(lm_spp_wtMtDiffProp_anomSev_region)
 
 
 ```{r lm_spp_wtMtDiffAnom_anomIntC_region}
-lm_spp_wtMtAnomProp_anomIntC_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtAnomProp_anomIntC_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtAnomProp ~ anomIntC + anomIntC * region, data=.)
@@ -440,7 +431,7 @@ summary(lm_spp_wtMtAnomProp_anomIntC_region)
 
 
 ```{r lm_spp_wtMtDiffAnom_anomDays_region}
-lm_spp_wtMtAnomProp_anomDays_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtAnomProp_anomDays_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtAnomProp ~ anomDays + anomDays * region, data=.)
@@ -449,7 +440,7 @@ summary(lm_spp_wtMtAnomProp_anomDays_region)
 ```
 
 ```{r lm_spp_wtMtDiffAnom_anomSev_region}
-lm_spp_wtMtAnomProp_anomSev_region <- inner_join(namerSppSummary, mhwSurvSummary) %>% 
+lm_spp_wtMtAnomProp_anomSev_region <- inner_join(region_spp_summary, mhwSurvSummary) %>% 
   filter(!is.na(wtMtAnomProp),
          wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
   lm(wtMtAnomProp ~ anomSev + anomSev * region, data=.)

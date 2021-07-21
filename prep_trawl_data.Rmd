@@ -47,7 +47,11 @@ nor_raw_zeros <- nor_raw %>%
   expand(haul_id, accepted_name) %>% 
   left_join(nor_haul_info) %>% # populate all the haul-level columns 
   left_join(nor_raw) %>% # add species data back in
-  mutate(wgt_cpue = replace_na(wgt_cpue, 0))# convert NAs to 0s (true absences)
+  mutate(wgt_cpue = replace_na(wgt_cpue, 0)) %>% # convert NAs to 0s (true absences)
+  filter(year >= 2004, # as per Laurene Pecuchet, filtering to only include the Barents Sea autumn survey in years with a standardized survey methodology
+         latitude >= 70,
+         month %in% c(8,9,10)
+  ) # this goes from ~6,100,000 records to just 200,000 ... is there a way to use the rest of the data? (or maybe they're artefacts of the expansion -- e.g., species that are only in the Norwegian Sea?)
 ```
 
 ```{r tidy data}

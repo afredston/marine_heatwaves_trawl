@@ -5,6 +5,8 @@ date: "5/21/2021"
 output: html_document
 ---
 
+PLEASE CHECK EACH DF MANUALLY WHEN NEW REGIONS ARE INCORPORATED to be sure the lag calculations are working correctly and the region names were harmonized!
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results=FALSE, eval=TRUE)
 ```
@@ -146,12 +148,17 @@ topspp <- region_spp_summary %>%
 # prep MHW for merging with surveys
 mhwSurvSummary <- mhwSurv %>% 
   group_by(ref_year) %>% 
+  arrange(date) %>% 
+  mutate(mhwYesNoPrep = if_else(sstAnom > 0 & lag(sstAnom, 1) > 0 & lag(sstAnom, 2) > 0 & lag(sstAnom, 3) > 0 & lag(sstAnom, 4) > 0, "yes","no"), # using the definition of a MHW event as five continuous days of elevated temperatures
+         mhwYesNo = ifelse("yes" %in% mhwYesNoPrep, "yes", "no") # is there at least one 5-day MHW event in the year?
+         ) %>% 
+  group_by(ref_year, mhwYesNo) %>% 
   summarise(
     anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
     anomSev = sum(sstAnom, na.rm=TRUE), # add up total anomaly values
     anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
   ) %>% 
-  mutate(anomIntC = replace_na(anomIntC, 0)) # replacing NAs in AnomIntC that came from dividing by 0 with 0s
+  mutate(anomIntC = replace_na(anomIntC, 0))  # replacing NAs in AnomIntC that came from dividing by 0 with 0s
 
 # datasets based on calendar year -- use only for characterizing regional MHWs, not for comparing to trawl data -- BE CAREFUL ABOUT MERGING THE DATASETS GENERATED BELOW THIS LINE WITH THE SURVEYS!
 mhwTidy <- mhwRaw %>% 
