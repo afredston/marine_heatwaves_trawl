@@ -5,10 +5,6 @@ date: "10/20/2020"
 output: html_document
 ---
 
-IT IS VERY IMPORTANT TO CHECK THAT THERE ARE NO WINTER SURVEYS, AND IF THERE ARE, REVISE THE WAY THE START MONTH IS ESTIMATED. SURVEYS THAT STRADDLE THE NEW YEAR WOULD END UP WITH THE WRONG "START MONTH" FROM EG min(12, 1, 2). 
-
-need to think more about gomx, the months run from 1 to 12, but it's a summer and fall survey...
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results=FALSE, eval=TRUE)
 ```
@@ -52,11 +48,28 @@ nor_raw_zeros <- nor_raw %>%
          latitude >= 70,
          month %in% c(8,9,10)
   ) # this goes from ~6,100,000 records to just 200,000 ... is there a way to use the rest of the data? (or maybe they're artefacts of the expansion -- e.g., species that are only in the Norwegian Sea?)
+
+# Europe
+datras_raw <- read_csv(here("raw-data","DATRAS_clean_Aug2021.csv"))%>% 
+  select(where(~!all(is.na(.x)))) #drop FISHGLOB columns that are all NAs for this survey
+
+datras_haul_info <- datras_raw %>% 
+  select("survey", "haul_id", "country", "continent", "year", "month", 
+"quarter", "latitude", "longitude", "haul_dur", "area_swept", 
+"gear", "depth") %>% 
+  distinct() # get all non-species-level information
+
+datras_raw_zeros <- datras_raw %>% 
+  expand(haul_id, accepted_name) %>% 
+  left_join(datras_haul_info) %>% # populate all the haul-level columns 
+  left_join(datras_raw) %>% # add species data back in
+  mutate(wgt_cpue = replace_na(wgt_cpue, 0)) # convert NAs to 0s (true absences)
 ```
 
 ```{r tidy data}
 # get start months for each survey 
-namer_survey_months <- read_csv(here("processed-data","compiled_haul_data.csv")) %>% 
+namer_survey_months <- read_csv(here("processed-data","compiled_haul_data.csv")) %>% # starting with the haul data because oceanadapt outputs do not retain the date or month
+  filter(haulid %in% namer_raw_zeros$haulid) %>% # because compiled_haul_data has no QA/QC checks, need to drop the hauls that aren't in the actual data (which has been QA/QCed) before getting the start months!
   mutate(month = lubridate::month(datetime)) %>% # suggest checking that there are no december entries here, and if there are, ensure that they're fall surveys not winter, so they don't represent start months! for NAmer this is the case for GoMx and NEUS
   group_by(region) %>% 
   summarise(startmonth=min(month)) %>% 
@@ -66,6 +79,54 @@ namer_survey_months <- read_csv(here("processed-data","compiled_haul_data.csv"))
 
 norway_survey_month <- min(nor_raw$month)
 
+# here, we split up all the Europe surveys to select only the fall / winter surveys and correctly assign start months # most are from the supplementary material for Maureaud et al. 10.1098/rspb.2019.1189
+# the rest are from the data itself and pers. comm. A. Maureaud
+
+# baltic sea - pers. comm. A. Maureaud re: work by L. Pecuchet and R. Frelat
+bits_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=='BITS', month %in% c(2, 3)) %>% 
+  mutate(startmonth=2)
+  
+# bay of biscay
+evhoe_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=="EVHOE", month %in% c(10, 11, 12)) %>% 
+  mutate(startmonth=10)
+
+# east english channel
+fr_cgfs_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=="FR-CGFS", month %in% c(10, 11, 12)) %>% 
+  mutate(startmonth=10)
+  
+# ireland
+ie_igfs_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=="IE-IGFS", month %in% c(10, 11, 12)) %>% 
+  mutate(startmonth=10)
+  
+# irish sea
+nigfs_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=="NIGFS", month %in% c(1, 2, 3)) %>% 
+  mutate(startmonth=1)
+  
+# north sea
+ns_ibts_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=="NS-IBTS", month %in% c(1, 2, 3)) %>% 
+  mutate(startmonth=1)
+
+# portugal - OK to derive start mo from raw data
+pt_ibts_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=='PT-IBTS') %>% 
+  mutate(startmonth = min(month))
+
+# rockall - OK to derive start mo from raw data
+rockall_raw_zeros <- datras_raw_zeros %>% 
+  filter(survey=='ROCKALL') %>% 
+  mutate(startmonth = min(month))
+
+# scottish west coast
+swc_ibts_raw_zeros <-datras_raw_zeros %>% 
+  filter(survey=="SWC-IBTS", month %in% c(1, 2, 3)) %>% 
+  mutate(startmonth=1)
+  
 # make tidy dataframe 
 namer_cpue <- namer_raw_zeros %>% 
   filter(!wtcpue==Inf) %>% # 19 values from the Southeast US Summer survey in 1992 have values of Inf for some reason
@@ -79,6 +140,11 @@ nor_cpue <- nor_raw_zeros %>%
   group_by(region, spp, year) %>% 
   summarise(wtcpue_mean = mean(wgt_cpue))
 nor_cpue$startmonth  <- norway_survey_month
+
+datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, nigfs_raw_zeros, ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) %>% 
+  mutate(spp=accepted_name, region=survey) %>% 
+  group_by(region, spp, year, startmonth) %>% 
+  summarise(wtcpue_mean = mean(wgt_cpue))
 ```
 
 # Write out processed biomass data
@@ -86,5 +152,5 @@ nor_cpue$startmonth  <- norway_survey_month
 ```{r write out}
 write_csv(namer_cpue, here("processed-data","biomass_time_namer.csv"))
 write_csv(nor_cpue, here("processed-data","biomass_time_norway.csv"))
-
+write_csv(datras_cpue, here("processed-data", "biomass_time_datras.csv"))
 ```
