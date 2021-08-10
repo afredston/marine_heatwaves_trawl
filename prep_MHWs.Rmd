@@ -22,7 +22,10 @@ mhwRaw <- read_delim(here("processed-data","MHW_95P_surveys_for_malin.csv"), ";"
 mhwYrRaw <- read_delim(here("processed-data","mhws_90P_surveys_yearly.csv"), ";") 
 namer_cpue <- read_csv(here("processed-data","biomass_time_namer.csv"))
 nor_cpue <- read_csv(here("processed-data","biomass_time_norway.csv"))
-cpuedat <- bind_rows(namer_cpue, nor_cpue)
+nor_cpue$region <- "norbts"
+datras_cpue <-read_csv(here("processed-data","biomass_time_datras.csv")) %>% mutate(region = gsub("-","_",str_to_lower(region))) # starting to prep names for harmonization with MHW data
+
+cpuedat <- bind_rows(namer_cpue, nor_cpue, datras_cpue)
 
 maxyr <- max(cpuedat$year)
 ```
@@ -34,10 +37,10 @@ maxyr <- max(cpuedat$year)
 
 # step 1: get a dataframe of the survey start months
 survey_start_times <- cpuedat %>%
-  filter(year>=1982) %>% # start of MHW data
+  filter(year>1982) %>% # start of MHW data is 1982, need surveys to start Jan 1983 or later 
   mutate(region=gsub("-","",region), # reformat to be consistent with MHW region IDs
-    region = gsub(" ","_",str_to_lower(region)), 
-         region = gsub("_us","", region)) %>%
+         region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub("_us","", region)) %>% #manually check here that all region names are harmonized!
   mutate(month_year = paste0(startmonth,"-",year)) %>%
   select(region, year, month_year) %>%
   distinct() %>%
@@ -76,7 +79,7 @@ survey_years <- expand.grid(month=seq(1, 12, 1), year=seq(1982, maxyr, 1), regio
 mhwSurv <- mhwRaw %>% 
   rename("dateRaw"=X1) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
-  mutate(sstAnom=replace_na(sstAnom, 0)) %>%  # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros for easier arithmetic
+  mutate(sstAnom=replace_na(sstAnom, 0)) %>%  # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros to properly account for them 
   filter(region %in% unique(survey_start_times$region)) %>% 
   mutate(date = dmy(dateRaw)) %>% # standardize date formats
   select(-dateRaw) %>% 
@@ -99,7 +102,7 @@ mhwSurv <- mhwRaw %>%
 region_summary <- cpuedat %>% 
   filter(year>=1982) %>% # start of MHW data
   mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
-    region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>% 
   left_join(survey_start_times, by=c('region','year')) %>% 
   group_by(ref_year, region, year) %>% 
@@ -117,7 +120,7 @@ region_summary <- cpuedat %>%
 region_spp_summary <- cpuedat %>% 
   filter(year>=1982) %>% # start of MHW data
   mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
-    region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>% 
   mutate(wtMt = wtcpue_mean/1000) %>% 
   select(-wtcpue_mean) %>% 
@@ -151,7 +154,7 @@ mhwSurvSummary <- mhwSurv %>%
   arrange(date) %>% 
   mutate(mhwYesNoPrep = if_else(sstAnom > 0 & lag(sstAnom, 1) > 0 & lag(sstAnom, 2) > 0 & lag(sstAnom, 3) > 0 & lag(sstAnom, 4) > 0, "yes","no"), # using the definition of a MHW event as five continuous days of elevated temperatures
          mhwYesNo = ifelse("yes" %in% mhwYesNoPrep, "yes", "no") # is there at least one 5-day MHW event in the year?
-         ) %>% 
+  ) %>% 
   group_by(ref_year, mhwYesNo) %>% 
   summarise(
     anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
