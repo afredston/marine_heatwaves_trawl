@@ -50,7 +50,7 @@ nor_raw_zeros <- nor_raw %>%
   ) # this goes from ~6,100,000 records to just 200,000 ... is there a way to use the rest of the data? (or maybe they're artefacts of the expansion -- e.g., species that are only in the Norwegian Sea?)
 
 # Europe
-datras_raw <- read_csv(here("raw-data","DATRAS_clean_Aug2021.csv"))%>% 
+datras_raw <- read_csv(here("raw-data","DATRAS_v2_clean.csv"))%>% 
   select(where(~!all(is.na(.x)))) #drop FISHGLOB columns that are all NAs for this survey
 
 datras_haul_info <- datras_raw %>% 
@@ -96,6 +96,7 @@ evhoe_raw_zeros <- datras_raw_zeros %>%
 fr_cgfs_raw_zeros <- datras_raw_zeros %>% 
   filter(survey=="FR-CGFS", month %in% c(10, 11, 12)) %>% 
   mutate(startmonth=10)
+ # filter(!accepted_name=="Scomber scombrus")# DANGER! REMOVING DATA -- this species increased more than 100x from 2016 to 2017 and is skewing all of our analyses and plots
   
 # ireland
 ie_igfs_raw_zeros <- datras_raw_zeros %>% 
@@ -103,9 +104,9 @@ ie_igfs_raw_zeros <- datras_raw_zeros %>%
   mutate(startmonth=10)
   
 # irish sea
-nigfs_raw_zeros <- datras_raw_zeros %>% 
-  filter(survey=="NIGFS", month %in% c(1, 2, 3)) %>% 
-  mutate(startmonth=1)
+# nigfs_raw_zeros <- datras_raw_zeros %>% 
+#   filter(survey=="NIGFS", month %in% c(1, 2, 3)) %>% 
+#   mutate(startmonth=1)
   
 # north sea
 ns_ibts_raw_zeros <- datras_raw_zeros %>% 
@@ -141,7 +142,9 @@ nor_cpue <- nor_raw_zeros %>%
   summarise(wtcpue_mean = mean(wgt_cpue))
 nor_cpue$startmonth  <- norway_survey_month
 
-datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, nigfs_raw_zeros, ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) %>% 
+datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, 
+                  #   nigfs_raw_zeros, 
+                     ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) %>% 
   mutate(spp=accepted_name, region=survey) %>% 
   group_by(region, spp, year, startmonth) %>% 
   summarise(wtcpue_mean = mean(wgt_cpue))

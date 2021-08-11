@@ -26,7 +26,7 @@ library(broom)
 mhwSurvSummary <- read_csv(here("processed-data","survey_MHW_summary_stats.csv"))
 mhwYrTidy <- read_csv(here("processed-data","MHW_calendar_year_anomaly.csv"))
 region_summary <-read_csv(here("processed-data","survey_region_biomass_with_MHWs.csv"))
-region_species_summary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
+region_spp_summary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 ```
 
@@ -111,7 +111,7 @@ ggsummary <- region_summary %>%
   guides(color=guide_legend(nrow=4,byrow=TRUE)) +
   NULL
 
-ggsave(ggsummary, filename=here("results","line_plots_all_CPUE_MHW.png"), dpi=300, width=8, height=5)
+ggsave(ggsummary, filename=here("results","line_plots_all_CPUE_MHW.png"), dpi=600, width=8, height=5)
 ```
 
 ```{r namer-mhw-years-cpue-scatter, fig.cap="Biomass Change vs MHW-Years", fig.height=7}

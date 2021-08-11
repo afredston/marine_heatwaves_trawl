@@ -100,7 +100,7 @@ mhwSurv <- mhwRaw %>%
 
 # stats pooled across all species 
 region_summary <- cpuedat %>% 
-  filter(year>=1982) %>% # start of MHW data
+  filter(year>1982) %>% # start of MHW data
   mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
          region = gsub(" ","_",str_to_lower(region)), 
          region = gsub("_us","", region)) %>% 
