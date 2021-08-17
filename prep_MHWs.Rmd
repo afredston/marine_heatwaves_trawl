@@ -113,7 +113,9 @@ region_summary <- cpuedat %>%
   mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year surveyed--not always a one-year lag though!)
          wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
          wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
-         wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)), # get proportional difference of anomaly relative to mean
+         wtMtZ = (wtMt - mean(wtMt)) / sd(wtMt), # calculate Z-score
+         wtMtLog = log(wtMt / lag(wtMt))
   ) 
 
 # species-level stats
@@ -132,7 +134,9 @@ region_spp_summary <- cpuedat %>%
          wtMtDiffPropAbs = abs(wtMtDiffProp), 
          wtMtDiffPropAbsLog = log(wtMtDiffPropAbs),
          wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
-         wtMtAnomProp = (wtMtAnom / mean(wtMt)) # get proportional difference of anomaly relative to mean
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)), # get proportional difference of anomaly relative to mean
+         wtMtZ = (wtMt - mean(wtMt)) / sd(wtMt), # calculate Z-score
+         wtMtLog = log(wtMt / lag(wtMt))
   ) 
 
 # get highest-biomass spp in each region 

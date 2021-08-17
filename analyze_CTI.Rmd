@@ -43,7 +43,9 @@ ctiNamerSummary <- namerSummary %>%
   mutate(ctiDiff = CTI - lag(CTI),
          ctiDiffProp = ctiDiff / lag(CTI),
          ctiAnom = CTI - mean(CTI),
-         ctiAnomProp = ctiAnom / mean(CTI))
+         ctiAnomProp = ctiAnom / mean(CTI),
+         ctiZ = (CTI - mean(CTI)) / sd(CTI),
+         ctiLog = log(CTI / lag(CTI)))
 
 write_csv(ctiNamerSummary, here('processed-data','survey_CTI_with_MHWs.csv'))
 ```
