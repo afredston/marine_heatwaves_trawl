@@ -10,6 +10,8 @@
 1. `analyze_MHWs.Rmd` contains some exploratory plots and models of marine heatwave incidence and trends in fish biomass, and writes them out to a Github markdown document (viewable online [here](https://github.com/afredston/marine_heatwaves_trawl/blob/master/analyze_MHWs.md), or just click on the .md file).
 1. `analyze_CTI.Rmd` does the same for CTI.
 
+**Note:** I'm in the process of replacing `analyze_MHWs.Rmd` and `analyze_CTI.Rmd` with a single script `MHW_stats_and_figures.R`. 
+
 ## Notes
 
 * Large files are not on GitHub. The code should contain instructions for how to download files that are missing from the version controlled repository. 
