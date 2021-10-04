@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results=FA
 ```{r packages}
 library(tidyverse)
 library(here)
+library(lubridate)
 ```
 
 # Pull in data 
@@ -134,12 +135,14 @@ namer_cpue <- namer_raw_zeros %>%
   mutate(region = str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'="",' Triennial'="", ' Annual'=""))) %>% # get rid of seasons so that the different seasonal surveys in each region look like replicates of one regional survey
   group_by(region, spp, year) %>% 
   summarise(wtcpue_mean = mean(wtcpue)) %>% # get mean species-level cpue for that region and year across all hauls in the region
-  left_join(namer_survey_months)
+  left_join(namer_survey_months) %>% 
+  ungroup()
 
 nor_cpue <- nor_raw_zeros %>% 
   mutate(spp=accepted_name, region=survey) %>% 
   group_by(region, spp, year) %>% 
-  summarise(wtcpue_mean = mean(wgt_cpue))
+  summarise(wtcpue_mean = mean(wgt_cpue))%>% 
+  ungroup()
 nor_cpue$startmonth  <- norway_survey_month
 
 datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, 
@@ -147,7 +150,30 @@ datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, n
                      ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) %>% 
   mutate(spp=accepted_name, region=survey) %>% 
   group_by(region, spp, year, startmonth) %>% 
-  summarise(wtcpue_mean = mean(wgt_cpue))
+  summarise(wtcpue_mean = mean(wgt_cpue)) %>% 
+  ungroup()
+
+# get year interval -- how often is survey conducted?
+nor_intervals <- nor_cpue %>% 
+  select(region, year) %>% 
+  distinct() %>% 
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(year_interval = time_length(interval(year, lag(year))))
+
+datras_intervals <- datras_cpue %>% 
+  select(region, year) %>% 
+  distinct() %>% 
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(year_interval = interval(lubridate::ym(paste0(year,"-01"),lubridate::ym( paste0(lag(year),"-01")))))
+
+namer_intervals <- namer_cpue %>% 
+  select(region, year) %>% 
+  distinct() %>% 
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(year_interval = time_length(interval(year, lag(year))))
 ```
 
 # Write out processed biomass data
