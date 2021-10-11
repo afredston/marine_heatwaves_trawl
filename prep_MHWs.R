@@ -1,0 +1,202 @@
+# PLEASE CHECK EACH DF MANUALLY WHEN NEW REGIONS ARE INCORPORATED to be sure the lag calculations are working correctly and the region names were harmonized!
+
+########
+# load packages
+########
+
+library(tidyverse)
+library(here)
+library(lubridate) # for standardizing date format of MHW data
+
+########
+# load data
+########
+mhwRaw <- read.delim(here("processed-data","MHW_95P_surveys_for_malin.csv"), sep=";") # file from Thomas - download and move to processed-data folder
+mhwYrRaw <- read.delim(here("processed-data","mhws_90P_surveys_yearly.csv"), sep=";") 
+namer_cpue <- read_csv(here("processed-data","biomass_time_namer.csv"))
+nor_cpue <- read_csv(here("processed-data","biomass_time_norway.csv"))
+nor_cpue$region <- "norbts"
+datras_cpue <-read_csv(here("processed-data","biomass_time_datras.csv")) %>% mutate(region = gsub("-","_",str_to_lower(region))) # starting to prep names for harmonization with MHW data
+cpuedat <- bind_rows(namer_cpue, nor_cpue, datras_cpue)
+
+maxyr <- max(cpuedat$year)
+
+cti <- read_csv(here("raw-data/6855203","mxesr.csv")) # https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1
+
+########
+# match surveys to dates
+########
+
+# The goal of this part of code is to match each survey (noting that they start at different times of year in different regions, and don't all happen each year) to MHW data from only the 365 days preceding the survey in that region. It took me some time to hammer out this solution (and needed help from @GracoRoza and @KivaOken) and it could probably be rewritten to be shorter.
+
+# regs <- c("aleutian_islands","eastern_bering_sea","gulf_of_alaska", "gulf_of_mexico","northeast","scotian_shelf","southeast","west_coast")
+
+# step 1: get a dataframe of the survey start months
+survey_start_times <- cpuedat %>%
+  filter(year>1982) %>% # start of MHW data is 1982, need surveys to start Jan 1983 or later 
+  mutate(region=gsub("-","",region), # reformat to be consistent with MHW region IDs
+         region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub("_us","", region)) %>% #manually check here that all region names are harmonized!
+  mutate(month_year = paste0(startmonth,"-",year)) %>%
+  select(region, year, month_year) %>%
+  distinct() %>%
+  mutate(ref_year = paste0(region,"-",month_year), # get unique survey identifier
+         survey_date = dmy(paste0('01-',month_year)) # get earliest possible survey start date
+  )
+
+# step 2: expand this out to all possible months, tracking which reference year they belong to
+# get all month*year combinations for each survey and denote which reference year (12-month period custom to each region based on when survey began) each belongs to 
+survey_years <- expand.grid(month=seq(1, 12, 1), year=seq(1982, maxyr, 1), region=unique(survey_start_times$region)) %>% # get a factorial combo of every possible month*year; have to start in 1982 even though we can't use surveys before 1983 because we need to match to env data from 1982
+  mutate(region_month_year = paste0(region,"-",month,"-",year)) %>% # create unique identifier
+  mutate(ref_year = ifelse(region_month_year %in% survey_start_times$ref_year, region_month_year, NA),
+         month_year = paste0(month,"-",year)) %>% 
+  select(region, month_year, ref_year) %>% 
+  distinct() %>% 
+  group_by(region) %>% 
+  fill(ref_year, .direction="up") %>%  # fill in each region with the survey to which env data from each month*year should correspond
+  ungroup() %>% 
+  left_join(survey_start_times %>% select(ref_year, survey_date) %>% distinct(), by="ref_year") # add back in the survey start dates now that we've isolated the months of interest for temperature
+
+# step 3: join this list of all months to the MHW data and then calculate statistics based on survey-years 
+mhwSurv <- mhwRaw %>% 
+  rename("dateRaw"=X) %>% 
+  pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
+  mutate(sstAnom=replace_na(sstAnom, 0)) %>%  # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros to properly account for them 
+  filter(region %in% unique(survey_start_times$region)) %>% 
+  mutate(date = dmy(dateRaw)) %>% # standardize date formats
+  select(-dateRaw) %>% 
+  mutate(year = year(date),
+         month = month(date),
+         month_year = paste0(month,"-",year)) %>% 
+  left_join(survey_years, by=c('region','month_year')) %>% # note that because this is a left_join, and the mhw data starts at 1982, sometimes a ref_year is matched with many years of data preceding the survey -- this is corrected below when we keep only dates a certain lag value before the survey
+  filter(!is.na(ref_year), # here, run mhwSurvYr %>% group_by(ref_year) %>% summarise(n=length(sstAnom)), and confirm that they are all at least 365 rows long. If not (i.e., if there were 1982 surveys we now need to filter out), filter out on next line
+         !ref_year %in% c('northeast-2-1982','eastern_bering_sea-5-1982','scotian_shelf-6-1982')) %>% 
+  mutate(date_lag = survey_date - date) %>% # how many days before the survey was the SST observation?
+  filter(date_lag < 365,
+         date_lag >= 0) # only keep SST data within 365 days of a survey for each region
+
+########
+# make summary datasets 
+########
+
+#Make different summary datasets of survey data + MHW data
+
+# stats pooled across all species 
+region_summary <- cpuedat %>% 
+  filter(year>1982) %>% # start of MHW data
+  mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
+         region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub("_us","", region)) %>% 
+  left_join(survey_start_times, by=c('region','year')) %>% 
+  filter(!is.na(ref_year)) %>% # keep only the rows assigned to a ref_year 
+  group_by(ref_year, region, year) %>% 
+  summarise(wt = sum(wtcpue_mean)) %>% # get total weight across all species for the region*year
+  mutate(wtMt = wt/1000) %>% # convert to metric tons from kg
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year surveyed--not always a one-year lag though!)
+         wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
+         wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)), # get proportional difference of anomaly relative to mean
+         wtMtZ = (wtMt - mean(wtMt)) / sd(wtMt), # calculate Z-score
+         wtMtLog = log(wtMt / lag(wtMt))
+  ) 
+
+# species-level stats
+region_spp_summary <- cpuedat %>% 
+  filter(year>=1982) %>% # start of MHW data
+  mutate(region = gsub("-", "", region),# reformat to be consistent with MHW region IDs
+         region = gsub(" ","_",str_to_lower(region)), 
+         region = gsub("_us","", region)) %>% 
+  mutate(wtMt = wtcpue_mean/1000) %>% 
+  select(-wtcpue_mean) %>% 
+  left_join(survey_start_times, by=c('region','year')) %>% 
+  filter(!is.na(ref_year)) %>% # keep only the rows assigned to a ref_year 
+  group_by(region, spp) %>% 
+  arrange(year) %>% 
+  mutate(wtMtDiff = wtMt - lag(wtMt), # calculate first difference (delta from last year; will be 3 years ago in WCTRI)
+         wtMtDiffProp = (wtMtDiff / lag(wtMt)), # calculate proportional change
+         wtMtDiffPropAbs = abs(wtMtDiffProp), 
+         wtMtDiffPropAbsLog = log(wtMtDiffPropAbs),
+         wtMtAnom = wtMt - mean(wtMt), # subtract mean over all years within the region
+         wtMtAnomProp = (wtMtAnom / mean(wtMt)), # get proportional difference of anomaly relative to mean
+         wtMtZ = (wtMt - mean(wtMt)) / sd(wtMt), # calculate Z-score
+         wtMtLog = log(wtMt / lag(wtMt))
+  ) 
+
+# get highest-biomass spp in each region 
+topspp <- region_spp_summary %>% 
+  group_by(region, spp) %>% 
+  summarise(wtTotal = sum(wtMt)) %>% 
+  group_by(region) %>% 
+  arrange(-wtTotal) %>% 
+  slice_head(n=5) %>%  # change this for different no. spp/reg
+  mutate(sppReg = paste0(region, spp))
+
+# Make summary datasets with MHW data
+
+# prep MHW for merging with surveys
+mhwSurvSummary <- mhwSurv %>% 
+  group_by(ref_year) %>% 
+  arrange(date) %>% 
+  mutate(mhwYesNoPrep = if_else(sstAnom > 0 & lag(sstAnom, 1) > 0 & lag(sstAnom, 2) > 0 & lag(sstAnom, 3) > 0 & lag(sstAnom, 4) > 0, "yes","no"), # using the definition of a MHW event as five continuous days of elevated temperatures
+         mhwYesNo = ifelse("yes" %in% mhwYesNoPrep, "yes", "no") # is there at least one 5-day MHW event in the year?
+  ) %>% 
+  group_by(ref_year, mhwYesNo) %>% 
+  summarise(
+    anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
+    anomSev = sum(sstAnom, na.rm=TRUE), # add up total anomaly values
+    anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
+  ) %>% 
+  mutate(anomIntC = replace_na(anomIntC, 0))  # replacing NAs in AnomIntC that came from dividing by 0 with 0s
+
+# datasets based on calendar year -- use only for characterizing regional MHWs, not for comparing to trawl data -- BE CAREFUL ABOUT MERGING THE DATASETS GENERATED BELOW THIS LINE WITH THE SURVEYS!
+mhwTidy <- mhwRaw %>% 
+  rename("dateRaw"=X) %>% 
+  pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
+  mutate(date = dmy(dateRaw)) %>% # standardize date formats
+  select(-dateRaw) %>% 
+  mutate(year = year(date)) %>% 
+  group_by(region, year) %>% 
+  mutate(anomDays = sum(sstAnom>0, na.rm=TRUE),# count number of non-NA anomaly days 
+         anomSev = sum(sstAnom, na.rm=TRUE), # add up total anomaly values
+         anomIntC = anomSev / anomDays # calculate cumulative mean intensity for every region*year 
+  )  %>% 
+  ungroup()
+
+mhwYrTidy <- mhwYrRaw %>% 
+  rename("year"=X) %>% 
+  pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstCalYrAnom") # convert to "long" format
+
+########
+# add in CTI data
+########
+
+cti_spp <- region_spp_summary %>% 
+  inner_join(cti %>% select(speciesName, hadsstwannp50), by=c('spp'='speciesName') # keep only the species with CTIs, and use the hadsstwannp50 index (see dataset description in source file for CTI data)
+  ) %>% 
+  rename('STI' = hadsstwannp50) %>% 
+  group_by(ref_year) %>% 
+  mutate(CTI = weighted.mean(STI, w=wtMt))
+
+cti_summary <- region_summary %>% 
+  inner_join(cti_spp %>% select(ref_year, CTI) %>% distinct(), by="ref_year") %>% 
+  inner_join(mhwSurvSummary, by="ref_year") %>% 
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(ctiDiff = CTI - lag(CTI),
+         ctiDiffProp = ctiDiff / lag(CTI),
+         ctiAnom = CTI - mean(CTI),
+         ctiAnomProp = ctiAnom / mean(CTI),
+         ctiZ = (CTI - mean(CTI)) / sd(CTI),
+         ctiLog = log(CTI / lag(CTI)))
+########
+# write out dataframes 
+########
+
+write_csv(mhwSurvSummary, here("processed-data","survey_MHW_summary_stats.csv"))
+write_csv(mhwYrTidy, here("processed-data","MHW_calendar_year_anomaly.csv"))
+write_csv(region_summary, here("processed-data","survey_region_biomass_with_MHWs.csv"))
+write_csv(region_spp_summary, here("processed-data","survey_species_biomass_with_MHWs.csv"))
+write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
+write_csv(cti_summary, here('processed-data','survey_CTI_with_MHWs.csv'))

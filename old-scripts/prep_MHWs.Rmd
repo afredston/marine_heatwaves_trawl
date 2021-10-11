@@ -77,7 +77,7 @@ survey_years <- expand.grid(month=seq(1, 12, 1), year=seq(1982, maxyr, 1), regio
 
 # step 3: join this list of all months to the MHW data and then calculate statistics based on survey-years 
 mhwSurv <- mhwRaw %>% 
-  rename("dateRaw"=X1) %>% 
+  rename("dateRaw"=`...1`) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstAnom") %>% # convert to "long" format
   mutate(sstAnom=replace_na(sstAnom, 0)) %>%  # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros to properly account for them 
   filter(region %in% unique(survey_start_times$region)) %>% 
@@ -184,6 +184,10 @@ mhwTidy <- mhwRaw %>%
 mhwYrTidy <- mhwYrRaw %>% 
   rename("year"=X1) %>% 
   pivot_longer(cols=2:ncol(mhwRaw), names_to="region", values_to="sstCalYrAnom") # convert to "long" format
+
+```
+
+```{r cti}
 
 ```
 
