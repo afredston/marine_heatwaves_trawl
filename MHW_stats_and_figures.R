@@ -15,6 +15,56 @@ region_spp_summary <- read_csv(here("processed-data","survey_species_biomass_wit
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 cti <- read_csv(here("processed-data","survey_CTI_with_MHWs.csv"))
 
+#######
+# stats
+#######
+
+# what magnitude of change followed MHWs vs non-MHWs?
+region_summary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% 
+  mutate(abswtMtLog = abs(wtMtLog)) %>% 
+  group_by(mhwYesNo) %>% 
+  summarise(mean_abs_log_ratio = mean(abswtMtLog, na.rm=TRUE))
+
+# how much did biomass decline in the Gulf of Alaska in 2014-2016?
+region_summary %>% 
+  filter(region=="gulf_of_alaska") %>% 
+  filter(year %in% c(2013, 2015, 2017)) %>% 
+  select(year, wtMt) %>% 
+  mutate(relative_to_2013 = (wtMt-wtMt[1])/wtMt[1])
+
+# specifically for cod and pollock
+region_spp_summary %>% 
+  filter(region=="gulf_of_alaska", spp %in% c("Gadus macrocephalus","Gadus chalcogrammus"), year %in% c(2013, 2015, 2017)) %>% 
+  select(year, spp, wtMt) %>% 
+  group_by(spp) %>% 
+  arrange(year) %>% 
+  mutate(relative_to_2013 = (wtMt-wtMt[1])/wtMt[1]) %>% 
+  ungroup()
+
+# how much did biomass change on the West Coast?
+region_summary %>% 
+  filter(region=="west_coast") %>% 
+  filter(year >= 2014) %>% 
+  select(year, wtMt) %>% 
+  arrange(year) %>% 
+  mutate(relative_to_2014 = (wtMt-wtMt[1])/wtMt[1])
+
+# Northeast 2012 MHW
+region_summary %>% 
+  filter(region=="northeast") %>% 
+ filter(year >= 2012) %>% 
+  select(year, wtMt) %>% 
+  arrange(year) %>% 
+  mutate(relative_to_2012 = (wtMt-wtMt[1])/wtMt[1])
+
+region_spp_summary %>% 
+  filter(region=="northeast", spp=="Homarus americanus") %>% 
+  filter(year >= 2012) %>% 
+  select(year, wtMt) %>% 
+  arrange(year) %>% 
+  mutate(relative_to_2012 = (wtMt-wtMt[1])/wtMt[1])
+  
 ########
 # plots
 ########
@@ -62,6 +112,35 @@ gg_mhw_cti_point
 
 mhw_panel_fig <- grid.arrange(gg_mhw_biomass_hist, gg_mhw_biomass_point, gg_mhw_cti_hist, gg_mhw_cti_point, ncol=2, nrow=2)
 ggsave(mhw_panel_fig, scale=1.5, dpi=300, filename=here("results","mhw_panel_figure.png"))
+
+
+#######
+# Absolute Change
+#######
+
+gg_mhw_biomass_hist_abs <- region_summary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  mutate(mhwYesNo = recode(mhwYesNo, no="No Marine Heatwave", yes="Marine Heatwave"),
+         wtMtLogAbs = abs(wtMtLog)) %>% 
+  ggplot(aes(x=wtMtLogAbs, group=mhwYesNo, fill=mhwYesNo, color=mhwYesNo)) +
+  geom_histogram(binwidth=0.1, alpha=0.5) +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+  theme_bw() + 
+  labs(x="Biomass Log Ratio Absolute Value", y="Frequency (Survey-Years)") +
+  theme(legend.position = c(0.7,0.8),
+        legend.title = element_blank())
+gg_mhw_biomass_hist_abs
+
+gg_mhw_biomass_point_abs <- region_summary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  mutate(wtMtLogAbs = abs(wtMtLog)) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtLogAbs)) +
+  geom_point() +
+  theme_bw() + 
+  labs(x="Marine Heatwave Cumulative Mean Intensity", y="Biomass Log Ratio Absolute Value") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_abs
 
 #######
 # NE Pacific

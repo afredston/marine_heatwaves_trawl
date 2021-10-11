@@ -126,7 +126,7 @@ MHWs calculated in each survey region
 
 All anomalies defined relative to the region
 
-MHW-days: >90% for temperature 
+MHW-days: >95% for temperature 
 
 MHW-years: >90% annual SST (3 per region)
 
