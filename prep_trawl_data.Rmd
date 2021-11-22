@@ -77,6 +77,36 @@ merge(datras_haul_info, all.x=TRUE, by="haul_id") %>%
 datras_raw_zeros <- datras_raw_zeros[is.na(wgt_cpue), wgt_cpue := 0]
 ```
 
+Check that the spatial domain of each region is fixed over time 
+
+```{r check domain}
+namer_coords <- unique(namer_raw_zeros[,.(lat, lon, region, year)])[,lat_round := (round(lat/0.25)*0.25)][,lon_round := (round(lon/0.25)*0.25)][,coords_round := paste0(lon_round, ", ", lat_round)]
+
+namer_coords_expand <- NULL
+for(i in unique(namer_coords$region)) {
+  # get all possible quarter-cells per region 
+  regdat <- namer_coords[region==i]
+  expdat <- as.data.table(expand.grid(coords_round = unique(regdat$coords_round), year=unique(regdat$year)))
+  expdat$region <- i
+  
+  # get the number of years each one was surveyed 
+  survdat <- unique(namer_coords[region==i][,.(year, coords_round)])
+  survdat$surveyed <- 1
+  
+  expdat <- merge(expdat, survdat, all.x=TRUE)
+  expdat <- expdat[is.na(surveyed), surveyed := 0]
+  
+  namer_coords_expand <- rbind(namer_coords_expand, expdat)
+}
+
+namer_coords_expand[,coords_n := sum(surveyed), by=.(region, coords_round)][,coords_prop := coords_n / max(coords_n), by=region]
+
+ggplot(namer_coords_expand, aes(x=coords_prop)) +
+  geom_histogram() + 
+  facet_wrap(~region, scales="free_y")
+
+```
+
 ```{r tidy data}
 # get start months for each survey 
 # starting with the haul data because oceanadapt outputs do not retain the date or month
@@ -88,7 +118,7 @@ namer_survey_months <- namer_survey_months[haulid %in% unique(namer_raw_zeros$ha
 
 namer_survey_months[,month := lubridate::month(datetime)]
 namer_survey_months <- namer_survey_months[,.(startmonth = min(month)), by=region] # calculate earliest month of each survey 
-setDT(namer_survey_months)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'="",' Triennial'="", ' Annual'=""))]
+setDT(namer_survey_months)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'=""))]
 namer_survey_months <- namer_survey_months[,.(startmonth = min(startmonth)), by=region] # re-calculate after pooling seasonal surveys within a region 
 
 norway_survey_month <- min(nor_raw$month)
@@ -119,7 +149,7 @@ swc_ibts_raw_zeros <-datras_raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)
   
 # make tidy dataframe 
 namer_cpue <- copy(namer_raw_zeros)[!wtcpue==Inf] 
-setDT(namer_cpue)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'="",' Triennial'="", ' Annual'=""))] # pool seasons
+setDT(namer_cpue)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'=""))] # pool seasons
 
 # calculate species-level mean CPUE in every year and region
 namer_cpue <- namer_cpue[,.(wtcpue_mean = mean(wtcpue)), by=c("region", "spp", "year")]  
@@ -137,7 +167,8 @@ nor_cpue$startmonth  <- norway_survey_month
 datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) 
 datras_cpue <- datras_cpue[,.(wtcpue_mean = mean(wgt_cpue)), by=.(survey, accepted_name, year, startmonth)]
 datras_cpue[,spp := accepted_name][,region := survey]
-datras_cpue[,!c("accepted_name","survey")]
+datras_cpue$accepted_name <- NULL
+datras_cpue$survey <- NULL
 
 # get year interval -- how often is survey conducted?
 nor_intervals <- copy(nor_cpue)
@@ -157,7 +188,7 @@ namer_intervals <- namer_intervals[order(year)][,year_interval := year - shift(y
 # Write out processed biomass data
 
 ```{r write out}
-fwrite(namer_cpue, here("processed-data","biomass_time_namer_new.csv"))
-fwrite(nor_cpue, here("processed-data","biomass_time_norway_new.csv"))
-fwrite(datras_cpue, here("processed-data", "biomass_time_datras_new.csv"))
+fwrite(namer_cpue, here("processed-data","biomass_time_namer.csv"))
+fwrite(nor_cpue, here("processed-data","biomass_time_norway.csv"))
+fwrite(datras_cpue, here("processed-data", "biomass_time_datras.csv"))
 ```
