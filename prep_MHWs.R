@@ -214,9 +214,9 @@ mhw_summary_soda_s <- mhw_soda_s %>%
   group_by(ref_year) %>% 
   arrange(date) %>% 
   summarise(
-    anomDays = sum(sstAnom>0, na.rm=TRUE),
+    anomDays = sum(sstAnom>0, na.rm=TRUE), # this is actually a count of months!
     anomSev = sum(sstAnom, na.rm=TRUE),
-    anomIntC = anomSev / anomDays 
+    anomIntC = anomSev / anomDays  # not really comparable to SST anomIntC
   ) %>% 
   ungroup() %>% 
   mutate(anomIntC = replace_na(anomIntC, 0)) %>% 

@@ -37,6 +37,15 @@ surveycoordsUS <- dat_exploded %>%
   select(-region) %>% 
   rename(region = regionName)
 
+surveycoordsUS_save <- dat_exploded %>% 
+  select(lat, lon, region) %>% 
+  distinct() %>% 
+  mutate(regionName = ifelse(region %in% c("Northeast US Spring","Northeast US Fall"), "Northeast",
+                             ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
+                                    ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>%   # merge seasons of surveys in the same regions
+  select(-region) %>% 
+  rename(region = regionName)
+
 # repeat for Europe - note that I think some coordinates are duplicated among surveys 
 surveycoordsEur <- surveycpue %>% 
   select(region, lat, long) %>%
@@ -48,9 +57,17 @@ surveycoordsEur <- surveycpue %>%
   mutate(coords=paste0(lon_round,",",lat_round)) %>% 
   select(coords, region) 
 
+#just for writing out lat/lon
+surveycoordsEur_save <- surveycpue %>% 
+  select(region, lat, long) %>%
+  distinct() %>% 
+  rename(lon=long)
+
 # combine Europe and US
 surveycoords <- rbind(surveycoordsEur, surveycoordsUS)%>% 
   mutate(survey=as.numeric(factor(region)))
+
+write_csv(rbind(surveycoordsEur_save, surveycoordsUS_save), file=here("processed-data","survey_coordinates.csv"))
 
 # save which region corresponds to which code
 surveyIDs <- surveycoords %>%   
