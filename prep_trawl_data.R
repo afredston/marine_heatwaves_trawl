@@ -1,6 +1,7 @@
 # this script imports the FISHGLOB trawl datasets and reshapes them
 # it uses data.table for fast data wrangling. for questions about the script contact Alexa Fredston
-
+# on some personal machines, you may exceed your memory with some of these dataframes, which are very large
+# this script was run on a remote server 
 #########
 # Load packages
 #########
@@ -8,30 +9,37 @@ library(here)
 library(lubridate)
 library(data.table)
 library(magrittr)
-
+here <- here::here
 #########
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v0.9_clean.csv")) 
+raw <- fread(here("raw-data","FISHGLOB_public_v0.9_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
 
 # get haul-level data
-haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude, haul_dur, area_swept, gear, depth)]
-haul_info %<>% unique()
+haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
 bad_hauls <- (haul_info[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
 haul_info <- haul_info[!haul_id %in% bad_hauls] # filter out bad hauls
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
+raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)] # trim to only species-level data for speed (but note there is a full taxonomy available, and other catch data)
+
+# get expanded grid for each region
+raw_zeros <- NULL
+for(i in unique(raw$survey)){
+  tmp1 <- raw[survey==i]
+  tmp2 <- as.data.table(expand.grid(haul_id=unique(tmp1[,haul_id]), accepted_name=unique(tmp1[,accepted_name])))
+  tmp2$survey <- i
+  raw_zeros <- rbind(raw_zeros, tmp2)
+}
 
 # expand raw to have true absences
-raw_zeros <- as.data.table(expand.grid(haul_id=unique(raw[,haul_id]), accepted_name=unique(raw[,accepted_name]))) %>%
+raw_zeros %<>%
   # left-join haul info to all spp*haul rows
-  merge(haul_info, all.x=TRUE, by="haul_id") %>%
+  merge(haul_info, all.x=TRUE, by=c("haul_id","survey")) %>%
   # left-join actual obs data to all spp*haul rows
-  merge(raw, all.x=TRUE, by=c("survey", "haul_id", "year", "month", "latitude", "longitude", 
-                                  "haul_dur", "area_swept", "gear", "depth", "accepted_name"))
-raw_zeros <- raw_zeros[is.na(wgt_cpue), wgt_cpue := 0] 
-
-# 
+  merge(raw, all.x=TRUE, by=c("survey", "haul_id", "accepted_name"))  
+raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf]
+ 
 
 # Check that the spatial domain of each region is fixed over time 
 
@@ -88,21 +96,21 @@ swc_ibts_raw_zeros <-raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)][,star
 raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS')]
 
 # get start months for each survey 
-start_months <- haul_info[,.(startmonth = min(month)), by=region][, .(region, startmonth)]
+start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, startmonth)]
 
 # join only the non-special case start months to raw_zeros 
-raw_zeros %<>% merge(start_months, all.x=TRUE, by="region") 
+raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey") 
 
 # add special cases back in 
-raw_zeros <- bind_rows(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros)[!wtcpue==Inf] 
+raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros)
 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year")] 
 
 # get year interval -- how often is survey conducted?
 intervals <- copy(raw_cpue)
-intervals <- unique(intervals[,.(region, year)])
-intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag")]
+intervals <- unique(intervals[,.(survey, year)])
+intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=.(survey)]
 
 #########
 # Write out processed biomass data
