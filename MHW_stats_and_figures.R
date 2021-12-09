@@ -9,6 +9,7 @@ library(gridExtra)
 library(sf)
 library(rnaturalearth)
 library(ggrepel)
+library(segmented)
 
 # load data
 mhw_summary <- read_csv(here("processed-data","survey_MHW_summary_stats.csv"))
@@ -73,6 +74,19 @@ region_spp_summary %>%
   arrange(year) %>% 
   mutate(relative_to_2012 = (wtMt-wtMt[1])/wtMt[1])
 
+modeldat <- region_summary %>% 
+  left_join (mhw_summary_sst, by="ref_year") %>% 
+  filter(!is.na(wtMtLog), !is.na(anomIntC))
+my.lm <- lm(wtMtLog ~ anomIntC, data = modeldat)
+my.seg1 <- segmented(my.lm, seg.Z = ~ anomIntC, npsi=1)
+my.seg2 <- segmented(my.lm, seg.Z = ~ anomIntC, npsi=2)
+my.seg3 <- segmented(my.lm, seg.Z = ~ anomIntC, psi = c(0.25, 0.5, 0.75), npsi=3)
+AIC(my.lm, my.seg1, my.seg2, my.seg3)
+AIC(my.lm, my.seg1, my.seg2, my.seg3)$AIC - min(AIC(my.lm, my.seg1, my.seg2, my.seg3)$AIC)
+
+my.fitted <- fitted(my.seg1)
+my.model <- data.frame(anomIntC = modeldat$anomIntC, wtMtLog = my.fitted)
+
 ########
 # plots
 ########
@@ -119,6 +133,41 @@ gg_mhw_biomass_point <- region_summary %>%
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 gg_mhw_biomass_point
 
+gg_mhw_biomass_point_models <- region_summary %>% 
+  left_join (mhw_summary_sst, by="ref_year") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anomIntC, y=wtMtLog)) +
+  geom_point() +
+  theme_bw() + 
+  geom_smooth(method="lm", color="blue", se=FALSE) +
+  geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
+  geom_smooth(method="loess", color="green", se=FALSE) +
+  geom_line(data = my.model, aes(x=anomIntC, y=wtMtLog), colour = "yellow") +
+  labs(x="Marine Heatwave Cumulative Mean Intensity", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_models
+
+gg_mhw_biomass_point_anomdays <- region_summary %>% 
+  left_join (mhw_summary_sst, by="ref_year") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anomDays, y=wtMtLog, label=ref_year)) +
+  geom_point() +
+  geom_text_repel(aes(label=ifelse(anomDays>100|abs(wtMtLog)>1,as.character(ref_year),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine Heatwave Duration (Days)", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_anomdays
+
+gg_mhw_biomass_point_anomsev <- region_summary %>% 
+  left_join (mhw_summary_sst, by="ref_year") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anomSev, y=wtMtLog, label=ref_year)) +
+  geom_point() +
+  geom_text_repel(aes(label=ifelse(anomSev>50|abs(wtMtLog)>1,as.character(ref_year),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine Heatwave Severity (Sum Anomaly)", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_anomsev
+
 gg_mhw_anomtype <- region_summary %>% 
   left_join (mhw_summary_sst, by="ref_year") %>% 
   ggplot(aes(x=anomDays, y=anomSev, color=anomIntC, fill=anomIntC)) +
@@ -161,6 +210,22 @@ gg_mhw_cti_point <- cti_sst %>%
   labs(x="Marine Heatwave Cumulative Mean Intensity", y="CTI Log Ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black")
 gg_mhw_cti_point
+
+gg_mhw_cti_point_anomsev <- cti_sst %>% 
+  ggplot(aes(x=anomSev, y=ctiLog)) +
+  geom_point() +
+  theme_bw() + 
+  labs(x="Marine Heatwave Severity (Sum Anomaly)", y="CTI Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black")
+gg_mhw_cti_point_anomsev
+
+gg_mhw_cti_point_anomdays <- cti_sst %>% 
+  ggplot(aes(x=anomDays, y=ctiLog)) +
+  geom_point() +
+  theme_bw() + 
+  labs(x="Marine Heatwave Duration (Days)", y="CTI Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black")
+gg_mhw_cti_point_anomdays
 
 mhw_panel_fig <- grid.arrange(gg_mhw_biomass_hist, gg_mhw_biomass_point, gg_mhw_cti_hist, gg_mhw_cti_point, ncol=2, nrow=2)
 ggsave(mhw_panel_fig, scale=1.5, dpi=300, filename=here("results","mhw_panel_figure.png"))
