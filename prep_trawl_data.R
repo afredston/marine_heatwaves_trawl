@@ -131,4 +131,5 @@ intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, ty
 # Write out processed biomass data
 #########
 fwrite(raw_cpue, here("processed-data","biomass_time.csv"))
+fwrite(haul_info, here("processed-data","haul_info.csv"))
 
