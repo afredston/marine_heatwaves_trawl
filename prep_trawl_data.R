@@ -2,6 +2,7 @@
 # it uses data.table for fast data wrangling. for questions about the script contact Alexa Fredston
 # on some personal machines, you may exceed your memory with some of these dataframes, which are very large
 # this script was run on a remote server 
+# most of it runs programmatically but if the source data are updated it's very important to revisit the filters in this document especially how surveys are trimmed to seasons
 #########
 # Load packages
 #########
@@ -14,14 +15,15 @@ here <- here::here
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v0.9_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
+raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
 
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
-bad_hauls <- (haul_info[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
-haul_info <- haul_info[!haul_id %in% bad_hauls] # filter out bad hauls
+bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
+short_surveys <- unique(copy(haul_info)[, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey # get surveys with less than ten years of data to trim out 
+haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys] # filter out bad hauls
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
-raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)] # trim to only species-level data for speed (but note there is a full taxonomy available, and other catch data)
+raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
 # get expanded grid for each region
 raw_zeros <- NULL
@@ -93,7 +95,20 @@ ns_ibts_raw_zeros <- raw_zeros[survey=='NS-IBTS'& month %in% c(1, 2, 3)][,startm
 # scottish west coast
 swc_ibts_raw_zeros <-raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)][,startmonth := min(month)] 
 
-raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS')]
+# many other surveys also have tows throughout the year; I'm cropping them manually to one season here
+# pick the season with the most hauls, no more than 4 months, except the regions with fully seasonal surveys that occasionally start slightly earlier / end slightly later than a 4-month window like wcann
+s_georg_raw_zeros <-raw_zeros[survey=='S-GEORG' & month %in% c(1, 2,3, 4)][,startmonth := min(month)] 
+dfo_nf_raw_zeros <-raw_zeros[survey=='DFO-NF' & month %in% c(9,10,11,12)][,startmonth := min(month)] 
+gsl_n_raw_zeros <-raw_zeros[survey=='GSL-N' & month %in% seq(7, 10, 1)][,startmonth := min(month)] 
+neus_raw_zeros <-raw_zeros[survey=='NEUS' & month %in% seq(9, 12, 1)][,startmonth := min(month)] 
+nigfs_raw_zeros <-raw_zeros[survey=='NIGFS' & month %in% seq(10,11, 1)][,startmonth := min(month)] # basically a toss-up here between fall and spring, doing fall to be more distinct from other uk surveys
+nor_bts_raw_zeros <-raw_zeros[survey=='Nor-BTS' & month %in% seq(8, 12, 1)][,startmonth := min(month)] # also a toss-up, but I'm keeping fall because there is some spatial overlap with ns-ibts, so this keeps them more distinct 
+nz_raw_zeros <-raw_zeros[survey=='NZ' & month %in% c(11,12,1)][,startmonth := 11] # manually coding start month because this "wraps around" the year, but the start month is not january!
+scs_raw_zeros <-raw_zeros[survey=='SCS' & month %in% seq(6,8, 1)][,startmonth := min(month)] 
+gmex_raw_zeros <-raw_zeros[survey=='GMEX' & month %in% seq(6,8, 1)][,startmonth := min(month)] 
+seus_raw_zeros <-raw_zeros[survey=='SEUS' & month %in% seq(7,10, 1)][,startmonth := min(month)] 
+
+raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS','S-GEORG','DFO-NF','GSL-N','NEUS','NIGFS','Nor-BTS','NZ','SCS','GMEX','SEUS')]
 
 # get start months for each survey 
 start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, startmonth)]
@@ -102,7 +117,7 @@ start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, st
 raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey") 
 
 # add special cases back in 
-raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros)
+raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, s_georg_raw_zeros, dfo_nf_raw_zeros, gsl_n_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros,nz_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year")] 
