@@ -20,13 +20,15 @@ biomass_time <- fread(here("processed-data","biomass_time.csv")) #for some reaso
 biomass_time <- biomass_time[grepl(" ",biomass_time$accepted_name)]
 
 #survey names
-survey_names <- unique(biomass_time$survey)
+survey_names <- sort(unique(biomass_time$survey))
 
 biomass_time_temporal_beta <- unique(biomass_time[,.(survey,year)])
 
 biomass_time_temporal_beta <- biomass_time_temporal_beta[
-  ,jaccard_dissimilarity := as.numeric()][
-  ,bray_dissimilarity := as.numeric()][
+  ,jaccard_dissimilarity_turnover := as.numeric()][
+  ,bray_dissimilarity_turnover := as.numeric()][
+    ,jaccard_dissimilarity_total := as.numeric()][
+      ,bray_dissimilarity_total := as.numeric()][
     , delta_richness := as.numeric()][
       ,richness_percent_change := as.numeric()
     ]
@@ -41,12 +43,16 @@ for (i in 1:length(survey_names)) {
   biomass_time_survey <- biomass_time[survey == survey_names[i],]
   
   #years
-  survey_years <- unique(biomass_time_survey$year)
+  survey_years <- sort(unique(biomass_time_survey$year))
   
   #cycle through years
   for (j in 1:length(survey_years)) {
     if(j == 1) {
-      biomass_time_temporal_beta[survey == survey_names[i] & year == survey_years[i], jaccard_dissimilarity := NA][survey == survey_names[i] & year == survey_years[i], bray_dissimilarity := NA][survey == survey_names[i] & year == survey_years[i], delta_richness := NA]
+      biomass_time_temporal_beta[survey == survey_names[i] & year == survey_years[i],
+                                 c("jaccard_dissimilarity_turnover","bray_dissimilarity_turnover",
+                                   "jaccard_dissimilarity_total", "bray_dissimilarity_total",
+                                   "delta_richness") := NA]
+
     } else {
       #subset current year
       biomass_time_survey_year <- biomass_time_survey[year == survey_years[j],]
@@ -93,8 +99,10 @@ for (i in 1:length(survey_names)) {
       richness_prev <- sum(biomass_time_survey_year_prev[,pres_abs])
       
     #populate data table
-      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "jaccard_dissimilarity"] <- jaccard_dissimilarity[[1]]
-      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "bray_dissimilarity"] <- bray_dissimilarity[[1]]
+      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "jaccard_dissimilarity_turnover"] <- jaccard_dissimilarity[[1]]
+      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "bray_dissimilarity_turnover"] <- bray_dissimilarity[[1]]
+      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "jaccard_dissimilarity_total"] <- jaccard_dissimilarity[[3]]
+      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "bray_dissimilarity_total"] <- bray_dissimilarity[[3]]
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "delta_richness"] <- richness-richness_prev
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "richness_percent_change"] <- (richness-richness_prev)/richness_prev
       
