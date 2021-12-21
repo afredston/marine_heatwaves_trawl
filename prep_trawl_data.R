@@ -21,6 +21,10 @@ raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordat
 neus_bad_hauls <- unique(raw[survey == "NEUS" & ((year < 2009 & haul_dur < 25 | haul_dur > 35) | (year >= 2009 & haul_dur < 15  | haul_dur > 25)),haul_id])
 #this removes 29349 hauls from 271993 total hauls (11%)
 
+#calculate wgt_cpue (km^2 avg from sean Lucey) and wgt_h (all biomass values calibrated to standard pre 2009 30 minute tow)
+raw[survey == "NEUS", wgt_h := wgt/0.5][survey == "NEUS", wgt_cpue := wgt/0.0384][survey == "NEUS", num_h := num/0.5][survey == "NEUS", num_cpue := num/0.0384]
+
+
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
 bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
