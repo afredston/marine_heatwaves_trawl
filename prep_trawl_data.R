@@ -17,12 +17,16 @@ here <- here::here
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
 
+#for northeast, we are going to delete any hauls before 2009 that are outside of +/- 5 minutes of 30 minutes and 2009 forward that are outside of +/- 5 minutes of 20 minutes
+neus_bad_hauls <- unique(raw[survey == "NEUS" & ((year < 2009 & haul_dur < 25 | haul_dur > 35) | (year >= 2009 & haul_dur < 15  | haul_dur > 25)),haul_id])
+#this removes 29349 hauls from 271993 total hauls (11%)
+
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
 bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
 bad_hauls <- c(bad_hauls, "EVHOE 2019 4 FR 35HT GOV X0510 64") #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
 GSLN_hauls_delete <- unique(raw[survey == "GSL-N" & year < 1987,haul_id]) #get rid of hauls before 1987 for GSL-N because there are only biomass data for 2 species in 1984, and then no biomass data for 2 years
-bad_hauls <- c(bad_hauls, GSLN_hauls_delete)
+bad_hauls <- c(bad_hauls, GSLN_hauls_delete, neus_bad_hauls)
 short_surveys <- unique(copy(haul_info)[, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey # get surveys with less than ten years of data to trim out 
 haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys] # filter out bad hauls
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
