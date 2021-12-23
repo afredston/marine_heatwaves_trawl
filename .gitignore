@@ -4,3 +4,4 @@
 .Ruserdata
 *.png
 .png
+.DS_Store
