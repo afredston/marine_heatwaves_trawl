@@ -5,3 +5,4 @@
 *.png
 .png
 .DS_Store
+processed-data/.DS_Store
