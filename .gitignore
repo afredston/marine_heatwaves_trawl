@@ -6,3 +6,4 @@
 .png
 .DS_Store
 processed-data/.DS_Store
+*.DS_Store
