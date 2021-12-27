@@ -15,7 +15,7 @@ here <- here::here
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
+raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"][!survey=='S-GEORG'][!survey=='GIN'] # shouldn't be any inverts, just checking
 
 #for northeast, we are going to delete any hauls before 2009 that are outside of +/- 5 minutes of 30 minutes and 2009 forward that are outside of +/- 5 minutes of 20 minutes
 neus_bad_hauls <- unique(raw[(survey == "NEUS" & year < 2009 & (haul_dur < 0.42 | haul_dur > 0.58)) | (survey == "NEUS" & year >= 2009 & (haul_dur < 0.25  | haul_dur > 0.42)),haul_id])
