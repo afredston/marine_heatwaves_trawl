@@ -17,9 +17,20 @@ here <- here::here
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"] # shouldn't be any inverts, just checking
 
+#for northeast, we are going to delete any hauls before 2009 that are outside of +/- 5 minutes of 30 minutes and 2009 forward that are outside of +/- 5 minutes of 20 minutes
+neus_bad_hauls <- unique(raw[(survey == "NEUS" & year < 2009 & (haul_dur < 0.42 | haul_dur > 0.58)) | (survey == "NEUS" & year >= 2009 & (haul_dur < 0.25  | haul_dur > 0.42)),haul_id])
+#this removes 315 hauls from 36792 total hauls (0.85%)
+
+#calculate wgt_cpue (km^2 avg from sean Lucey) and wgt_h (all biomass values calibrated to standard pre 2009 30 minute tow)
+raw[survey == "NEUS", wgt_h := wgt/0.5][survey == "NEUS", wgt_cpue := wgt/0.0384][survey == "NEUS", num_h := num/0.5][survey == "NEUS", num_cpue := num/0.0384]
+
+
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
 bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id # find duplicated hauls
+bad_hauls <- c(bad_hauls, "EVHOE 2019 4 FR 35HT GOV X0510 64") #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
+GSLN_hauls_delete <- unique(raw[survey == "GSL-N" & year < 1987,haul_id])#get rid of hauls before 1987 for GSL-N because there are only biomass data for 2 species in 1984, and then no biomass data for 2 years
+bad_hauls <- c(bad_hauls, GSLN_hauls_delete, neus_bad_hauls)
 short_surveys <- unique(copy(haul_info)[, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey # get surveys with less than ten years of data to trim out 
 haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys] # filter out bad hauls
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
@@ -120,7 +131,7 @@ raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey")
 raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, s_georg_raw_zeros, dfo_nf_raw_zeros, gsl_n_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros,nz_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
 
 # calculate species-level mean CPUE in every year and region
-raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year")] 
+raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
 
 # get year interval -- how often is survey conducted?
 intervals <- copy(raw_cpue)
