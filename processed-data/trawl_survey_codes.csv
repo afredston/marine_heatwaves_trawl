@@ -1,19 +1,27 @@
-region,survey
-NorBTS,10
-BITS,2
-EVHOE,4
-FR-CGFS,5
-IE-IGFS,8
-NIGFS,9
-NS-IBTS,12
-PT-IBTS,13
-ROCKALL,14
-SWC-IBTS,17
-Aleutian Islands,1
-Eastern Bering Sea,3
-Gulf of Alaska,6
-Northeast,11
-West Coast,18
-Gulf of Mexico,7
-Southeast,16
-Scotian Shelf,15
+"","surveyID","survey"
+"1",1,"AI"
+"2",2,"BITS"
+"3",3,"DFO-NF"
+"4",4,"DFO-QCS"
+"5",5,"EBS"
+"6",6,"EVHOE"
+"7",7,"FR-CGFS"
+"8",8,"GMEX"
+"9",9,"GOA"
+"10",10,"GSL-N"
+"11",11,"GSL-S"
+"12",12,"ICE-GFS"
+"13",13,"IE-IGFS"
+"14",14,"NEUS"
+"15",15,"NIGFS"
+"16",16,"Nor-BTS"
+"17",17,"NS-IBTS"
+"18",18,"NZ"
+"19",19,"PT-IBTS"
+"20",20,"ROCKALL"
+"21",21,"S-GEORG"
+"22",22,"SCS"
+"23",23,"SEUS"
+"24",24,"SWC-IBTS"
+"25",25,"WCANN"
+"26",26,"WCTRI"

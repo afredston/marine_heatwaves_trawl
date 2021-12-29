@@ -420,8 +420,8 @@ survey_summary_cti <- survey_summary %>%
 ########
 
 # trawl and cti datasets
-write_csv(survey_summary_cti, "survey_biomass_with_CTI.csv")
-write_csv(survey_spp_summary_cti, "species_biomass_with_CTI.csv")
+write_csv(survey_summary_cti, here("processed-data","survey_biomass_with_CTI.csv"))
+write_csv(survey_spp_summary_cti, here("processed-data","species_biomass_with_CTI.csv"))
 write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
 
 # MHWs paired with ref_years
