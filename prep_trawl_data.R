@@ -18,6 +18,11 @@ here <- here::here
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
+# DROP UNWANTED SURVEYS
+# based on the summary plots in FISHGLOB, there are a few surveys where CPUE has been immensely variable and can't be used as an index of interannual variation in biomass. a lot more surveys and years are trimmed out below, but here, we're just getting rid of a few that are obviously not usable for our questions. 
+bad_surveys <- c('GSL-N')
+raw <- raw[!survey %in% bad_surveys]
+
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
 
@@ -38,8 +43,8 @@ bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id
 # note that many of these earlier years would be trimmed out anyway when we match them to the temperature data, but those filters are still included here for the sake of completeness 
 bits_hauls_del <- unique(raw[survey=='BITS' & year <= 2000, haul_id])
 evhoe_hauls_del <- unique(raw[survey=='EVHOE' & year == 2017, haul_id]) 
+fr_cgfs_hauls_del <- unique(raw[survey=='FR-CGFS' & year >= 2015, haul_id]) # in/after 2015 the number of hauls goes way down and the CPUE goes way up
 gmex_hauls_del <- unique(raw[survey=='GMEX' & year %in% c(1987,2020), haul_id]) # first and last years
-gsl_n_hauls_del <- unique(raw[survey == "GSL-N" & year < 1987,haul_id])#get rid of hauls before 1987 for GSL-N because there are only biomass data for 2 species in 1984, and then no biomass data for 2 years
 gsl_s_hauls_del <-  unique(raw[survey=='GSL-S' & year < 1985, haul_id])
 neus_hauls_del <- unique(raw[survey=='NEUS' & (year < 1968 | year > 2019), haul_id])
 nifgs_hauls_del <- unique(raw[survey=='NIGFS' & year < 2009, haul_id])
@@ -52,7 +57,7 @@ swc_ibts_hauls_del <- unique(raw[survey=='SWC-IBTS' & (year < 1990 | year == 201
 wctri_hauls_del <- unique(raw[survey=='WCTRI' & year == 2004, haul_id]) # this year overlapped with the WCANN survey (which started in 2003), drop it to avoid double-counting 
 
 # collate list and add in other problematic hauls
-bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_n_hauls_del, gsl_s_hauls_del, neus_hauls_del, nifgs_hauls_del, nor_bts_hauls_del, ns_ibts_hauls_del, pt_ibts_hauls_del, scs_hauls_del, seus_hauls_del, swc_ibts_hauls_del, wctri_hauls_del, "EVHOE 2019 4 FR 35HT GOV X0510 64") #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
+bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s_hauls_del, neus_hauls_del, nifgs_hauls_del, nor_bts_hauls_del, ns_ibts_hauls_del, pt_ibts_hauls_del, scs_hauls_del, seus_hauls_del, swc_ibts_hauls_del, wctri_hauls_del, "EVHOE 2019 4 FR 35HT GOV X0510 64") #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
 
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
