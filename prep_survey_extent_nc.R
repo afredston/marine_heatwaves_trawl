@@ -1,11 +1,10 @@
 # code to generate a netcdf file with trawl survey footprints for comparison with MHW data 
 
 library(ncdf4) # see https://pjbartlein.github.io/REarthSysSci/netCDF.html#create-and-write-a-netcdf-file
-
+library(here)
+library(tidyverse)
 # pull in data
-load(here("processed-data","SurveyCPUEs26102020.Rdata")) # Europe
-OApath <- "~/github/pinskylab-OceanAdapt-c913be5" # specify where this directory is stored on your machine 
-dat_exploded <- readRDS(paste0(OApath, "/data_clean/dat_exploded.rds")) # US
+haul_info <- read.csv(here("processed-data","haul_info.csv")) 
 
 # set up global 0.25x0.25 grid
 nlon <- 360/0.25
@@ -22,64 +21,29 @@ colnames(worlddf) <- c('lon','lat')
 worlddf$coords <- paste0(worlddf$lon,",",worlddf$lat)
 
 # get survey coordinates 
-surveycoordsUS <- dat_exploded %>% 
-  select(lat, lon, region) %>% 
+surveycoords <- haul_info %>% 
+  select(latitude, longitude, survey) %>% 
   distinct() %>% 
-  mutate(lat_round = floor(lat*4)/4 + 0.125,
-         lon_round = floor(lon*4)/4 + 0.125) %>% 
-  select(lon_round, lat_round, region) %>% 
-  distinct() %>% 
-  mutate(coords=paste0(lon_round,",",lat_round)) %>% 
-  select(coords, region) %>% 
-  mutate(regionName = ifelse(region %in% c("Northeast US Spring","Northeast US Fall"), "Northeast",
-                             ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
-                                    ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>%   # merge seasons of surveys in the same regions
-  select(-region) %>% 
-  rename(region = regionName)
-
-surveycoordsUS_save <- dat_exploded %>% 
-  select(lat, lon, region) %>% 
-  distinct() %>% 
-  mutate(regionName = ifelse(region %in% c("Northeast US Spring","Northeast US Fall"), "Northeast",
-                             ifelse(region %in% c("Southeast US Spring", "Southeast US Summer", "Southeast US Fall"), "Southeast", 
-                                    ifelse(region %in% c('West Coast Triennial','West Coast Annual'), 'West Coast', region)))) %>%   # merge seasons of surveys in the same regions
-  select(-region) %>% 
-  rename(region = regionName)
-
-# repeat for Europe - note that I think some coordinates are duplicated among surveys 
-surveycoordsEur <- surveycpue %>% 
-  select(region, lat, long) %>%
-  distinct() %>% 
-  mutate(lat_round = floor(lat*4)/4 + 0.125,
-         lon_round = floor(long*4)/4 + 0.125) %>% 
-  select(lon_round, lat_round, region) %>% 
+  mutate(lat_round = floor(latitude*4)/4 + 0.125,
+         lon_round = floor(longitude*4)/4 + 0.125) %>% 
+  select(lon_round, lat_round, survey) %>% 
   distinct() %>% 
   mutate(coords=paste0(lon_round,",",lat_round)) %>% 
-  select(coords, region) 
-
-#just for writing out lat/lon
-surveycoordsEur_save <- surveycpue %>% 
-  select(region, lat, long) %>%
-  distinct() %>% 
-  rename(lon=long)
-
-# combine Europe and US
-surveycoords <- rbind(surveycoordsEur, surveycoordsUS)%>% 
-  mutate(survey=as.numeric(factor(region)))
-
-write_csv(rbind(surveycoordsEur_save, surveycoordsUS_save), file=here("processed-data","survey_coordinates.csv"))
+  select(coords, survey) %>%
+  arrange(survey) %>%
+  mutate(surveyID=as.numeric(factor(survey)))
 
 # save which region corresponds to which code
 surveyIDs <- surveycoords %>%   
-  select(region, survey) %>% 
+  select(surveyID, survey) %>% 
   distinct() # alphabetical ordering 
-write_csv(surveyIDs, path=here("processed-data","trawl_survey_codes.csv"))
+write.csv(surveyIDs,here("processed-data","trawl_survey_codes.csv"))
 
 # merge with world coordinates 
 worldsurvey <- worlddf %>% 
-  left_join(surveycoords %>% select(-region),by="coords") %>% 
+  left_join(surveycoords %>% select(-survey),by="coords") %>% 
   select(-coords) %>% 
-  replace_na(list(survey=0)) # replace NAs with FALSE 
+  replace_na(list(surveyID=0)) # replace NAs with FALSE 
 
 # set up nc file
 ncfile <- here("processed-data","survey_extent.nc")
@@ -106,7 +70,7 @@ for(i in 1:nobs) {
   k <- which.min(abs(worldlat-tmp_df03$lat[i]))
   
   # copy data from the data frame to array
-  surv_array3[j,k] <- (tmp_df03$survey[i])
+  surv_array3[j,k] <- (tmp_df03$surveyID[i])
 }
 
 # create netCDF file and put arrays - will throw an error if file exists
