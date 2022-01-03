@@ -15,7 +15,7 @@ here <- here::here
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))[phylum=="Chordata"][!survey=='S-GEORG'][!survey=='GIN'] # shouldn't be any inverts, just checking
+raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
 #for northeast, we are going to delete any hauls before 2009 that are outside of +/- 5 minutes of 30 minutes and 2009 forward that are outside of +/- 5 minutes of 20 minutes
 neus_bad_hauls <- unique(raw[(survey == "NEUS" & year < 2009 & (haul_dur < 0.42 | haul_dur > 0.58)) | (survey == "NEUS" & year >= 2009 & (haul_dur < 0.25  | haul_dur > 0.42)),haul_id])
@@ -51,7 +51,7 @@ raw_zeros %<>%
   merge(haul_info, all.x=TRUE, by=c("haul_id","survey")) %>%
   # left-join actual obs data to all spp*haul rows
   merge(raw, all.x=TRUE, by=c("survey", "haul_id", "accepted_name"))  
-raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf]
+raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf] # replace NAs with 0s
  
 
 # Check that the spatial domain of each region is fixed over time 
@@ -108,18 +108,15 @@ swc_ibts_raw_zeros <-raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)][,star
 
 # many other surveys also have tows throughout the year; I'm cropping them manually to one season here
 # pick the season with the most hauls, no more than 4 months, except the regions with fully seasonal surveys that occasionally start slightly earlier / end slightly later than a 4-month window like wcann
-s_georg_raw_zeros <-raw_zeros[survey=='S-GEORG' & month %in% c(1, 2,3, 4)][,startmonth := min(month)] 
-dfo_nf_raw_zeros <-raw_zeros[survey=='DFO-NF' & month %in% c(9,10,11,12)][,startmonth := min(month)] 
 gsl_n_raw_zeros <-raw_zeros[survey=='GSL-N' & month %in% seq(7, 10, 1)][,startmonth := min(month)] 
 neus_raw_zeros <-raw_zeros[survey=='NEUS' & month %in% seq(9, 12, 1)][,startmonth := min(month)] 
 nigfs_raw_zeros <-raw_zeros[survey=='NIGFS' & month %in% seq(10,11, 1)][,startmonth := min(month)] # basically a toss-up here between fall and spring, doing fall to be more distinct from other uk surveys
 nor_bts_raw_zeros <-raw_zeros[survey=='Nor-BTS' & month %in% seq(8, 12, 1)][,startmonth := min(month)] # also a toss-up, but I'm keeping fall because there is some spatial overlap with ns-ibts, so this keeps them more distinct 
-nz_raw_zeros <-raw_zeros[survey=='NZ' & month %in% c(11,12,1)][,startmonth := 11] # manually coding start month because this "wraps around" the year, but the start month is not january!
 scs_raw_zeros <-raw_zeros[survey=='SCS' & month %in% seq(6,8, 1)][,startmonth := min(month)] 
 gmex_raw_zeros <-raw_zeros[survey=='GMEX' & month %in% seq(6,8, 1)][,startmonth := min(month)] 
 seus_raw_zeros <-raw_zeros[survey=='SEUS' & month %in% seq(7,10, 1)][,startmonth := min(month)] 
 
-raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS','S-GEORG','DFO-NF','GSL-N','NEUS','NIGFS','Nor-BTS','NZ','SCS','GMEX','SEUS')]
+raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS','GSL-N','NEUS','NIGFS','Nor-BTS','SCS','GMEX','SEUS')]
 
 # get start months for each survey 
 start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, startmonth)]
@@ -128,15 +125,15 @@ start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, st
 raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey") 
 
 # add special cases back in 
-raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, s_georg_raw_zeros, dfo_nf_raw_zeros, gsl_n_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros,nz_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
+raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, gsl_n_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
 
 # get year interval -- how often is survey conducted?
-intervals <- copy(raw_cpue)
-intervals <- unique(intervals[,.(survey, year)])
-intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=.(survey)]
+# intervals <- copy(raw_cpue)
+# intervals <- unique(intervals[,.(survey, year)])
+# intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=.(survey)]
 
 #########
 # Write out processed biomass data
