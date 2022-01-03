@@ -138,7 +138,6 @@ swc_ibts_raw_zeros <-raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)][,star
 
 # many other surveys also have tows throughout the year; I'm cropping them manually to one season here
 # pick the season with the most hauls, no more than 4 months, except the regions with fully seasonal surveys that occasionally start slightly earlier / end slightly later than a 4-month window like wcann
-gsl_n_raw_zeros <-raw_zeros[survey=='GSL-N' & month %in% seq(7, 10, 1)][,startmonth := min(month)] 
 neus_raw_zeros <-raw_zeros[survey=='NEUS' & month %in% seq(9, 12, 1)][,startmonth := min(month)] 
 nigfs_raw_zeros <-raw_zeros[survey=='NIGFS' & month %in% seq(10,11, 1)][,startmonth := min(month)] # basically a toss-up here between fall and spring, doing fall to be more distinct from other uk surveys
 nor_bts_raw_zeros <-raw_zeros[survey=='Nor-BTS' & month %in% seq(8, 12, 1)][,startmonth := min(month)] # also a toss-up, but I'm keeping fall because there is some spatial overlap with ns-ibts, so this keeps them more distinct 
@@ -146,7 +145,7 @@ scs_raw_zeros <-raw_zeros[survey=='SCS' & month %in% seq(6,8, 1)][,startmonth :=
 gmex_raw_zeros <-raw_zeros[survey=='GMEX' & month %in% seq(6,8, 1)][,startmonth := min(month)] 
 seus_raw_zeros <-raw_zeros[survey=='SEUS' & month %in% seq(7,10, 1)][,startmonth := min(month)] 
 
-raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS','GSL-N','NEUS','NIGFS','Nor-BTS','SCS','GMEX','SEUS')]
+raw_zeros <- raw_zeros[!survey %in% c('BITS','EVHOE','FR-CGFS','IE-IGFS','NS-IBTS','SWC-IBTS','NEUS','NIGFS','Nor-BTS','SCS','GMEX','SEUS')]
 
 # get start months for each survey 
 start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, startmonth)]
@@ -155,7 +154,7 @@ start_months <- haul_info[,.(startmonth = min(month)), by=survey][, .(survey, st
 raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey") 
 
 # add special cases back in 
-raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, gsl_n_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
+raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
@@ -170,4 +169,3 @@ raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted
 #########
 fwrite(raw_cpue, here("processed-data","biomass_time.csv"))
 fwrite(haul_info, here("processed-data","haul_info.csv"))
-
