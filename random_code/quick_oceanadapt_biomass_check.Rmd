@@ -1,0 +1,121 @@
+---
+title: "Quick OceanAdapt Biomass Check"
+output: html_notebook
+---
+
+Pull in data (2020 dat_exploded release)
+```{r setup}
+library(data.table)
+library(ggplot2)
+library(taxize) # for getting correct species names
+library(dplyr)
+
+
+dat_exploded <- as.data.table(readRDS("/Users/zoekitchel/Downloads/OceanAdapt-update2020/data_clean/dat_exploded.rds"))
+```
+
+Limit to just EBS
+
+```{r}
+ebs <- dat_exploded[region == "Eastern Bering Sea",]
+rm(dat_exploded)
+```
+
+Sum biomass per year
+```{r}
+ebs[,year_wtcpue := sum(wtcpue, na.rm = T), .(year,spp)][,year:=as.numeric(year)]
+```
+
+Add in genus etc. 
+```{r}
+taxon_list <- unique(ebs[,spp])
+
+wrm <- taxize::gnr_datasources() %>% 
+    dplyr::filter(title == "World Register of Marine Species") %>% 
+    dplyr::pull(id)
+
+ # If scientific names are provided, check misspelling
+    fix_taxon <- taxize::gnr_resolve(taxon_list,
+                                     data_source_ids = wrm,
+                                     best_match_only = TRUE,
+                                     canonical = TRUE,
+                                     ask = FALSE) %>% 
+      dplyr::select(
+        query = user_supplied_name,
+        taxa = matched_name2)
+    
+    # Missing in fix_taxon
+    missing_misspelling <- tibble(
+      query = taxon_list) %>% 
+      dplyr::filter(!query %in% fix_taxon$query)
+    
+    # Get Alphaid of taxon (Takes some time)
+    
+    alphaid <- tibble::tibble(
+      fix_taxon,
+      worms_id = cbind(worms::wormsbynames(fix_taxon$taxa,
+                                           verbose = FALSE)
+                       )
+    )
+    
+    # Missing in AphiaIDs (none missing!)
+    missing_alphaid <- alphaid %>% 
+      dplyr::filter(is.na(worms_id)) %>% 
+      dplyr::select(query)
+    
+    # Get correct names and full classification
+    worms_db <-  worms::wormsbyid(as.numeric(alphaid$worms_id$AphiaID),
+                                  verbose = F) %>% 
+      dplyr::select(
+        taxa = valid_name, # selects valid name in case is synonym
+        worms_id = valid_AphiaID, # selects valid id in case is synonym
+        kingdom,phylum,class,order,family,genus,isMarine,rank
+      ) %>%
+      # Include originally supplied taxa
+      dplyr::mutate(
+        query = fix_taxon$query
+      ) %>% rename("spp" = "query")
+    
+    
+    # Get Missing information
+    missing_data <- dplyr::bind_rows(missing_alphaid,missing_misspelling)
+    
+#leaves out Ciliatoclinocardium ciliatum, look into later
+
+
+#merge back with ebs
+
+
+ebs_spp <- ebs[worms_db, on = "spp"]
+```
+
+
+Plot biomass over time
+```{r}
+year_wtcpue_byspp <- ggplot(data = ebs[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~spp, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp, path = "/Users/zoekitchel/Downloads/OceanAdapt-update2020", filename = "year_wtcpue_byspp.eps", width = 20, height = 10, unit = "in")
+
+```
+Average by phylum
+```{r}
+ebs_spp[,year_wtcpue_phylum := sum(year_wtcpue),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+```
+
+Plot by group
+```{r}
+ggplot(ebs_spp, aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  theme_classic()
+
+ggplot(ebs_spp, aes(x = year, y = year_wtcpue_phylum_scaled, color = phylum)) +
+  geom_line() +
+  theme_classic()
+```
+
