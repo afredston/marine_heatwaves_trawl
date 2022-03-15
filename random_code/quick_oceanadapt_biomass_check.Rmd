@@ -9,26 +9,56 @@ library(data.table)
 library(ggplot2)
 library(taxize) # for getting correct species names
 library(dplyr)
+library(cowplot)
 
-
+#oceanadapt
 dat_exploded <- as.data.table(readRDS("/Users/zoekitchel/Downloads/OceanAdapt-update2020/data_clean/dat_exploded.rds"))
+#fishglob
+FishGlob <- readRDS(file = here::here("processed-data", "FishGlob_1.1.clean.rds"))
+
 ```
 
 Limit to just EBS
 
-```{r}
-ebs <- dat_exploded[region == "Eastern Bering Sea",]
+```{r limit to EBS}
+#ocean adapt
+OceanAdapt_ebs <- dat_exploded[region == "Eastern Bering Sea",]
+
+#fishglob
+FishGlob_ebs <- FishGlob[survey == "EBS",]
+
+
+```
+
+Limit to NEUS spring and fall
+```{r limit to NEUS}
+#ocean adapt neus spring
+OceanAdapt_neus_spring <- dat_exploded[region == "Northeast US Spring",]
+
+#ocean adapt neus fall
+OceanAdapt_neus_fall <- dat_exploded[region == "Northeast US Fall",]
+
+
+#fishglob neus fall 
+FishGlob_neus_fall <- FishGlob[survey == "NEUS" & season %in% c("fall","Fall","FALL"),]
+
+#fishglob neus spring
+FishGlob_neus_spring <- FishGlob[survey == "NEUS" & season %in% c("spring","Spring","SPRING"),]
+
+rm(FishGlob)
 rm(dat_exploded)
 ```
 
+
 Sum biomass per year
-```{r}
-ebs[,year_wtcpue := sum(wtcpue, na.rm = T), .(year,spp)][,year:=as.numeric(year)]
+```{r ebs sum biomass per year}
+OceanAdapt_ebs[,year_wtcpue := sum(wtcpue, na.rm = T), .(year,spp)][,year:=as.numeric(year)] #in kg/hectare
+FishGlob_ebs[,year_wtcpue := sum(wgt_cpue, na.rm = T), .(year,accepted_name)][,year:=as.numeric(year)] #will be in kg/km^2
 ```
 
 Add in genus etc. 
-```{r}
-taxon_list <- unique(ebs[,spp])
+```{r ebs add in taxonomy}
+taxon_list <- unique(OceanAdapt_ebs[,spp])
 
 wrm <- taxize::gnr_datasources() %>% 
     dplyr::filter(title == "World Register of Marine Species") %>% 
@@ -86,13 +116,13 @@ wrm <- taxize::gnr_datasources() %>%
 #merge back with ebs
 
 
-ebs_spp <- ebs[worms_db, on = "spp"]
+OceanAdapt_ebs_spp <- OceanAdapt_ebs[worms_db, on = "spp"]
 ```
 
 
 Plot biomass over time
-```{r}
-year_wtcpue_byspp <- ggplot(data = ebs[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+```{r ebs biomass over time}
+year_wtcpue_byspp_oceanadapt <- ggplot(data = OceanAdapt_ebs[year >= 2010,], aes(x = year, y = year_wtcpue)) +
   geom_line(size = 0.5) +
   facet_wrap(~spp, scales = "free") +
   theme_classic() +
@@ -100,22 +130,359 @@ year_wtcpue_byspp <- ggplot(data = ebs[year >= 2010,], aes(x = year, y = year_wt
         axis.title = element_text(size =5),
         axis.text.x=element_text(angle=90, size = 3))
 
-ggsave(year_wtcpue_byspp, path = "/Users/zoekitchel/Downloads/OceanAdapt-update2020", filename = "year_wtcpue_byspp.eps", width = 20, height = 10, unit = "in")
+ggsave(year_wtcpue_byspp_oceanadapt, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_oceanadapt.pdf", width = 20, height = 10, unit = "in")
+
+year_wtcpue_byspp_fishglob <- ggplot(data = FishGlob_ebs[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~accepted_name, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp_fishglob, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_fishglob.pdf", width = 20, height = 10, unit = "in")
 
 ```
 Average by phylum
-```{r}
-ebs_spp[,year_wtcpue_phylum := sum(year_wtcpue),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+```{r ebs avg by phylum}
+OceanAdapt_ebs_spp[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
+FishGlob_ebs[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
 ```
 
 Plot by group
-```{r}
-ggplot(ebs_spp, aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+```{r ebs plot by group}
+#ocean adapt
+ggplot(OceanAdapt_ebs_spp, aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
   geom_line() +
+  scale_color_manual(values =  c("#5A5156","#E4E1E3","#F6222E","#FE00FA", 
+  "#16FF32","#3283FE","#FEAF16","#B00068", 
+  "#1CFFCE")) +
   theme_classic()
 
-ggplot(ebs_spp, aes(x = year, y = year_wtcpue_phylum_scaled, color = phylum)) +
+ggplot(OceanAdapt_ebs_spp, aes(x = year, y = year_wtcpue_phylum_scaled, color = phylum)) +
   geom_line() +
+  scale_color_manual(values =  c("#5A5156","#E4E1E3","#F6222E","#FE00FA", 
+  "#16FF32","#3283FE","#FEAF16","#B00068", 
+  "#1CFFCE")) +
   theme_classic()
+
+#fishglob
+ggplot(FishGlob_ebs, aes(x = year, y = year_wtcpue_phylum)) +
+  geom_line(color = "#FE00FA") +
+  theme_classic()
+
+ggplot(FishGlob_ebs, aes(x = year, y = year_wtcpue_phylum_scaled)) +
+  geom_line(color = "#FE00FA") +
+  theme_classic()
+
+#compare just 2012-2017
+oceanadapt_ebs_biomass_2010s <- ggplot(OceanAdapt_ebs_spp[year > 2007 & year < 2018], aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#5A5156","#E4E1E3","#F6222E","#FE00FA", 
+  "#16FF32","#3283FE","#FEAF16","#B00068", 
+  "#1CFFCE")) +
+  theme_classic()
+
+fishglob_ebs_biomass_2010s <- ggplot(FishGlob_ebs[year > 2007 & year < 2018], aes(x = year, y = year_wtcpue_phylum)) +
+  geom_line(color = "#FE00FA") +
+  theme_classic()
+
+#side by side
+plot_grid(oceanadapt_ebs_biomass_2010s + theme(legend.position = "none"), fishglob_ebs_biomass_2010s, labels = c(c("EBS OceanAdapt","  EBS FishGlob")))
 ```
 
+
+##NEUS Spring
+
+Calculate CPUE for NEUS #note that this does not get rid of all bad hauls where haul duration is not near 20 or 30, should do this later
+```{r calc cpue for neus}
+FishGlob_neus_spring[,wgt_cpue := wgt/area_swept]
+```
+
+
+Sum biomass per year
+```{r neus_spring sum biomass per year}
+OceanAdapt_neus_spring[,year_wtcpue := sum(wtcpue, na.rm = T), .(year,spp)][,year:=as.numeric(year)] #in kg/hectare
+FishGlob_neus_spring[,year_wtcpue := sum(wgt_cpue, na.rm = T), .(year,accepted_name)][,year:=as.numeric(year)] #will be in kg/km^2
+```
+
+Add in genus etc. 
+```{r neus_spring add in taxonomy}
+taxon_list <- unique(OceanAdapt_neus_spring[,spp])
+
+wrm <- taxize::gnr_datasources() %>% 
+    dplyr::filter(title == "World Register of Marine Species") %>% 
+    dplyr::pull(id)
+
+ # If scientific names are provided, check misspelling
+    fix_taxon <- taxize::gnr_resolve(taxon_list,
+                                     data_source_ids = wrm,
+                                     best_match_only = TRUE,
+                                     canonical = TRUE,
+                                     ask = FALSE) %>% 
+      dplyr::select(
+        query = user_supplied_name,
+        taxa = matched_name2)
+    
+    # Missing in fix_taxon
+    missing_misspelling <- tibble(
+      query = taxon_list) %>% 
+      dplyr::filter(!query %in% fix_taxon$query)
+    
+    # Get Alphaid of taxon (Takes some time)
+    
+    alphaid <- tibble::tibble(
+      fix_taxon,
+      worms_id = cbind(worms::wormsbynames(fix_taxon$taxa,
+                                           verbose = FALSE)
+                       )
+    )
+    
+    # Missing in AphiaIDs (none missing!)
+    missing_alphaid <- alphaid %>% 
+      dplyr::filter(is.na(worms_id)) %>% 
+      dplyr::select(query)
+    
+    # Get correct names and full classification
+    worms_db <-  worms::wormsbyid(as.numeric(alphaid$worms_id$AphiaID),
+                                  verbose = F) %>% 
+      dplyr::select(
+        taxa = valid_name, # selects valid name in case is synonym
+        worms_id = valid_AphiaID, # selects valid id in case is synonym
+        kingdom,phylum,class,order,family,genus,isMarine,rank
+      ) %>%
+      # Include originally supplied taxa
+      dplyr::mutate(
+        query = fix_taxon$query
+      ) %>% rename("spp" = "query")
+    
+    
+    # Get Missing information
+    missing_data <- dplyr::bind_rows(missing_alphaid,missing_misspelling)
+    
+#leaves out none
+
+
+#merge back with neus_spring
+
+
+OceanAdapt_neus_spring_spp <- OceanAdapt_neus_spring[worms_db, on = "spp"]
+```
+
+
+Plot biomass over time
+```{r neus_spring biomass over time}
+year_wtcpue_byspp_oceanadapt_neus_spring <- ggplot(data = OceanAdapt_neus_spring[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~spp, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp_oceanadapt_neus_spring, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_oceanadapt_neus_spring.pdf", width = 20, height = 10, unit = "in")
+
+year_wtcpue_byspp_fishglob_neus_spring <- ggplot(data = FishGlob_neus_spring[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~accepted_name, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp_fishglob_neus_spring, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_fishglob_neus_spring.pdf", width = 20, height = 10, unit = "in")
+
+```
+Average by phylum
+```{r neus_spring avg by phylum}
+OceanAdapt_neus_spring_spp[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
+FishGlob_neus_spring[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
+```
+
+Plot by group
+```{r neus_spring plot by group}
+#ocean adapt
+ggplot(OceanAdapt_neus_spring_spp, aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+ggplot(OceanAdapt_neus_spring_spp, aes(x = year, y = year_wtcpue_phylum_scaled, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+#fishglob
+ggplot(FishGlob_neus_spring, aes(x = year, y = year_wtcpue_phylum)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+ggplot(FishGlob_neus_spring, aes(x = year, y = year_wtcpue_phylum_scaled)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+#compare just 2010-2014
+oceanadapt_neus_spring_biomass_2010s <- ggplot(OceanAdapt_neus_spring_spp[year > 2009 & year < 2014], aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+fishglob_neus_spring_biomass_2010s <- ggplot(FishGlob_neus_spring[year > 2009 & year < 2014], aes(x = year, y = year_wtcpue_phylum)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+#side by side
+plot_grid(oceanadapt_neus_spring_biomass_2010s + theme(legend.position = "none"), fishglob_neus_spring_biomass_2010s, labels = c(c("NEUS Spring OceanAdapt","  NEUS Spring FishGlob")))
+
+```
+
+##NEUS Fall
+
+Calculate CPUE for NEUS #note that this does not get rid of all bad hauls where haul duration is not near 20 or 30, should do this later
+```{r calc cpue for neus fall}
+FishGlob_neus_fall[,wgt_cpue := wgt/area_swept]
+```
+
+
+
+Sum biomass per year
+```{r neus_fall sum biomass per year}
+OceanAdapt_neus_fall[,year_wtcpue := sum(wtcpue, na.rm = T), .(year,spp)][,year:=as.numeric(year)] #in kg/hectare
+FishGlob_neus_fall[,year_wtcpue := sum(wgt_cpue, na.rm = T), .(year,accepted_name)][,year:=as.numeric(year)] #will be in kg/km^2
+```
+
+Add in genus etc. 
+```{r neus_fall add in taxonomy}
+taxon_list <- unique(OceanAdapt_neus_fall[,spp])
+
+wrm <- taxize::gnr_datasources() %>% 
+    dplyr::filter(title == "World Register of Marine Species") %>% 
+    dplyr::pull(id)
+
+ # If scientific names are provided, check misspelling
+    fix_taxon <- taxize::gnr_resolve(taxon_list,
+                                     data_source_ids = wrm,
+                                     best_match_only = TRUE,
+                                     canonical = TRUE,
+                                     ask = FALSE) %>% 
+      dplyr::select(
+        query = user_supplied_name,
+        taxa = matched_name2)
+    
+    # Missing in fix_taxon
+    missing_misspelling <- tibble(
+      query = taxon_list) %>% 
+      dplyr::filter(!query %in% fix_taxon$query)
+    
+    # Get Alphaid of taxon (Takes some time)
+    
+    alphaid <- tibble::tibble(
+      fix_taxon,
+      worms_id = cbind(worms::wormsbynames(fix_taxon$taxa,
+                                           verbose = FALSE)
+                       )
+    )
+    
+    # Missing in AphiaIDs (none missing!)
+    missing_alphaid <- alphaid %>% 
+      dplyr::filter(is.na(worms_id)) %>% 
+      dplyr::select(query)
+    
+    # Get correct names and full classification
+    worms_db <-  worms::wormsbyid(as.numeric(alphaid$worms_id$AphiaID),
+                                  verbose = F) %>% 
+      dplyr::select(
+        taxa = valid_name, # selects valid name in case is synonym
+        worms_id = valid_AphiaID, # selects valid id in case is synonym
+        kingdom,phylum,class,order,family,genus,isMarine,rank
+      ) %>%
+      # Include originally supplied taxa
+      dplyr::mutate(
+        query = fix_taxon$query
+      ) %>% rename("spp" = "query")
+    
+    
+    # Get Missing information
+    missing_data <- dplyr::bind_rows(missing_alphaid,missing_misspelling)
+    
+#doeesn't leave out any
+
+
+#merge back with neus_fall
+
+
+OceanAdapt_neus_fall_spp <- OceanAdapt_neus_fall[worms_db, on = "spp"]
+```
+
+
+Plot biomass over time
+```{r neus_fall biomass over time}
+year_wtcpue_byspp_oceanadapt_neus_fall <- ggplot(data = OceanAdapt_neus_fall[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~spp, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp_oceanadapt_neus_fall, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_oceanadapt_neus_fall.pdf", width = 20, height = 10, unit = "in")
+
+year_wtcpue_byspp_fishglob_neus_fall <- ggplot(data = FishGlob_neus_fall[year >= 2010,], aes(x = year, y = year_wtcpue)) +
+  geom_line(size = 0.5) +
+  facet_wrap(~accepted_name, scales = "free") +
+  theme_classic() +
+  theme(strip.text = element_text(size=5),
+        axis.title = element_text(size =5),
+        axis.text.x=element_text(angle=90, size = 3))
+
+ggsave(year_wtcpue_byspp_fishglob_neus_fall, path = here::here("figures","fishglob_oceanadapt_comparison"), filename = "year_wtcpue_byspp_fishglob_neus_fall.pdf", width = 20, height = 10, unit = "in")
+
+```
+
+Average by phylum
+```{r neus_fall avg by phylum}
+OceanAdapt_neus_fall_spp[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
+FishGlob_neus_fall[,year_wtcpue_phylum := sum(year_wtcpue, na.rm = T),.(year,phylum)][,year_wtcpue_phylum_scaled := scale(year_wtcpue_phylum), phylum]
+
+```
+
+Plot by group
+```{r neus_fall plot by group}
+#ocean adapt
+ggplot(OceanAdapt_neus_fall_spp, aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+ggplot(OceanAdapt_neus_fall_spp, aes(x = year, y = year_wtcpue_phylum_scaled, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+#fishglob
+ggplot(FishGlob_neus_fall, aes(x = year, y = year_wtcpue)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+ggplot(FishGlob_neus_fall, aes(x = year, y = year_wtcpue)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+#compare just 2010-2014
+oceanadapt_neus_fall_biomass_2010s <- ggplot(OceanAdapt_neus_fall_spp[year > 2009 & year < 2014], aes(x = year, y = year_wtcpue_phylum, color = phylum)) +
+  geom_line() +
+  scale_color_manual(values =  c("#1CFFCE", "#16FF32","#B00068")) +
+  theme_classic()
+
+fishglob_neus_fall_biomass_2010s <- ggplot(FishGlob_neus_fall[year > 2009 & year < 2014], aes(x = year, y = year_wtcpue_phylum)) +
+  geom_line(color = "#16FF32") +
+  theme_classic()
+
+#side by side
+plot_grid(oceanadapt_neus_fall_biomass_2010s + theme(legend.position = "none"), fishglob_neus_fall_biomass_2010s, labels = c("     NEUS Fall OceanAdapt","     NEUS Fall FishGlob"))
+```
