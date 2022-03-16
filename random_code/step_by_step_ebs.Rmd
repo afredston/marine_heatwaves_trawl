@@ -316,8 +316,7 @@ if(all(duplicated(ebs_data) == FALSE)) {
 } else {
   ebs_data_nodups <- distinct(ebs_data)
 }
-   
-} #tells us there are duplicated rows
+   #tells us there are duplicated rows
 
 
 #delete duplicated rows
