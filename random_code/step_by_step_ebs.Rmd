@@ -1,0 +1,468 @@
+---
+title: "Step by Step Pollock EBS"
+output: html_notebook
+---
+We're trying to figure out where the 2020 release of compile.R goes wrong so that there is a mismatch between Fishglob and OceanAdapt data in EBS in 2016.
+
+```{r setup}
+ library(tidyverse)
+ library(lubridate)
+ library(PBSmapping) 
+ library(data.table) 
+ library(gridExtra) 
+ library(questionr) 
+ library(geosphere)
+ library(here)
+```
+
+Toggles
+
+```{r toggles}
+# Answer the following questions using all caps TRUE or FALSE to direct the actions of the script =====================================
+
+# 1. Some strata and years have very little data, should they be removed? #DEFAULT: TRUE. 
+HQ_DATA_ONLY <- TRUE
+
+# 2. View plots of removed strata for HQ_DATA. #OPTIONAL, DEFAULT:FALSE
+# It takes a while to generate these plots.
+HQ_PLOTS <- FALSE
+
+# 3. Remove ai,ebs,gmex,goa,neus,seus,wcann,wctri, scot. Keep `dat`. #DEFAULT: FALSE 
+REMOVE_REGION_DATASETS <- FALSE
+
+# 4. Create graphs based on the data similar to those shown on the website and outputs them to pdf. #DEFAULT:FALSE
+PLOT_CHARTS <- FALSE
+# This used to be called OPTIONAL_PLOT_CHARTS, do I need to change it back?
+
+# 5. If you would like to write out the clean data, would you prefer it in Rdata or CSV form?  Note the CSV's are much larger than the Rdata files. #DEFAULT:TRUE, FALSE generates CSV's instead of Rdata.
+PREFER_RDATA <- TRUE
+
+# 5. Output the clean full master data frame. #DEFAULT:FALSE
+WRITE_MASTER_DAT <- TRUE
+# This used to be called OPTIONAL_OUTPUT_DAT_MASTER_TABLE, do I need to change the name back?
+
+# 6. Output the clean trimmed data frame. #DEFAULT:FALSE
+WRITE_TRIMMED_DAT <- TRUE
+
+# 7. Generate dat.exploded table. #OPTIONAL, DEFAULT:TRUE
+DAT_EXPLODED <- TRUE
+
+# 8. Output the dat.exploded table #DEFAULT:FALSE
+WRITE_DAT_EXPLODED <- TRUE
+
+# 9. Output the BY_SPECIES, BY_REGION, and BY_NATIONAL tables. #DEFAULT:FALSE
+WRITE_BY_TABLES <- TRUE
+
+```
+
+Functions
+
+```{r functions}
+# function to calculate convex hull area in km2
+#developed from http://www.nceas.ucsb.edu/files/scicomp/GISSeminar/UseCases/CalculateConvexHull/CalculateConvexHullR.html
+calcarea <- function(lon,lat){
+  hullpts = chull(x=lon, y=lat) # find indices of vertices
+  hullpts = c(hullpts,hullpts[1]) # close the loop
+  lonlat <- data.frame(cbind(lon, lat))
+  ps = appendPolys(NULL,mat=as.matrix(lonlat[hullpts,]),1,1,FALSE) # create a Polyset object
+  attr(ps,"projection") = "LL" # set projection to lat/lon
+  psUTM = convUL(ps, km=TRUE) # convert to UTM in km
+  polygonArea = calcArea(psUTM,rollup=1)
+  return(polygonArea$area)
+}
+
+sumna <- function(x){
+  #acts like sum(na.rm=T) but returns NA if all are NA
+  if(!all(is.na(x))) return(sum(x, na.rm=T))
+  if(all(is.na(x))) return(NA)
+}
+
+meanna = function(x){
+  if(!all(is.na(x))) return(mean(x, na.rm=T))
+  if(all(is.na(x))) return(NA)
+}
+
+# weighted mean for use with summarize(). values in col 1, weights in col 2
+wgtmean = function(x, na.rm=FALSE) {questionr::wtd.mean(x=x[,1], weights=x[,2], na.rm=na.rm)}
+
+wgtse = function(x, na.rm=TRUE){ 
+  if(sum(!is.na(x[,1]) & !is.na(x[,2]))>1){
+    if(na.rm){
+      return(sqrt(wtd.var(x=x[,1], weights=x[,2], na.rm=TRUE, normwt=TRUE))/sqrt(sum(!is.na(x[,1] & !is.na(x[,2])))))
+    } else {
+      return(sqrt(wtd.var(x=x[,1], weights=x[,2], na.rm=FALSE, normwt=TRUE))/sqrt(length(x))) # may choke on wtd.var without removing NAs
+    }
+  } else {
+    return(NA) # NA if vector doesn't have at least 2 values
+  }
+}
+
+se <- function(x) sd(x)/sqrt(length(x)) # assumes no NAs
+
+lunique = function(x) length(unique(x)) # number of unique values in a vector
+
+present_every_year <- function(dat, ...){
+  presyr <- dat %>% 
+    filter(wtcpue > 0) %>% 
+    group_by(...) %>% 
+    summarise(pres = n())
+  return(presyr)
+}
+
+num_year_present <- function(presyr, ...){
+  presyrsum <- presyr %>% 
+    filter(pres > 0) %>% 
+    group_by(...) %>% 
+    summarise(presyr = n()) 
+  return(presyrsum)
+}
+
+max_year_surv <- function(presyrsum, ...){
+  maxyrs <- presyrsum %>% 
+    group_by(...) %>% 
+    summarise(maxyrs = max(presyr))
+  return(maxyrs)
+  
+}
+
+explode0 <- function(x, by=c("region")){
+  # x <- copy(x)
+  stopifnot(is.data.table(x))
+  
+  # print(x[1])
+  
+  # x <- as.data.table(x)
+  # x <- as.data.table(trimmed_dat)[region=="Scotian Shelf Summer"]
+  # setkey(x, haulid, stratum, year, lat, lon, stratumarea, depth)
+  # group the data by these columns
+  setorder(x, haulid, stratum, year, lat, lon, stratumarea, depth)
+  
+  # pull out all of the unique spp
+  u.spp <- x[,as.character(unique(spp))]
+  # pull out all of the unique common names
+  u.cmmn <- x[,common[!duplicated(as.character(spp))]]
+  
+  # pull out these location related columns and sort by haul_id and year
+  x.loc <- x[,list(haulid, year, stratum, stratumarea, lat, lon, depth)]
+  setkey(x.loc, haulid, year)
+  
+  # attatch all spp to all locations
+  x.skele <- x.loc[,list(spp=u.spp, common=u.cmmn), by=eval(colnames(x.loc))]
+  setkey(x.skele, haulid, year, spp)
+  x.skele <- unique(x.skele)
+  setcolorder(x.skele, c("haulid","year","spp", "common", "stratum", "stratumarea","lat","lon","depth"))
+  
+  # pull in multiple observations of the same species 
+  x.spp.dat <- x[,list(haulid, year, spp, wtcpue)]
+  setkey(x.spp.dat, haulid, year, spp)
+  x.spp.dat <- unique(x.spp.dat)
+  
+  out <- x.spp.dat[x.skele, allow.cartesian = TRUE]
+  
+  out$wtcpue[is.na(out$wtcpue)] <- 0
+  
+  out
+}
+
+```
+
+Where are the inconsistencies?
+```{r compile EBS}
+# Compile EBS ============================================================
+files <- as.list(dir(pattern = "ebs", path = "random_code/OceanAdapt-update2020/data_raw", full.names = T)) #for some reason I have to copy paste this into console to work
+
+# exclude the strata file
+files <- files[-grep("strata", files)]
+
+
+```
+
+```{r seems like issue may actually be in single csv from 2020 ebs release} 
+#pull in csv for 2013-2016, sum
+ebs_2013_2016 <- read_csv("random_code/OceanAdapt-update2020/data_raw/ebs2013_2016.csv")
+  #plot at this stage
+  ebs_2013_2016 %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+#pull in, sum, only 2017-2018 file
+ebs_2017_2018 <- read_csv("random_code/OceanAdapt-update2020/data_raw/ebs2017_2018.csv")
+  #plot at this stage
+  ebs_2017_2018 %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+  #why does ebs_2017_2018 this have 2016? is it repeated? that appears to be the case, I'm going to check
+#just 2016 data from ebs_2017_2018
+ebs_2017_2018__2016  <- ebs_2017_2018 %>% filter(YEAR == 2016)
+
+#just 2016 data from ebs_2013_2016
+ebs_2013_2016__2016  <- ebs_2013_2016 %>% filter(YEAR == 2016)
+
+all(ebs_2013_2016__2016 == ebs_2017_2018__2016, na.rm = T) #identical data table
+#This is the problem! Needed a check to make sure no data were repeated, although should have been caught earlier. Now, out of curiosity, let's see if this is the case with any other Alaska regions (We should add in a check)
+#****
+```
+
+What about the more recent data files?
+```{r check if this also happens in more recent versions of EBS csvs}
+
+#pull in, sum, only 2013-2016 file, but this time from files added February 2021
+ebs2013_2016_2021raw <- read_csv("random_code/compare_2022_files/ebs2013_2016__2021raw.csv")
+  #plot at this stage
+  ebs2013_2016_2021raw %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+#unique years ebs2013_2016_2021raw
+unique(ebs2013_2016_2021raw$YEAR) #2013, 14, 15, 16
+  
+#pull in, sum, only 2017-2018 file
+ebs2017_2019_2021raw <- read_csv("random_code/compare_2022_files/ebs2017_2019__2021raw.csv")
+  #plot at this stage
+  ebs2017_2019_2021raw %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+    
+#unique years ebs2017_2019_2021raw
+unique(ebs2017_2019_2021raw$YEAR) #17, 18, 19
+
+#here, the years are correct
+  
+
+```
+What about other Alaska data files for 2020 release?
+```{r check if this also happens in more recent versions of AI csvs}
+
+#pull in, ai1983_2000__2020raw
+ai1983_2000__2020raw <- read_csv("random_code/OceanAdapt-update2020/data_raw/ai1983_2000.csv")
+  #plot at this stage
+  ai1983_2000__2020raw %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+#unique years ai1983_2000__2020raw
+unique(ai1983_2000__2020raw$YEAR) #1983 1986 1991 1994 1997 2000
+  
+#pull in, ai2002_2012__2020raw
+ai2002_2012__2020raw <- read_csv("random_code/OceanAdapt-update2020/data_raw/ai2002_2012.csv")
+  #plot at this stage
+  ai2002_2012__2020raw %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+    
+#unique years ai2014_2018__2020raw
+unique(ai2014_2018__2020raw$YEAR) #2002 2004 2006 2010 2012
+
+#pull in, ai2014_2018__2020raw
+ai2014_2018__2020raw <- read_csv("random_code/OceanAdapt-update2020/data_raw/ai2014_2018.csv")
+  #plot at this stage
+  ai2014_2018__2020raw %>%
+    group_by(YEAR) %>%
+    mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+    ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+    geom_line() +
+    theme_classic()
+  
+    
+#unique years ai2014_2018__2020raw
+unique(ai2014_2018__2020raw$YEAR) #2014 2018 2016
+
+
+#here, the years are correct
+  
+
+```
+
+Below is original compile.R code that led to the issue of 2016 being represented twice in the dataset
+```{r ebs}
+
+# combine all of the data files into one table
+ebs_data <- files %>% 
+  # read in all of the csv's in the files list
+  map_dfr(read_csv) %>%
+  # remove any data rows that have headers as data rows
+  filter(LATITUDE != "LATITUDE", !is.na(LATITUDE)) %>% 
+  mutate(stratum = as.integer(STRATUM))  %>% 
+  # remove unused columns
+  select(-STATION, -DATETIME, -NUMCPUE, -SID, -BOT_TEMP, -SURF_TEMP, -STRATUM) %>% 
+  # remove any extra white space from around spp and common names
+  mutate(COMMON = str_trim(COMMON), 
+         SCIENTIFIC = str_trim(SCIENTIFIC))
+
+#check there are no duplicate rows in the data
+if(all(duplicated(ebs_data) == FALSE)) {
+  ebs_data <- ebs_data
+} else {
+  ebs_data_nodups <- distinct(ebs_data)
+}
+   
+} #tells us there are duplicated rows
+
+
+#delete duplicated rows
+ebs_data_nodups <- distinct(ebs_data)
+
+nrow(ebs_data) - nrow(ebs_data_nodups)
+
+#try plotting this raw summed data
+ebs_data %>%
+  group_by(YEAR) %>%
+  mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T)) %>%
+  ggplot(aes(x = YEAR, y = wtcpue_year_sum)) +
+  geom_line() +
+  theme_classic()
+
+#what about a summary of wtcpue values
+summary(ebs_data$WTCPUE)
+
+#restrict to pollock only
+ebs_data_pollock <- ebs_data %>%
+  filter(COMMON == "walleye pollock") %>%
+  #test by summing wtcpue and plotting
+  group_by(YEAR) %>%
+  mutate(wtcpue_year_sum = sum(WTCPUE, na.rm = T))
+
+#try plotting just pollock
+ggplot(ebs_data_pollock, aes(x = YEAR, y = wtcpue_year_sum)) +
+  geom_line() +
+  theme_classic()
+
+#looks okay?
+
+# import the strata data
+ebs_strata <- read_csv(here::here("data_raw", "ebs_strata.csv"), col_types = cols(
+  SubareaDescription = col_character(),
+  StratumCode = col_integer(),
+  Areakm2 = col_integer()
+)) %>% 
+  select(StratumCode, Areakm2) %>% 
+  rename(stratum = StratumCode)
+
+ebs <- left_join(ebs_data, ebs_strata, by = "stratum")
+
+# are there any strata in the data that are not in the strata file?
+stopifnot(nrow(filter(ebs, is.na(Areakm2))) == 0)
+
+ebs <- ebs %>% 
+  mutate(
+    # Create a unique haulid
+    haulid = paste(formatC(VESSEL, width=3, flag=0), CRUISE, formatC(HAUL, width=3, flag=0), sep='-'), 
+    # convert -9999 to NA 
+    wtcpue = ifelse(WTCPUE == "-9999", NA, WTCPUE)) %>%  
+  # rename columns
+  rename(year = YEAR, 
+         lat = LATITUDE, 
+         lon = LONGITUDE, 
+         depth = BOT_DEPTH, 
+         spp = SCIENTIFIC, 
+         stratumarea = Areakm2) %>% 
+  # remove eggs
+  filter(spp != '' &
+           !grepl("egg", spp)) %>% 
+  # adjust spp names
+  mutate(spp = ifelse(grepl("Atheresthes", spp), "Atheresthes sp.", spp), 
+         spp = ifelse(grepl("Lepidopsetta", spp), "Lepidopsetta sp.", spp),
+         spp = ifelse(grepl("Myoxocephalus", spp), "Myoxocephalus sp.", spp),
+         spp = ifelse(grepl("Bathyraja", spp), 'Bathyraja sp.', spp), 
+         spp = ifelse(grepl("Hippoglossoides", spp), "Hippoglossoides sp.", spp)) %>% 
+  # change from all character to fitting column types
+  type_convert(col_types = cols(
+    lat = col_double(),
+    lon = col_double(),
+    STATION = col_character(),
+    year = col_integer(),
+    DATETIME = col_character(),
+    wtcpue = col_double(),
+    NUMCPUE = col_double(),
+    COMMON = col_character(),
+    spp = col_character(),
+    SID = col_integer(),
+    depth = col_integer(),
+    BOT_TEMP = col_double(),
+    SURF_TEMP = col_double(),
+    VESSEL = col_integer(),
+    CRUISE = col_integer(),
+    HAUL = col_integer(),
+    haulid = col_character()
+  ))  %>%  
+  group_by(haulid, stratum, stratumarea, year, lat, lon, depth, spp) %>% 
+  summarise(wtcpue = sumna(wtcpue)) %>% 
+  # add region column
+  mutate(region = "Eastern Bering Sea") %>% 
+  select(region, haulid, year, lat, lon, stratum, stratumarea, depth, spp, wtcpue) %>% 
+  ungroup()
+
+if (HQ_DATA_ONLY == TRUE){
+  # look at the graph and make sure decisions to keep or eliminate data make sense
+  
+  p1 <- ebs %>% 
+    select(stratum, year) %>% 
+    ggplot(aes(x = as.factor(stratum), y = as.factor(year)))   +
+    geom_jitter()
+  
+  p2 <- ebs %>%
+    select(lat, lon) %>% 
+    ggplot(aes(x = lon, y = lat)) +
+    geom_jitter()
+  
+  test <- ebs %>% 
+    select(stratum, year) %>% 
+    distinct() %>% 
+    group_by(stratum) %>% 
+    summarise(count = n())  %>% 
+    filter(count >= 36)
+  
+  # how many rows will be lost if only stratum trawled ever year are kept?
+  test2 <- ebs %>% 
+    filter(stratum %in% test$stratum)
+  nrow(ebs) - nrow(test2)
+  # percent that will be lost
+  print((nrow(ebs) - nrow(test2))/nrow(ebs))
+  # 4.7% of rows are removed
+  ebs <- ebs %>% 
+    filter(stratum %in% test$stratum)
+  
+  p3 <- ebs %>% 
+    select(stratum, year) %>% 
+    ggplot(aes(x = as.factor(stratum), y = as.factor(year))) +
+    geom_jitter()
+  
+  p4 <- ebs %>%
+    select(lat, lon) %>% 
+    ggplot(aes(x = lon, y = lat)) +
+    geom_jitter()
+  
+  if (HQ_PLOTS == TRUE){
+    temp <- grid.arrange(p1, p2, p3, p4, nrow = 2)
+    ggsave(plot = temp, filename = here::here("plots", "ebs_hq_dat_removed.pdf"))
+    rm(temp)
+  }
+  rm(test, test2, p1, p2, p3, p4)
+}
+# clean up
+rm(files, ebs_data, ebs_strata)
+
+
+```
+
