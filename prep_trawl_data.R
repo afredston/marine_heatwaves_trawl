@@ -18,10 +18,15 @@ here <- here::here
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
-# DROP UNWANTED SURVEYS
+##############
+# trim datasets
+##############
 # based on the summary plots in FISHGLOB, there are a few surveys where CPUE has been immensely variable and can't be used as an index of interannual variation in biomass. a lot more surveys and years are trimmed out below, but here, we're just getting rid of a few that are obviously not usable for our questions. 
 bad_surveys <- c('GSL-N')
 raw <- raw[!survey %in% bad_surveys]
+
+standardize_footprints <-  TRUE # this is a conservative approach because I only keep the strata or stat_rec that have been surveyed in most/all years in a given region. may be replaced by more nuanced fishglob methods by the working group. this is really just a placeholder, and has its issues, e.g., it should really happen after the trimming by season. 
+missingness <- 0.3 # what proportion of years do we tolerate missing before omitting the sampling subregion?
 
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
@@ -62,7 +67,66 @@ bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
 
-haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys] # filter out bad hauls
+if(standardize_footprints==TRUE){
+  # STANDARDIZE SURVEY FOOTPRINTS
+  stat_strat <- unique(copy(raw)[, .(survey, stat_rec, station, stratum)])
+  
+  # visually inspect each of the following and pick the one that makes the most sense for each region
+  # where possible, avoid using station, unless it's the only column that varies for a region
+  # (station often refers to subsamples within a stratum, and we don't care about preserving those over time)
+  unique(copy(stat_strat)[, .(survey,stat_rec)])[, .N, by=.(survey)]
+  unique(copy(stat_strat)[, .(survey,stratum)])[, .N, by=.(survey)]
+  unique(copy(stat_strat)[, .(survey,station)])[, .N, by=.(survey)] 
+  
+  # manually generate lists of regions that use strata vs. fixed stations
+  # if FISHGLOB is updated, revisit this to ensure each survey really has values in these columns
+  ls_strata <- c('AI','NEUS','EBS','GMEX','GOA','NEUS','SCS','SEUS','WCANN','WCTRI')
+  ls_stat_rec <- c('BITS','EVHOE','FR-CGFS','IE-IGFS','NIGFS','NS-IBTS','PT-IBTS','ROCKALL','SWC-IBTS')
+  
+  keep_strata <- NULL
+  for(i in 1:unique(ls_strata)){
+    # get the survey's sampled strata 
+    tmp_strata <- unique(copy(raw)[, .(survey, station, stratum, haul_id, year)])[survey==i]
+    tmp_strata[,ID:=paste0(year, "-", stratum)]
+    
+    # get all combinations of strata / years and identify which strata were sampled every year 
+    tmp_strata_all <- as.data.table(expand.grid(stratum=unique(tmp_strata[,stratum]), year=unique(tmp_strata[,year]))) # get all combinations 
+    tmp_strata_all[,ID:=paste0(year, "-", stratum)] # make a year-stratum ID
+    tmp_strata_all$test <- ifelse(tmp_strata_all$ID %in% unique(tmp_strata$ID),"present","absent") # denote whether that year-stratum was sampled 
+    tmp_strata_all <- copy(tmp_strata_all)[, .(test, year, stratum)][test=="present"] # count up how many times each stratum was sampled 
+    tmp_strata_all[,N := length(year), by=.(stratum)]
+    tmp_strata_keep <- tmp_strata_all[N > floor(max(N) * (1 - missingness))]  
+    # length(unique(tmp_strata_keep$stratum)) / length(unique(tmp_strata_all$stratum)) # what fraction of the total strata are kept?
+    tmp_strata <- tmp_strata[stratum %in% tmp_strata_keep$stratum] #trim down to the kept strata
+    tmp_strata$station <- NULL # overwrite to avoid confusion
+    keep_strata <- rbind(keep_strata, tmp_strata)
+  }
+  
+  # same thing for regions that use stat_recs
+  keep_stat_recs <- NULL
+  for(i in 1:unique(ls_stat_rec)){
+    tmp_stat_recs <- unique(copy(raw)[, .(survey, stat_rec, stratum, haul_id, year)])[survey==i]
+    tmp_stat_recs[,ID:=paste0(year, "-", stat_rec)]
+    tmp_stat_recs_all <- as.data.table(expand.grid(stat_rec=unique(tmp_stat_recs[,stat_rec]), year=unique(tmp_stat_recs[,year]))) 
+    tmp_stat_recs_all[,ID:=paste0(year, "-", stat_rec)] 
+    tmp_stat_recs_all$test <- ifelse(tmp_stat_recs_all$ID %in% unique(tmp_stat_recs$ID),"present","absent") 
+    tmp_stat_recs_all <- copy(tmp_stat_recs_all)[, .(test, year, stat_rec)][test=="present"] 
+    tmp_stat_recs_all[,N := length(year), by=.(stat_rec)]
+    tmp_stat_recs_keep <- tmp_stat_recs_all[N > floor(max(N) * (1 - missingness))]  
+    length(unique(tmp_stat_recs_keep$stat_rec)) / length(unique(tmp_stat_recs_all$stat_rec)) 
+    tmp_stat_recs <- tmp_stat_recs[stat_rec %in% tmp_stat_recs_keep$stat_rec] 
+    tmp_stat_recs$stratum <- NULL # 
+    keep_stat_recs <- rbind(keep_stat_recs, tmp_stat_recs)
+  }
+  
+  keep <- rbind(keep_stat_recs, keep_strata)
+} # end spatial trimming 
+
+##########
+# cut down raw to the good hauls in haul_info, and expand with zeros
+##########
+
+haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys][haul_id %in% keep$haul_id] # filter out bad hauls
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
 raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
