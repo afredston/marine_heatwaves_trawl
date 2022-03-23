@@ -15,7 +15,6 @@ library(data.table)
 # load FISHGLOB trawl data
 cpue <- read_csv(here("processed-data","biomass_time.csv"))%>%
   filter(!(survey=="WCTRI" & year==2004),
-         !survey=='GIN',
          year < 2020)  # get rid of the year overlapping with the annual WCANN survey, and regions that were included by accident
 
 sat_sst_raw <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf.csv"), sep=";") 
@@ -393,8 +392,8 @@ cti_spp_prep <- cti %>%
          'accepted_name' =speciesName)  %>% 
   filter(accepted_name %in% unique(survey_spp_summary$accepted_name))
 
-length(unique(survey_spp_summary$accepted_name)) # 2387
-length(unique(cti_spp_prep$accepted_name)) #985
+length(unique(survey_spp_summary$accepted_name)) # 2129
+length(unique(cti_spp_prep$accepted_name)) #917
   
 survey_spp_summary_cti <- survey_spp_summary %>% 
   left_join(cti_spp_prep) 

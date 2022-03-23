@@ -32,7 +32,7 @@ surveycoords <- haul_info %>%
   select(coords, survey) %>%
   arrange(survey) %>%
   mutate(surveyID=as.numeric(factor(survey)))
-
+write.csv(surveycoords, here("processed-data","survey_coordinates.csv"))
 # save which region corresponds to which code
 surveyIDs <- surveycoords %>%   
   select(surveyID, survey) %>% 
