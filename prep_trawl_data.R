@@ -27,6 +27,7 @@ raw <- raw[!survey %in% bad_surveys]
 
 standardize_footprints <-  TRUE # this is a conservative approach because I only keep the strata or stat_rec that have been surveyed in most/all years in a given region. may be replaced by more nuanced fishglob methods by the working group. this is really just a placeholder, and has its issues, e.g., it should really happen after the trimming by season. 
 missingness <- 0.3 # what proportion of years do we tolerate missing before omitting the sampling subregion?
+nor_placeholder <- unique(copy(raw)[survey=="Nor-BTS"]$haul_id)
 
 # get haul-level data
 haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
@@ -84,7 +85,7 @@ if(standardize_footprints==TRUE){
   ls_stat_rec <- c('BITS','EVHOE','FR-CGFS','IE-IGFS','NIGFS','NS-IBTS','PT-IBTS','ROCKALL','SWC-IBTS')
   
   keep_strata <- NULL
-  for(i in 1:unique(ls_strata)){
+  for(i in unique(ls_strata)){
     # get the survey's sampled strata 
     tmp_strata <- unique(copy(raw)[, .(survey, station, stratum, haul_id, year)])[survey==i]
     tmp_strata[,ID:=paste0(year, "-", stratum)]
@@ -104,7 +105,7 @@ if(standardize_footprints==TRUE){
   
   # same thing for regions that use stat_recs
   keep_stat_recs <- NULL
-  for(i in 1:unique(ls_stat_rec)){
+  for(i in unique(ls_stat_rec)){
     tmp_stat_recs <- unique(copy(raw)[, .(survey, stat_rec, stratum, haul_id, year)])[survey==i]
     tmp_stat_recs[,ID:=paste0(year, "-", stat_rec)]
     tmp_stat_recs_all <- as.data.table(expand.grid(stat_rec=unique(tmp_stat_recs[,stat_rec]), year=unique(tmp_stat_recs[,year]))) 
@@ -119,14 +120,15 @@ if(standardize_footprints==TRUE){
     keep_stat_recs <- rbind(keep_stat_recs, tmp_stat_recs)
   }
   
-  keep <- rbind(keep_stat_recs, keep_strata)
 } # end spatial trimming 
 
 ##########
 # cut down raw to the good hauls in haul_info, and expand with zeros
 ##########
-
-haul_info <- haul_info[!haul_id %in% bad_hauls][!survey %in% short_surveys][haul_id %in% keep$haul_id] # filter out bad hauls
+# sequentially filter out bad hauls
+haul_info <- haul_info[haul_id %in% keep_stat_recs$haul_id | haul_id %in% keep_strata$haul_id | haul_id %in% nor_placeholder]
+haul_info <- haul_info[!haul_id %in% bad_hauls]
+haul_info <- haul_info[!survey %in% short_surveys]
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
 raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
@@ -147,34 +149,6 @@ raw_zeros %<>%
   merge(raw, all.x=TRUE, by=c("survey", "haul_id", "accepted_name"))  
 raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf] # replace NAs with 0s
  
-
-# Check that the spatial domain of each region is fixed over time 
-
-# namer_coords <- unique(namer_raw_zeros[,.(lat, lon, region, year)])[,lat_round := (round(lat/0.25)*0.25)][,lon_round := (round(lon/0.25)*0.25)][,coords_round := paste0(lon_round, ", ", lat_round)]
-# 
-# namer_coords_expand <- NULL
-# for(i in unique(namer_coords$region)) {
-#   # get all possible quarter-cells per region 
-#   regdat <- namer_coords[region==i]
-#   expdat <- as.data.table(expand.grid(coords_round = unique(regdat$coords_round), year=unique(regdat$year)))
-#   expdat$region <- i
-#   
-#   # get the number of years each one was surveyed 
-#   survdat <- unique(namer_coords[region==i][,.(year, coords_round)])
-#   survdat$surveyed <- 1
-#   
-#   expdat <- merge(expdat, survdat, all.x=TRUE)
-#   expdat <- expdat[is.na(surveyed), surveyed := 0]
-#   
-#   namer_coords_expand <- rbind(namer_coords_expand, expdat)
-# }
-# 
-# namer_coords_expand[,coords_n := sum(surveyed), by=.(region, coords_round)][,coords_prop := coords_n / max(coords_n), by=region]
-# 
-# ggplot(namer_coords_expand, aes(x=coords_prop)) +
-#   geom_histogram() + 
-#   facet_wrap(~region, scales="free_y")
-
 #########
 # Tidy data
 #########
