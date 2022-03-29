@@ -13,7 +13,7 @@ library(betapart)
 ########
 # load data
 ########
-
+#bring in biomass_time data (prepped on annotate)
 biomass_time <- fread(here("processed-data","biomass_time.csv")) #for some reason NEUS has zero biomass here, CHECK
 
 #delete any observations not to species
@@ -114,3 +114,6 @@ for (i in 1:length(survey_names)) {
 }
 
 fwrite(biomass_time_temporal_beta, file = here::here("processed-data","survey_temporal_beta_diversity.csv"))
+
+
+

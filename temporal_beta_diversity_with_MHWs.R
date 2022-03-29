@@ -1,12 +1,11 @@
 #This code explores relationships between turnover, richness, and MHWs
+#Specifically, these figures compare heat wave intensity with the beta diversity between years (measured with either jaccard or bray curtis dissimilarity)
 #Contact Zoe Kitchel for questions
 ########
 # load packages
 ########
-
+ 
 ####
-#TO DO 
-#*rerun with new biomass_time compilation (with EVHOE, GSL-N, and NEUS fixed)
 ###
 
 library(here)
@@ -16,6 +15,8 @@ library(data.table)
 library(betapart)
 library(ggformula) #splines
 library(ggrepel)
+library(cowplot)
+library(ggpubr)
 
 ########
 # load data
@@ -51,6 +52,8 @@ survey_CTI_temporal_diversity_with_MHWs <- survey_temporal_beta_diversity[survey
 
 #add in the number of mhw events to give sense of sample size
 survey_CTI_temporal_diversity_with_MHWs[,N := .N,.(region,mhwYesNo)]
+
+head(survey_CTI_temporal_diversity_with_MHWs)
 
 ###############
 ### TURNOVER ONLY
@@ -124,7 +127,7 @@ delta_richness_boxplot_MHWs <- ggplot(survey_CTI_temporal_diversity_with_MHWs[co
   facet_wrap(~region) +
   theme_classic()
 
-ggsave(delta_richness_boxplot_MHWs, path = here::here("figures","beta_diversity"), filename = "delta_richness_boxplot_MHWs_survey.jpg", width = 10, height = 4)
+ggsave(delta_richness_boxplot_MHWs, path = here::here("figures","beta_diversity"), filename = "delta_richness_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
 
 ###########################
@@ -135,7 +138,7 @@ ggsave(delta_richness_boxplot_MHWs, path = here::here("figures","beta_diversity"
 delta_richness_cum_mean_int <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomIntC, y = richness_percent_change)) +
   labs(x = "Cumulative Mean Intensity", y = "Percent Change in Richness") +
   geom_hline(yintercept = 0) +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomIntC > 1 | abs(richness_percent_change) > 0.5,], aes(label=outlier_labels),hjust="inward", vjust=2, size = 2, check_overlap = T) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomIntC > 1 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2, check_overlap = T) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
   geom_spline(nknots = 15, color = "gray28", alpha = 0.7, linetype = "longdash") +
   theme_classic()
@@ -291,7 +294,7 @@ bray_total_boxplot_MHWs_survey <- ggplot(survey_CTI_temporal_diversity_with_MHWs
   facet_wrap(~region) +
   theme_classic()
 
-ggsave(bray_total_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "bray_total_boxplot_MHWs_survey.jpg", width = 10, height = 4)
+ggsave(bray_total_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "bray_total_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
 
 delta_richness_boxplot_MHWs <- ggplot(survey_CTI_temporal_diversity_with_MHWs[complete.cases(mhwYesNo),], aes(x = mhwYesNo, y = delta_richness)) +
@@ -311,7 +314,7 @@ ggsave(delta_richness_boxplot_MHWs, path = here::here("figures","beta_diversity"
 jaccard_total_cum_mean_int <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomIntC, y = jaccard_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
   labs(x = "Cumulative Mean Intensity", y = "Jaccard Dissimilarity Total") +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomIntC_outlier) | !is.na(richness_percent_change_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomIntC > 1 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   #     geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$jaccard_dissimilarity_total, na.rm = T)) +
   theme_classic()
 
@@ -321,7 +324,7 @@ ggsave(jaccard_total_cum_mean_int, path = here::here("figures","beta_diversity")
 bray_total_cum_mean_int <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomIntC, y = bray_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
   labs(x = "Cumulative Mean Intensity", y = "Bray Dissimilarity Total") +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomIntC_outlier) | !is.na(bray_dissimilarity_total_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomIntC > 1 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   #     geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$bray_dissimilarity_total, na.rm = T)) +
   theme_classic()
 
@@ -336,7 +339,7 @@ ggsave(bray_total_cum_mean_int, path = here::here("figures","beta_diversity"), f
 jaccard_total_anomaly_days <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomDays, y = jaccard_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
   labs(x = "Anomaly Days", y = "Jaccard Dissimilarity Total") +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomDays_outlier) | !is.na(jaccard_dissimilarity_total_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomDays > 100 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   #   geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$jaccard_dissimilarity_total, na.rm = T)) +
   theme_classic()
 
@@ -346,7 +349,7 @@ ggsave(jaccard_total_anomaly_days, path = here::here("figures","beta_diversity")
 bray_total_anomaly_days <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomDays, y = bray_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
   labs(x = "Anomaly Days", y = "Bray Dissimilarity Total") +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomDays_outlier) | !is.na(bray_dissimilarity_total_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomDays > 100 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   #   geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$bray_dissimilarity_total, na.rm = T)) +
   theme_classic()
 
@@ -360,7 +363,7 @@ ggsave(bray_total_anomaly_days, path = here::here("figures","beta_diversity"), f
 #anomSev versus dissimilarity
 jaccard_total_severity <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomSev, y = jaccard_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomSev_outlier) | !is.na(jaccard_dissimilarity_total_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomSev > 85 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   labs(x = "Heat Wave Severity", y = "Jaccard Dissimilarity Total") +
   #   geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$jaccard_dissimilarity_total, na.rm = T)) +
   theme_classic()
@@ -370,9 +373,96 @@ ggsave(jaccard_total_severity, path = here::here("figures","beta_diversity"), fi
 
 bray_total_severity <- ggplot(survey_CTI_temporal_diversity_with_MHWs, aes(x = anomSev, y = bray_dissimilarity_total)) +
   geom_point(alpha = 0.5, aes(color = mhwYesNo)) +
-  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[mhwYesNo == "yes" & (!is.na(anomSev_outlier) | !is.na(bray_dissimilarity_total_outlier)),], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
+  geom_text(data = survey_CTI_temporal_diversity_with_MHWs[anomSev > 85 | abs(richness_percent_change) > 0.5,], aes(label=ref_year),hjust="inward", vjust=2, size = 2) +
   labs(x = "Heat Wave Severity", y = "Bray Dissimilarity Total") +
   #   geom_hline(yintercept = mean(survey_CTI_temporal_diversity_with_MHWs$bray_dissimilarity_total, na.rm = T)) +
   theme_classic()
 
 ggsave(bray_total_severity, path = here::here("figures","beta_diversity"), filename = "bray_total_severity.jpg", width = 10, height = 4)
+
+#######################
+#Diverging Bars
+#######################
+#Anomaly Days
+#######################
+#sort by anomaly days
+
+setkey(survey_CTI_temporal_diversity_with_MHWs, anomDays)
+#make a factor to retain in plot
+survey_CTI_temporal_diversity_with_MHWs[, ref_year := as.factor(ref_year)]
+
+#color by increase or decrease in richness
+survey_CTI_temporal_diversity_with_MHWs[,richness_direction := as.factor(ifelse(richness_percent_change > 0, "Increase",
+                                                                                ifelse(richness_percent_change < 0, "Decrease","No Change")))]
+
+#plot
+anomalydays_divbar <- ggplot(survey_CTI_temporal_diversity_with_MHWs[complete.cases(survey_CTI_temporal_diversity_with_MHWs[,richness_percent_change])], aes(x=reorder(ref_year,anomDays), y=anomDays)) + 
+  geom_bar(stat='identity',fill = "black")  +
+  labs(x = "Reference Year-Region", y = "Anomaly Days") + 
+  coord_flip() +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank())
+
+
+################
+#% change Richness
+#################
+
+#plot
+richness_divbar <- ggplot(survey_CTI_temporal_diversity_with_MHWs[complete.cases(survey_CTI_temporal_diversity_with_MHWs[,richness_percent_change])], aes(x=reorder(ref_year,anomDays), y=richness_percent_change, label = richness_direction)) + 
+  geom_bar(aes(fill = richness_direction),stat='identity')  +
+  scale_fill_manual(name="Direction of Richness Change", 
+                    labels= c("Decrease" , "Increase",  ""),
+                    values = c("darkgoldenrod","plum3","#FFFFFF")) +
+  labs(x = "Reference Year-Region", y = "Percent Change Richness\nYear t versus t-1") + 
+  coord_flip() +
+  theme_classic() +
+  theme(legend.position = "top",
+        axis.ticks.y = element_blank())
+
+################
+#Bray Diversity
+#################
+
+#plot
+bray_dissim_divbar <- ggplot(survey_CTI_temporal_diversity_with_MHWs[complete.cases(survey_CTI_temporal_diversity_with_MHWs[,richness_percent_change])], aes(x=reorder(ref_year,anomDays), y=bray_dissimilarity_turnover)) + 
+  geom_bar(stat='identity', fill = "black")  +
+  labs(x = "Reference Year-Region", y = "Bray Curtis Turnover Dissimilarity\nYear t versus t-1") + 
+  coord_flip() +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank())
+
+################
+#Jaccard diversity
+#################
+
+#plot
+jaccard_dissim_divbar <- ggplot(survey_CTI_temporal_diversity_with_MHWs[complete.cases(survey_CTI_temporal_diversity_with_MHWs[,richness_percent_change])], aes(x=reorder(ref_year,anomDays), y=jaccard_dissimilarity_turnover, label = richness_direction)) + 
+  geom_bar(stat='identity', fill = "black")  +
+  labs(x = "Reference Year-Region", y = "Jaccard Turnover Dissimilarity\nYear t versus t-1") + 
+  coord_flip() +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank())
+
+
+##############
+#merge anomaly days and richness change
+##############
+##############
+
+diverging_bars <- plot_grid(anomalydays_divbar + theme(legend.position = "none", axis.text.y = element_text(size = 1)),
+          richness_divbar + theme(legend.position = "none", axis.text.y = element_blank(), axis.title.y = element_blank()),
+          bray_dissim_divbar + theme(legend.position = "none", axis.text.y = element_blank(), axis.title.y = element_blank()),
+          jaccard_dissim_divbar + theme(legend.position = "none", axis.text.y = element_blank(), axis.title.y = element_blank()),
+          nrow = 1, ncol = 4, align = "h")
+
+diverging_bars_legend <- get_legend(richness_divbar)
+
+diverging_bars_wlegend <- plot_grid(diverging_bars_legend, diverging_bars, ncol = 1, rel_heights = c(1,10))
+
+ggsave(diverging_bars_wlegend, path = here::here("figures","beta_diversity"),
+       filename = "diverging_bars_wlegend.pdf",height = 10, width = 10, unit = "in")
+
+
