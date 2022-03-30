@@ -30,7 +30,7 @@ missingness <- 0.3 # what proportion of years do we tolerate missing before omit
 nor_placeholder <- unique(copy(raw)[survey=="Nor-BTS"]$haul_id)
 
 # get haul-level data
-haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude)] %>% unique() # lots of other useful data in here like depth, just trimming for speed 
+haul_info <- copy(raw)[, .(survey, country, haul_id, year, month, latitude, longitude, depth)] %>% unique() # lots of other useful data in here, just trimming for speed 
 
 # FILTER OUT BAD HAULS 
 
@@ -194,9 +194,20 @@ raw_zeros %<>% merge(start_months, all.x=TRUE, by="survey")
 # add special cases back in 
 raw_zeros <- rbind(raw_zeros, bits_raw_zeros, evhoe_raw_zeros, fr_cgfs_raw_zeros, ie_igfs_raw_zeros, ns_ibts_raw_zeros, swc_ibts_raw_zeros, neus_raw_zeros,nigfs_raw_zeros,nor_bts_raw_zeros, scs_raw_zeros,gmex_raw_zeros,seus_raw_zeros)
 
+# are there any regions missing a lot of depth data?
+# tmp <- copy(raw_zeros)[is.na(depth)]
+# tmp_ls <- unique(tmp$survey)
+# for(i in tmp_ls){
+#   print("fraction of hauls missing depth is ")
+#   print(length(tmp[survey==i]$haul_id)/length(raw_zeros[survey==i]$haul_id))
+# }
+# all way less than 1%, should be fine to run the below with na.rm
+
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
+raw_depth <- raw_zeros[,.(depth_mean = weighted.mean(depth, w=wgt_cpue, na.rm=TRUE)), by=c("survey", "accepted_name", "year","startmonth")] # note that this will be NA for species never observed in that year 
 
+raw_cpue %<>% merge(raw_depth, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth"))
 # get year interval -- how often is survey conducted?
 # intervals <- copy(raw_cpue)
 # intervals <- unique(intervals[,.(survey, year)])
