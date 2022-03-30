@@ -351,7 +351,8 @@ survey_summary <- cpue %>%
   left_join(survey_start_times, by=c('survey','year')) %>% 
   filter(!is.na(ref_yr)) %>% # keep only the rows assigned to a ref_yr (will also filter out the early trawl data)
   group_by(ref_yr, survey, year) %>% 
-  summarise(wt = sum(wtcpue_mean)) %>% # get total weight across all species for the survey*year
+  summarise(wt = sum(wtcpue_mean),
+            depth_wt = weighted.mean(depth_mean, w=wtcpue_mean, na.rm=TRUE)) %>% # get total weight across all species for the survey*year
   mutate(wt_mt = wt/1000) %>% # convert to metric tons from kg
   group_by(survey) %>% 
   arrange(year) %>% 
