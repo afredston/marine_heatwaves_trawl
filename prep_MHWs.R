@@ -356,12 +356,13 @@ survey_summary <- cpue %>%
   mutate(wt_mt = wt/1000) %>% # convert to metric tons from kg
   group_by(survey) %>% 
   arrange(year) %>% 
-  mutate(wt_mt_diff = wt_mt - lag(wt_mt), # calculate first difference (delta from last year surveyed--not always a one-year lag though!)
-         wt_mt_diff_prop = (wt_mt_diff / lag(wt_mt)), # calculate proportional change
-         wt_mt_anom = wt_mt - mean(wt_mt), # subtract mean over all years within the survey
-         wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), # get proportional difference of anomaly relative to mean
-         wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt), # calculate Z-score
-         wt_mt_log = log(wt_mt / lag(wt_mt)) # calculate log ratio
+  mutate(#wt_mt_diff = wt_mt - lag(wt_mt), # calculate first difference (delta from last year surveyed--not always a one-year lag though!)
+     #    wt_mt_diff_prop = (wt_mt_diff / lag(wt_mt)), # calculate proportional change
+     #    wt_mt_anom = wt_mt - mean(wt_mt), # subtract mean over all years within the survey
+    #     wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), # get proportional difference of anomaly relative to mean
+     #    wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt), # calculate Z-score
+         wt_mt_log = log(wt_mt / lag(wt_mt)), # calculate log ratio
+         depth_wt_log = log(depth_wt / lag(depth_wt))
   )  %>% 
   ungroup()
 
@@ -373,14 +374,15 @@ survey_spp_summary <- cpue %>%
   filter(!is.na(ref_yr)) %>%
   group_by(survey, accepted_name) %>% 
   arrange(year) %>% 
-  mutate(wt_mt_diff = wt_mt - lag(wt_mt), 
-         wt_mt_diff_prop = (wt_mt_diff / lag(wt_mt)),
-         wt_mt_diff_prop_abs = abs(wt_mt_diff_prop), 
-         wt_mt_diff_prop_abs_log = log(wt_mt_diff_prop_abs),
-         wt_mt_anom = wt_mt - mean(wt_mt),
-         wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), 
-         wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt),
-         wt_mt_log = log(wt_mt / lag(wt_mt))
+  mutate(#wt_mt_diff = wt_mt - lag(wt_mt), 
+        # wt_mt_diff_prop = (wt_mt_diff / lag(wt_mt)),
+        # wt_mt_diff_prop_abs = abs(wt_mt_diff_prop), 
+        # wt_mt_diff_prop_abs_log = log(wt_mt_diff_prop_abs),
+        # wt_mt_anom = wt_mt - mean(wt_mt),
+        # wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), 
+        # wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt),
+         wt_mt_log = log(wt_mt / lag(wt_mt)),
+         depth_wt_log = log(depth_mean / lag(depth_mean))
   )  %>% 
   ungroup()
 
