@@ -22,7 +22,7 @@ raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 # trim datasets
 ##############
 # based on the summary plots in FISHGLOB, there are a few surveys where CPUE has been immensely variable and can't be used as an index of interannual variation in biomass. a lot more surveys and years are trimmed out below, but here, we're just getting rid of a few that are obviously not usable for our questions. 
-bad_surveys <- c('GSL-N')
+bad_surveys <- c('GSL-N','ROCKALL') # rockall is sampled inconsistently, and gsl-n has very odd cpue patterns as seen in the fishglob summary pdf
 raw <- raw[!survey %in% bad_surveys]
 
 standardize_footprints <-  TRUE # this is a conservative approach because I only keep the strata or stat_rec that have been surveyed in most/all years in a given region. may be replaced by more nuanced fishglob methods by the working group. this is really just a placeholder, and has its issues, e.g., it should really happen after the trimming by season. 
@@ -68,6 +68,11 @@ bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
 
+# do some data trimming before footprint standardization
+haul_info <- haul_info[!haul_id %in% bad_hauls]
+haul_info <- haul_info[!survey %in% short_surveys]
+raw <- copy(raw)[haul_id %in% haul_info$haul_id]
+
 if(standardize_footprints==TRUE){
   # STANDARDIZE SURVEY FOOTPRINTS
   stat_strat <- unique(copy(raw)[, .(survey, stat_rec, station, stratum)])
@@ -81,8 +86,8 @@ if(standardize_footprints==TRUE){
   
   # manually generate lists of regions that use strata vs. fixed stations
   # if FISHGLOB is updated, revisit this to ensure each survey really has values in these columns
-  ls_strata <- c('AI','NEUS','EBS','GMEX','GOA','NEUS','SCS','SEUS','WCANN','WCTRI')
-  ls_stat_rec <- c('BITS','EVHOE','FR-CGFS','IE-IGFS','NIGFS','NS-IBTS','PT-IBTS','ROCKALL','SWC-IBTS')
+  ls_strata <- c('AI','NEUS','EBS','GMEX','GOA','NEUS','SCS','SEUS','WCANN')
+  ls_stat_rec <- c('BITS','EVHOE','FR-CGFS','IE-IGFS','NIGFS','NS-IBTS','PT-IBTS','SWC-IBTS')
   
   keep_strata <- NULL
   for(i in unique(ls_strata)){
@@ -126,9 +131,7 @@ if(standardize_footprints==TRUE){
 # cut down raw to the good hauls in haul_info, and expand with zeros
 ##########
 # sequentially filter out bad hauls
-haul_info <- haul_info[haul_id %in% keep_stat_recs$haul_id | haul_id %in% keep_strata$haul_id | haul_id %in% nor_placeholder]
-haul_info <- haul_info[!haul_id %in% bad_hauls]
-haul_info <- haul_info[!survey %in% short_surveys]
+haul_info <- haul_info[haul_id %in% keep_stat_recs$haul_id | haul_id %in% keep_strata$haul_id | haul_id %in% nor_placeholder] # this also filters out smaller surveys without spatial units like GSL-S and DFO-QCS
 length(unique(haul_info$haul_id))==nrow(haul_info) # check that every haul is listed exactly once 
 raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
