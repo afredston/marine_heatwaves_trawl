@@ -9,10 +9,12 @@ library(gridExtra)
 library(sf)
 library(rnaturalearth)
 library(ggrepel)
-library(mcp)
-library(rjags)
-library(segmented)
+#library(mcp)
+#library(rjags)
+#library(segmented)
+library(patchwork)
 # load data
+library(pwr)
 
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
@@ -31,6 +33,114 @@ survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.c
   rename('spp'=accepted_name)
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
+haul_info <- read_csv(here("processed-data","haul_info.csv"))
+######
+# FINAL
+######
+
+gg_mhw_biomass_hist <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
+  ggplot(aes(x=wt_mt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
+  geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+  theme_bw() + 
+  labs(x="Biomass log ratio", y="Frequency") +
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  )
+wt_no_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "no", !is.na(wt_mt_log)) %>%
+  pull(wt_mt_log)
+wt_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "yes", !is.na(wt_mt_log)) %>%
+  pull(wt_mt_log)
+t.test(wt_mhw, wt_no_mhw)
+pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = , sig.level =, power = )
+
+lm.dat1 <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(anom_days>0)
+lm.final1 <- lm(wt_mt_log ~ anom_days, data = lm.dat1)
+lm.predict1 <- data.frame(wt_mt_log = predict(lm.final1, lm.dat1), anom_days=lm.dat1$anom_days)
+
+gg_mhw_biomass_point_final <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anom_days, y=wt_mt_log, group = mhw_yes_no)) +
+  geom_point() +
+  geom_smooth(method="lm", color = "gray35") +
+  # geom_smooth(data = lm.dat1, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+  #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg_mhw_biomass_point_final
+
+
+gg_mhw_biomass_box <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  mutate(mhw_yes_no = recode(mhw_yes_no, no="No MHW", yes="MHW")) %>% 
+  ggplot(aes(x=mhw_yes_no, y=wt_mt_log, group=mhw_yes_no, color=mhw_yes_no)) +
+  geom_boxplot() +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  # scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+  theme_bw() + 
+  labs(x="", y="Biomass log ratio") +
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+gg_mhw_biomass_box
+
+ggsave(gg_mhw_biomass_point_final, scale=0.8, filename=here("results","final_biomass_point.png"), width=170, height=135, units="mm")
+ggsave(gg_mhw_biomass_box, scale=0.8, filename=here("results","final_biomass_box.png"), width=50, height=50, units="mm")
+ggsave(gg_mhw_biomass_hist, scale=0.8, filename=here("results","final_biomass_hist.png"), width=50, height=50, units="mm")
+
+reg_cti <- survey_summary %>% 
+  select(CTI, ref_yr) %>% 
+  distinct()
+
+top_spp <- survey_spp_summary %>% 
+  group_by(survey, spp) %>% 
+  summarise(sumwt = sum(wt_mt)) %>% 
+  left_join(survey_spp_summary %>% select(spp, STI) %>% distinct()) %>% 
+  arrange(-sumwt) %>% 
+  slice(1:10)
+
+tax_list <- survey_spp_summary %>% 
+  select(spp) %>% 
+  distinct() %>% 
+  pull()
+
+sti_list <- survey_spp_summary %>% 
+  filter(!is.na(STI)) %>% 
+  select(spp) %>% 
+  distinct() %>% 
+  pull()
+
+gg_mhw_biomass_point_spp <- survey_spp_summary %>% 
+  left_join(reg_cti) %>% 
+  mutate(STI_diff = STI - CTI) %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  filter(!is.na(STI_diff), mhw_yes_no=="yes") %>% 
+  ggplot(aes(x=anom_days, y=wt_mt_log, color=STI_diff, fill=STI_diff)) +
+  geom_point(size=0.5, position="jitter") + 
+  scale_color_gradient2(midpoint=0, low="#1F78B4", mid="grey",
+                        high="#E31A1C") +
+  scale_fill_gradient2(midpoint=0, low="#1F78B4", mid="grey",
+                       high="#E31A1C")+
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="none")
+
+#gg_mhw_biomass_point_spp
+ggsave(gg_mhw_biomass_point_spp, filename=here("results","final_sti_cti.png"))
 
 ######
 # models
@@ -38,7 +148,12 @@ coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 
 modeldat <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(!is.na(wt_mt_log), !is.na(anom_days))
+  filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
+  left_join(med_lat)
+
+summary(lm(wt_mt_log ~ anom_days + med_lat + med_lat * anom_days, data = modeldat))
+summary(lm(wt_mt_log ~ anom_days + med_lat, data = modeldat))
+summary(lm(depth_wt ~ anom_days, data = modeldat %>% filter(mhw_yes_no=="yes")))
 
 # Define the model
 model = list(

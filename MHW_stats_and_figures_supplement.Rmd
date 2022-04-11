@@ -1,0 +1,150 @@
+---
+title: "Supplementary information for TITLE"
+author: "Fredston, A. [insert other authors]"
+date: 2022
+output: pdf_document
+editor_options: 
+  markdown: 
+    wrap: 72
+bibliography: references.bib
+---
+
+```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
+
+# load packages
+library(tidyverse)
+library(here)
+library(lubridate) # for standardizing date format of MHW data
+# library(kableExtra)
+# library(broom)
+# library(gridExtra)
+library(sf)
+library(rnaturalearth)
+# library(ggrepel)
+
+# marine heatwave data for joining with survey data
+mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
+mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
+mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # modeled SST from SODA
+mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
+
+# calendar year MHW data for plotting
+mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
+mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
+mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
+
+# survey data 
+survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv"))
+survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
+  rename('spp'=accepted_name)
+survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
+coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
+haul_info <- read_csv(here("processed-data","haul_info.csv"))
+```
+
+```{r, setup2, include=FALSE}
+knitr::opts_chunk$set(
+  message=FALSE, echo=FALSE, warning=FALSE
+)
+```
+
+# Appendix: Predictors of temporal biomass change
+
+We explored a number of additional predictors of biomass change in the
+trawl surveys beyond marine heatwaves in the preceding 12 months (the
+main text results).
+
+### Depth
+
+Our study explored the shifts in marine fish community composition that
+may occur from species shifting their ranges into or out of the study
+region in response to environmental change. However, this is not the
+only spatial redistribution that may arise from warming: marine species
+have been widely documented shifting deeper into the oceans (@dulvy2008
+@chaikin2022 ). For this reason, we also investigated whether marine
+heatwaves were associated with depth shifts of these temperate marine
+fishes. We do not see a change in the depth of the fish assemblage as a
+function of marine heatwave duration \@ref(fig:fig-depth-point) or
+whether or not a marine heatwave occurred at all
+\@ref(fig:fig-depth-hist).
+
+```{r fig-depth-point, fig.cap="Caption"}
+gg_mhw_biomass_point_depth <- survey_summary %>% inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
+  ggplot(aes(x=anom_days, y=depth_wt_log, fill=wt_mt_log, color=wt_mt_log, group=mhw_yes_no)) + 
+  geom_point(position = "jitter") + 
+  geom_smooth(method="lm", color = "gray35") + 
+  theme_bw() + 
+  coord_cartesian(clip = "off") + 
+  labs(x="Marine heatwave duration (days)", y="Depth (m, weighted by biomass)", fill="Biomass log ratio",color="Biomass log ratio") + scale_color_viridis_c() + scale_fill_viridis_c() + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_depth # lm estimate is 0.3 with SE 0.16, p = 0.0575
+
+```
+
+```{r fig-depth-hist, fig.cap="Caption"}
+
+gg_mhw_biomass_hist_depth <- survey_summary %>% inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
+  mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
+  ggplot(aes(x=depth_wt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) + geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) + 
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) + 
+  scale_fill_manual(values=c("#E31A1C","#1F78B4")) + 
+  theme_bw() + 
+  labs(x="Depth log ratio", y="Frequency") + 
+  theme(legend.position = "none", legend.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+gg_mhw_biomass_hist_depth
+```
+
+### Latitude
+
+Marine communities across latitudes have responded differently to
+climate change, with some declines in species richness recorded in the
+tropics and at equatorward range edges (@chaudhary2021 @hastings2020 )
+and some increases in species richness recorded in colder oceans and at
+poleward range edges (@hastings2020 @english ). In our dataset, the
+direction or magnitude of biomass change was not related to the latitude
+of the region \@ref(fig:fig-lat-point).
+
+```{r fig-lat-point, fig.cap="Caption"}
+med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
+
+gg_mhw_biomass_point_latitude <- survey_summary %>% inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  left_join(med_lat)%>% 
+  ggplot(aes(x=anom_days, y=wt_mt_log, fill=med_lat, color=med_lat)) +
+  geom_point(position = "jitter") + 
+  theme_bw() + coord_cartesian(clip = "off") + 
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio", fill='Median latitude', color='Median latitude') + 
+  scale_color_viridis_c() + 
+  scale_fill_viridis_c() + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black")
+
+gg_mhw_biomass_point_latitude
+
+```
+
+### Temporal lags
+
+```{r fig-lag-point, fig.cap="Caption"}
+
+gg_mhw_biomass_point_lags <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(!survey %in% c('AI','GOA')) %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(anom_days_lag1 = lag(anom_days, n=1), anom_days_lag2 = lag(anom_days, n=2)) %>% select(survey, wt_mt_log, anom_days, anom_days_lag1, anom_days_lag2) %>% pivot_longer(cols=c(anom_days, anom_days_lag1, anom_days_lag2), names_to="lag", values_to="anomaly_days") %>% 
+  mutate(lag = recode(lag, anom_days = "0_12",anom_days_lag1= "12_24",anom_days_lag2="24_36")) %>% 
+  ggplot(aes(x=anomaly_days, y=wt_mt_log)) + 
+  geom_point() + geom_smooth(method="lm") + 
+  # geom_smooth(data = lm.dat1, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+  # geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
+  theme_bw() + 
+  coord_cartesian(clip = "off") + 
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  facet_wrap(~lag) 
+
+gg_mhw_biomass_point_lags
+```
+
+# References
