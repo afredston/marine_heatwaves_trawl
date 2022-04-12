@@ -89,9 +89,9 @@ gg_mhw_biomass_box <- survey_summary %>%
         panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 gg_mhw_biomass_box
 
-ggsave(gg_mhw_biomass_point_final, scale=0.8, filename=here("results","final_biomass_point.png"), width=170, height=135, units="mm")
-ggsave(gg_mhw_biomass_box, scale=0.8, filename=here("results","final_biomass_box.png"), width=50, height=50, units="mm")
-ggsave(gg_mhw_biomass_hist, scale=0.8, filename=here("results","final_biomass_hist.png"), width=50, height=50, units="mm")
+ggsave(gg_mhw_biomass_point_final, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=135, units="mm")
+ggsave(gg_mhw_biomass_box, scale=0.8, filename=here("figures","final_biomass_box.png"), width=50, height=50, units="mm")
+ggsave(gg_mhw_biomass_hist, scale=0.8, filename=here("figures","final_biomass_hist.png"), width=50, height=50, units="mm")
 
 reg_cti <- survey_summary %>% 
   select(CTI, ref_yr) %>% 
@@ -133,7 +133,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="none")
 
 #gg_mhw_biomass_point_spp
-ggsave(gg_mhw_biomass_point_spp, filename=here("results","final_sti_cti.png"))
+ggsave(gg_mhw_biomass_point_spp, filename=here("figures","final_sti_cti.png"))
 
 ######
 # models and stats 
@@ -303,7 +303,7 @@ gg_mhw_cti_point_models <- survey_summary %>%
 gg_mhw_cti_point_models
 
 mhw_panel_fig <- grid.arrange(gg_mhw_biomass_hist, gg_mhw_biomass_point, gg_mhw_cti_hist, gg_mhw_cti_point, ncol=2, nrow=2)
-# ggsave(mhw_panel_fig, scale=1.5, dpi=300, width=5, height=3.5, filename=here("results","mhw_panel_figure.png"))
+# ggsave(mhw_panel_fig, scale=1.5, dpi=300, width=5, height=3.5, filename=here("figures","mhw_panel_figure.png"))
 
 gg_mhw_cti_point_int <- survey_summary %>%
   inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
@@ -315,17 +315,17 @@ gg_mhw_cti_point_int <- survey_summary %>%
   geom_hline(aes(yintercept=0), linetype="dashed", color="black")
 gg_mhw_cti_point_int
 
-ggsave(gg_mhw_biomass_hist, scale=1.5, dpi=300, width=3, filename=here("results","biomass_vs_mhw_hist.png"))
-ggsave(gg_mhw_cti_hist, scale=1.5, dpi=300, width=3, filename=here("results","cti_vs_mhw_hist.png"))
-ggsave(gg_mhw_biomass_point, scale=1.5, dpi=300, width=4, filename=here("results","biomass_vs_mhw_points.png"))
-ggsave(gg_mhw_biomass_point_abs, scale=1.5, dpi=300, width=4, filename=here("results","abs_biomass_vs_mhw_points.png"))
-ggsave(gg_mhw_biomass_point_models, scale=1.5, dpi=300, width=4, filename=here("results","biomass_vs_mhw_points_models.png"))
-ggsave(gg_mhw_biomass_point_models_int, scale=1.5, dpi=300, width=4, filename=here("results","biomass_vs_mhw_points_models_int.png"))
-ggsave(gg_mhw_biomass_point_labels, scale=1.5, dpi=300, width=4, filename=here("results","biomass_vs_mhw_points_labels.png"))
-ggsave(gg_mhw_cti_point, scale=1.5, dpi=300, width=4, filename=here("results","cti_vs_mhw_points.png"))
-ggsave(gg_mhw_cti_point_models, scale=1.5, dpi=300, width=4, filename=here("results","cti_vs_mhw_points_models.png"))
-ggsave(gg_mhw_cti_point_labels, scale=1.5, dpi=300, width=4, filename=here("results","cti_vs_mhw_points_labels.png"))
-ggsave(gg_mhw_biomass_point_soda, scale=1.5, dpi=300, width=4, filename=here("results","biomass_vs_bottom_mhw_points.png"))
+ggsave(gg_mhw_biomass_hist, scale=1.5, dpi=300, width=3, filename=here("figures","biomass_vs_mhw_hist.png"))
+ggsave(gg_mhw_cti_hist, scale=1.5, dpi=300, width=3, filename=here("figures","cti_vs_mhw_hist.png"))
+ggsave(gg_mhw_biomass_point, scale=1.5, dpi=300, width=4, filename=here("figures","biomass_vs_mhw_points.png"))
+ggsave(gg_mhw_biomass_point_abs, scale=1.5, dpi=300, width=4, filename=here("figures","abs_biomass_vs_mhw_points.png"))
+ggsave(gg_mhw_biomass_point_models, scale=1.5, dpi=300, width=4, filename=here("figures","biomass_vs_mhw_points_models.png"))
+ggsave(gg_mhw_biomass_point_models_int, scale=1.5, dpi=300, width=4, filename=here("figures","biomass_vs_mhw_points_models_int.png"))
+ggsave(gg_mhw_biomass_point_labels, scale=1.5, dpi=300, width=4, filename=here("figures","biomass_vs_mhw_points_labels.png"))
+ggsave(gg_mhw_cti_point, scale=1.5, dpi=300, width=4, filename=here("figures","cti_vs_mhw_points.png"))
+ggsave(gg_mhw_cti_point_models, scale=1.5, dpi=300, width=4, filename=here("figures","cti_vs_mhw_points_models.png"))
+ggsave(gg_mhw_cti_point_labels, scale=1.5, dpi=300, width=4, filename=here("figures","cti_vs_mhw_points_labels.png"))
+ggsave(gg_mhw_biomass_point_soda, scale=1.5, dpi=300, width=4, filename=here("figures","biomass_vs_bottom_mhw_points.png"))
 
 ####### NE Pacific
 

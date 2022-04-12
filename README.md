@@ -1,6 +1,6 @@
-# Signature of marine heatwaves in trawl surveys 
+# Marine heatwave effects on temperate fish biomass
 
-## A project of the FISHGLOB working group 
+### A project of the FISHGLOB working group that harmonized trawl surveys from around the world 
 
 ## What's in this repository, and in what order should things be run?
 
