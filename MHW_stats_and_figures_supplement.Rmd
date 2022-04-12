@@ -48,7 +48,58 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Appendix: Predictors of temporal biomass change
+# Appendix: Robustness to metrics of biomass and MHWs
+
+```{r fig-abs-biomass, fig.cap="Caption"}
+
+gg_mhw_biomass_point_abs <- survey_summary %>% 
+  inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anom_days, y=abs(wt_mt_log))) +
+  geom_point() +
+  theme_bw() + 
+  geom_smooth(method="lm", color="blue", se=FALSE) +
+  geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
+  geom_smooth(method="loess", color="green", se=FALSE) +
+  geom_line(data = my.model.abs, aes(x=anom_days, y=wt_mt_log_abs), colour = "yellow", size=1) +
+  labs(x="Marine Heatwave Duration (days)", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_abs
+
+```
+
+```{r fig-intensity, fig.cap="Caption"}
+
+gg_mhw_biomass_point_models_int <- survey_summary %>% 
+  inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anom_int, y=wt_mt_log)) +
+  geom_point() +
+  theme_bw() + 
+  geom_smooth(method="lm", color="blue", se=FALSE) +
+  geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
+  geom_smooth(method="loess", color="green", se=FALSE) +
+  geom_line(data = my.model.int, aes(x=anom_int, y=wt_mt_log), colour = "yellow", size=1) +
+  labs(x="Marine Heatwave Cumulative Mean Intensity", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_models_int
+
+```
+
+```{r fig-soda, fig.cap=""}
+
+gg_mhw_biomass_point_soda <- survey_summary %>% 
+  inner_join(mhw_summary_soda_sbt, by="ref_yr") %>% # get MHW data matched to surveys
+  ggplot(aes(x=anomMonths, y=wt_mt_log, label=ref_yr)) +
+  geom_point() +
+  geom_text_repel(aes(label=ifelse(anomMonths>4|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Bottom Marine Heatwave Duration (months)", y="Biomass Log Ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+gg_mhw_biomass_point_soda
+
+```
+
+# Appendix: Predictors of regional biomass change
 
 We explored a number of additional predictors of biomass change in the
 trawl surveys beyond marine heatwaves in the preceding 12 months (the
@@ -124,6 +175,16 @@ gg_mhw_biomass_point_latitude
 
 ### Temporal lags
 
+Some studies find that marine communities respond rapidly to
+environmental change (e.g., @flanagan2019 ). Others suggest that
+ecological responses may lag disturbances for years (e.g., @babcock2010
+). We explored whether marine heatwave records from further into the
+past --- specifically, 1-2 and 2-3 years before each trawl survey ---
+predict biomass responses. Analogous to our findings for marine
+heatwaves that occur up to 12 months before each survey reported in the
+main text, we found no evidence that biomass change is associated with
+marine heatwave duration from prior years \@ref(fig:fig-lag-point) .
+
 ```{r fig-lag-point, fig.cap="Caption"}
 
 gg_mhw_biomass_point_lags <- survey_summary %>% 
@@ -146,5 +207,14 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 
 gg_mhw_biomass_point_lags
 ```
+
+# Appendix: Predictors of species-level change
+
+Our focus on net change in biomass in temperate marine fish assemblages
+may obscure important species-level changes in abundance. One way we
+address this is our analysis (presented in the main text) of shifts in
+community composition and Community Temperature Index. Here, we also
+explore patterns in species-level biomass change in the context of
+marine heatwaves.
 
 # References
