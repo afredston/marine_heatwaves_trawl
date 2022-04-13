@@ -71,15 +71,15 @@ theme_classic() +
   
   
 ##########
-#distinctive color pallette
-survey_pallette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
+#distinctive color palette
+survey_palette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
                      "#16FF32","#3283FE","#FEAF16","#B00068", 
                      "#1CFFCE","#90AD1C","#2ED9FF","#DEA0FD", 
                      "#AA0DFE","#F8A19F","#325A9B","#C4451C", 
                      "#1C8356","#66B0FF")
 #add survey points
 survey_regions_polar <- basemap_polar + geom_point(data = haul_info.r, aes(x = longitude, y = latitude, color = survey), alpha = 0.8, shape = 20, size = 0.00000000000001) +
-  scale_color_manual(values = survey_pallette) + theme(legend.position = "none")
+  scale_color_manual(values = survey_palette) + theme(legend.position = "none")
 
 #save global map
 ggsave(survey_regions_polar, path = here::here("figures"), filename = "survey_regions_polar.jpg",height = 5, width = 6, unit = "in")
@@ -108,9 +108,11 @@ haul_info.r.AI.split.concave.binded.spdf <- as_Spatial(haul_info.r.AI.split.conc
 haul_info.r.split.concave.binded_merge <- rbind(haul_info.r.AI.split.concave.binded,
                                                    haul_info.r.split.concave.binded)
 
-haul_info.r.split.concave.binded_merge.spdf <- as_Spatial(haul_info.r.AI.split.concave.binded_merge)
+#haul_info.r.split.concave.binded_merge.spdf <- as_Spatial(haul_info.r.AI.split.concave.binded_merge)
+# Alexa hacky fix to drop AI
+haul_info.r.split.concave.binded_merge.spdf <- as_Spatial(haul_info.r.split.concave.binded)
 
-haul_info.r.split.concave.binded_merge.spdf$survey <- levels(as.factor(haul_info.r$survey))
+haul_info.r.split.concave.binded_merge.spdf$survey <- levels(as.factor(haul_info.r[!haul_info.r$survey=='AI',]$survey))
 
 
 #add these polygons to map
@@ -121,8 +123,8 @@ survey_regions_polar_polygon <- ggplot() +
   geom_polygon(data = haul_info.r.split.concave.binded_merge.spdf,
                aes(x = long, y = lat, group = group, fill = group, color = group),
                alpha = 0.8) +
-  scale_color_manual(values = survey_pallette) +
-  scale_fill_manual(values = survey_pallette)  +
+  scale_color_manual(values = survey_palette) +
+  scale_fill_manual(values = survey_palette)  +
   geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
                # colour = "black"
                #,
@@ -157,8 +159,8 @@ survey_regions_polar_polygon <- basemap_polar +
   geom_polygon(data = haul_info.r.split.concave.binded_merge.spdf,
           aes(x = long, y = lat, group = group, fill = group, color = group),
                alpha = 0.8) +
-  scale_color_manual(values = survey_pallette) +
-  scale_fill_manual(values = survey_pallette)  +  
+  scale_color_manual(values = survey_palette) +
+  scale_fill_manual(values = survey_palette)  +  
   theme(legend.position = "none")
 
 #what abouttt
