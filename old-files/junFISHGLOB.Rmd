@@ -1,0 +1,384 @@
+---
+title: "Marine Heatwaves"
+subtitle: "FISHGLOB"
+author: 
+  - "Alexa Fredston"
+date: 'June 18, 2021'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+seal: false
+---
+<style>
+.title-slide {
+vertical-align: bottom !important; 
+text-align: left !important;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+ # fig.width=9, 
+  fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = FALSE,
+  message = FALSE, 
+  warning = FALSE,
+  fig.show = TRUE,
+  hiline = TRUE,
+  eval=TRUE
+)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+library(tweetrmd) 
+library(here)
+style_duo_accent(
+  primary_color = "#EBB59F",
+ # primary_color = "#008080",
+  secondary_color = "#001f3d",
+  text_color = "#001f3d",
+  inverse_header_color = "#001f3d",
+  title_slide_text_color="#001f3d",
+  link_color = "#EBB59F",
+# link_color = "#008080",
+  header_font_google = google_font("Cardo"),
+  text_font_google = google_font("Work Sans"),
+  code_font_google = google_font("Fira Mono")
+)
+```
+
+```{r packages, results=FALSE}
+library(tidyverse)
+library(here)
+library(lubridate) # for standardizing date format of MHW data
+library(kableExtra)
+library(broom)
+```
+ 
+```{r data, results=FALSE}
+mhwSurvSummary <- read_csv(here("processed-data","survey_MHW_summary_stats.csv"))
+mhwYrTidy <- read_csv(here("processed-data","MHW_calendar_year_anomaly.csv"))
+namerSummary <-read_csv(here("processed-data","survey_region_biomass_with_MHWs.csv"))
+namerSppSummary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
+ctiNamerSummary <- read_csv(here('processed-data','survey_CTI_with_MHWs.csv'))
+survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
+
+sppdat <- namerSppSummary %>% 
+  group_by(region) %>% 
+  filter(year > min(year)) %>% 
+  group_by(region, year, ref_year) %>% 
+  summarise(wtMtAnomPropMean = mean(wtMtAnomProp, na.rm=TRUE),
+            wtMtAnomPropMeanAbs = mean(abs(wtMtAnomProp), na.rm=TRUE)) 
+```
+
+---
+
+# How have marine heatwaves (MHWs) affected biomass in the trawl surveys?
+
+---
+
+# Predictions
+
+1. No MHW effect on biomass or community composition
+
+--
+
+1. Loss of cold species is greater than gain of warm species -> net biomass loss
+
+--
+
+1. Gain of warm species is greater than loss of cold species -> net biomass gain (tropicalisation)
+
+--
+
+1. No net biomass change, but community composition shifts toward a higher overall thermal niche (community turnover)
+
+
+---
+
+# What we know
+
+--
+
+MHWs are becoming increasingly frequent and intense ... and so are papers about them
+
+--
+
+Most studies on MHWs find deleterious effects on species and communities
+* Many are focused on coral reefs, or on historically dominant species in an area
+
+---
+
+# Methods: MHWs
+
+MHWs calculated in each survey region
+
+All anomalies defined relative to the region
+
+MHW-days: >95% for temperature 
+
+MHW-years: >90% annual SST (3 per region)
+
+Many different metrics for MHWs
+
+---
+
+# Methods: trawl data 
+
+Analyzed North America 
+
+For each species, calculated mean weight within strata, and multiplied by stratum area 
+
+Then added these up to get total single-species and net biomass for each region
+
+Four current metrics for biomass change: 
+* Mean species-level change vs. last year
+* Mean species-level change vs. time-series mean (anomaly)
+* Net biomass change vs. last year
+* Net biomass change vs. time-series mean (anomaly)
+
+Paired these with MHW data *from the 12 months preceding the earliest survey month*
+
+---
+
+```{r namer-mhw-years-cpue-hist-prop, fig.cap="Biomass Change vs MHW-Years", results="hide"}
+tmp1 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  group_by(mhwYesNo) %>% 
+  summarise(med = median(wtMtDiffProp, na.rm=TRUE))
+
+mhwyes1 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(mhwYesNo == "yes") %>% 
+  pull(wtMtDiffProp)
+
+mhwno1 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(mhwYesNo == "no") %>% 
+  pull(wtMtDiffProp)
+
+inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(!is.na(wtMtDiffProp)) %>% 
+  ggplot(aes(x=wtMtDiffProp, group=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("#1f78b4","#d95f02")) + 
+  scale_fill_manual(values=c("#1f78b4","#d95f02")) + 
+  geom_histogram(binwidth=.1, color="black", alpha=0.6,position="dodge") +
+  geom_vline(aes(xintercept=tmp1[tmp1$mhwYesNo=="yes",]$med),color="#d95f02", size=4, linetype="dashed") +
+    geom_vline(aes(xintercept=tmp1[tmp1$mhwYesNo=="no",]$med),color="#1f78b4", size=4, linetype="dashed") +
+  geom_text(x=1.8, y=15, label=paste0("T-test: p = ", round(t.test(mhwyes1, mhwno1)$p.value, digits=5))) + 
+theme_bw() +
+  labs(group=">1 Anomaly-Day", x="Prop. Change Species CPUE vs. Last Year",y="Frequency", color=">1 Anomaly-Day",fill=">1 Anomaly-Day") + 
+  theme(legend.position = c(0.8,0.5))
+```
+
+---
+
+```{r namer-mhw-years-cpue-hist-anom, fig.cap="Biomass Change vs MHW-Years", results="hide"}
+tmp2 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  group_by(mhwYesNo) %>% 
+  summarise(med = median(wtMtAnomProp, na.rm=TRUE))
+
+mhwyes2 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(mhwYesNo == "yes") %>% 
+  pull(wtMtAnomProp)
+
+mhwno2 <- inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(mhwYesNo == "no") %>% 
+  pull(wtMtAnomProp)
+
+inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(!is.na(wtMtAnomProp)) %>% 
+  ggplot(aes(x=wtMtAnomProp, group=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("#1f78b4","#d95f02")) + 
+  scale_fill_manual(values=c("#1f78b4","#d95f02")) + 
+  geom_histogram(binwidth=.1, color="black", alpha=0.6,position="dodge") +
+  geom_vline(aes(xintercept=tmp2[tmp2$mhwYesNo=="yes",]$med),color="#d95f02", size=4, linetype="dashed") +
+    geom_vline(aes(xintercept=tmp2[tmp2$mhwYesNo=="no",]$med),color="#1f78b4", size=4, linetype="dashed") +
+  geom_text(x=0.8, y=15, label=paste0("T-test: p = ", round(t.test(mhwyes2, mhwno2)$p.value, digits=5))) + 
+theme_bw() +
+  labs(group=">1 Anomaly-Day", x="Prop. Change Species CPUE vs. Time-Series Mean",y="Frequency", color=">1 Anomaly-Day",fill=">1 Anomaly-Day") + 
+  theme(legend.position = c(0.8,0.5))
+```
+
+---
+
+```{r namer-mhw-years-cpue-hist-anom-reg, fig.cap="Biomass Change vs MHW-Years", results="hide"}
+inner_join(namerSummary, mhwSurvSummary) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(!is.na(wtMtAnomProp)) %>% 
+  ggplot(aes(x=wtMtAnomProp, group=mhwYesNo, fill=mhwYesNo)) +
+  scale_color_manual(values=c("#1f78b4","#d95f02")) + 
+  scale_fill_manual(values=c("#1f78b4","#d95f02")) + 
+  geom_histogram(binwidth=.1, color="black", alpha=0.6,position="dodge") +
+theme_bw() +
+  labs(group=">1 Anomaly-Day", x="Prop. Change Species CPUE vs. Time-Series Mean",y="Frequency", color=">1 Anomaly-Day",fill=">1 Anomaly-Day") + 
+  facet_wrap(~region) +
+  scale_y_continuous(limits=c(0, 10), breaks=seq(0, 10, 2)) +
+  theme(legend.position = c(0.8,0.15))
+```
+
+---
+
+```{r namer-mhw-years-cpue-scatter-diff, fig.cap="Biomass Change vs MHW-Years",results='hide', eval=FALSE}
+
+outlierdiff <- namerSummary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  filter(anomIntC > 0.7 | wtMtDiffProp > 1)
+
+namerSummary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  filter(year>=1982, !is.na(wtMtDiffProp)) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp, color=region, fill=region)) +
+  geom_point(size=3) +
+  geom_text(data=outlierdiff, aes(x=anomIntC, y=wtMtDiffProp, label=year), nudge_y=0.1) +
+  scale_fill_viridis_d() +
+    scale_color_viridis_d() +
+theme_bw() + 
+  labs(x="Cumulative Mean Intensity of MHW",y="Prop. Change CPUE vs. Last Year")
+
+```
+
+---
+
+```{r namer-mhw-years-cpue-scatter-anom, fig.cap="Biomass Change vs MHW-Years",results='hide'}
+
+outlieranom <- namerSummary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  filter(year>=1982, !is.na(wtMtAnomProp)) %>% 
+  filter(anomIntC > 0.7 | wtMtAnomProp > 1)
+
+namerSummary %>% 
+  left_join (mhwSurvSummary, by="ref_year") %>% # get MHW data matched to surveys
+  filter(year>=1982, !is.na(wtMtAnomProp)) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtAnomProp, color=region, fill=region)) +
+  geom_point(size=3) +
+  geom_text(data=outlieranom, aes(x=anomIntC, y=wtMtAnomProp, label=year), nudge_y=0.1) +
+  scale_fill_viridis_d() +
+    scale_color_viridis_d() +
+theme_bw() + 
+  labs(x="Cumulative Mean Intensity of MHW",y="Prop. Change CPUE vs. Time-Series Mean")
+```
+
+
+---
+
+```{r namer-spp-diff-mhwYesNo-log-boxplot, fig.cap="Log Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years"}
+left_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtDiffProp),
+         wtMtDiffProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(!is.na(mhwYesNo)) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=mhwYesNo, y=log(wtMtDiffProp))) +
+  theme_bw() + 
+  labs(x=">1 Anomaly-Day", y="Log Prop. Change Species CPUE vs. Last Year") +
+  NULL
+
+```
+
+
+---
+
+
+```{r namer-spp-anom-coef-boxplot, fig.cap="Distribution of Coefficients for Single-Species Linear Models of Biomass Change on MHW Intensity"}
+lm_spp_anom <- left_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtDiffProp),
+         wtMtDiffProp < Inf) %>% 
+  group_by(spp, region) %>% 
+  nest() %>% 
+  mutate(
+    model = purrr::map(data, ~lm(wtMtAnomProp ~ anomIntC, data = .x)), 
+    tidymodel = purrr::map(model, tidy)
+  ) %>% 
+  unnest(tidymodel)  %>% 
+  filter(!term=="(Intercept)") %>%
+  select(-data) %>%
+  ungroup()%>% 
+  select(-model)
+
+lm_spp_anom %>% 
+  ggplot() +
+  geom_density(aes(x=estimate)) + 
+  facet_wrap(~region) +
+  theme_bw() + 
+  labs(x="Coefficient of Change in Species Biomass ~ MHW Intensity", y="Density") +
+  NULL
+```
+
+---
+
+
+```{r namer-spp-anom-mhwYesNo-log-boxplot, fig.cap="Log Species Proportional CPUE Year-Over-Year Change in MHW and Non-MHW Years", eval=FALSE}
+left_join(namerSppSummary, mhwSurvSummary) %>% 
+  filter(!is.na(wtMtAnomProp),
+         wtMtAnomProp < Inf) %>% # because the proportion becomes Inf if previous year was 0
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes", "no")) %>% 
+  filter(!is.na(mhwYesNo)) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=mhwYesNo, y=log(wtMtAnomProp))) +
+  theme_bw() + 
+  labs(x=">1 Anomaly-Day", y="Log Prop. Change Species CPUE vs. Time-Series Mean") +
+  NULL
+
+```
+
+---
+
+## Preliminary result: no change in net biomass during MHWs in North America
+
+### But a lot of single-species change
+
+---
+
+# The community temperature index (CTI)
+
+Get the realized thermal niche of all species in a region 
+
+Take the average, weighted by biomass
+
+Used as a metric of "thermophilization" or "tropicalization"
+
+Data from [Mike Burrows and friends](https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1)
+
+---
+
+```{r boxplot, fig.cap="Distribution of CTIs in MHW-Years vs. non-MHW Years"}
+ctiNamerSummary %>% 
+  group_by(ref_year) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes" ,"no")) %>% 
+  ggplot(aes(x=mhwYesNo, y=CTI)) +
+  geom_boxplot() + 
+    labs(x=">1 Anomaly-Day", y="Community Temperature Index") +
+  facet_wrap(~region, scales="free_y") +
+theme_bw()
+```
+
+---
+
+# Next steps 
+
+* Refine CTI analysis, be sure included species are representative
+* Focus in on "famous MHWs"
+* Incorporate all trawl surveys! (May switch to different index of biomass)
+* Test categorical MHW bins (like hurricanes)?
+* Taxonomic checks?
+
+## Thanks!
+

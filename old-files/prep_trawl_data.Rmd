@@ -1,0 +1,194 @@
+---
+title: "prep_trawl_data"
+author: "Alexa Fredston-Hermann"
+date: "10/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results=FALSE, eval=TRUE)
+```
+
+Note that this filtering was rewritten to use data.table which is faster than tidyverse; if you aren't familiar with the syntax, ask Alexa
+
+```{r packages}
+#library(tidyverse)
+library(here)
+library(lubridate)
+library(data.table)
+library(magrittr)
+```
+
+# Pull in data 
+
+Currently using:
+* North American data from OceanAdapt
+* Norway from FISHGLOB
+* DATRAS from FISHGLOB 
+
+OA is too large to keep on GitHub, but can be downloaded from Zenodo here (updated 2020): https://zenodo.org/record/3885625 
+
+Europe datasets were prepared by Aurore Maureaud and downloaded from here: https://drive.google.com/drive/u/0/folders/1CGY8oI6DbpdHYAMV_8ztetxSrhUPpu3F 
+
+```{r raw data}
+# North America
+OApath <- "~/github/OceanAdapt-update2020/" # specify where this directory is stored on your machine 
+namer_raw_zeros <- readRDS(paste0(OApath, "/data_clean/dat_exploded.rds")) # pull in the entire dataset with zeros representing true absences; think this is based on the list of common species in all-regions-trimmed 
+namer_raw_zeros %<>% as.data.table(namer_raw_zeros)
+
+# pull in Norway
+nor_raw <- fread(here("raw-data","NOR-BTS_clean_May2021.csv")) 
+nor_raw <- nor_raw[, .SD, .SDcols = \(x) !all(is.na(x))] # get rid of all-NA columns
+
+nor_raw <- nor_raw[!haul_id=="NOR-BTS 1992 9 3236 16.967 75.117 225 525"]
+# this is duplicated in the data--not sure why--just drop it for now 
+
+ # get all non-species-level information
+nor_haul_info <- copy(nor_raw)[, .(survey, haul_id, year, month, latitude, longitude, haul_dur, area_swept, gear, depth)]
+
+nor_haul_info %<>% unique()
+
+nor_raw_zeros <- as.data.table(expand.grid(haul_id=unique(nor_raw[,haul_id]), accepted_name=unique(nor_raw[,accepted_name]))) %>%
+# left-join haul info to all spp*haul rows
+merge(nor_haul_info, all.x=TRUE, by="haul_id") %>%
+# left-join actual obs data to all spp*haul rows
+  merge(nor_raw, all.x=TRUE, by=c("survey", "haul_id", "year", "month", "latitude", "longitude", 
+"haul_dur", "area_swept", "gear", "depth", "accepted_name"))
+
+nor_raw_zeros <- nor_raw_zeros[is.na(wgt_cpue), wgt_cpue := 0][year >= 2004 & latitude >= 70 & month %in% c(8,9,10)]
+# convert NAs to 0s (true absences)
+# as per Laurene Pecuchet, filtering to only include the Barents Sea autumn survey in years with a standardized survey methodology
+# this goes from ~6,100,000 records to just 200,000 ... is there a way to use the rest of the data? (or maybe they're artefacts of the expansion -- e.g., species that are only in the Norwegian Sea?)
+# for some Norway spp eg Agonus cataphractus, it looks like they have zero abundance every year. there actally are some positive encounters just so few at such low CPUE that it still averages out to ~0.
+
+# Europe -- same operations 
+datras_raw <- fread(here("raw-data","DATRAS_v2_clean.csv"))
+datras_raw <- datras_raw[, .SD, .SDcols = \(x) !all(is.na(x))] # get rid of all-NA columns
+
+datras_haul_info <- copy(datras_raw)[,.(survey, haul_id, year, month, latitude, longitude, haul_dur, area_swept, gear, depth)] 
+datras_haul_info %<>% unique()
+
+datras_raw_zeros <- as.data.table(expand.grid(haul_id=unique(datras_raw[,haul_id]), accepted_name=unique(datras_raw[,accepted_name]))) %>%
+merge(datras_haul_info, all.x=TRUE, by="haul_id") %>%
+# left-join actual obs data to all spp*haul rows
+  merge(datras_raw, all.x=TRUE, by=c("survey", "haul_id", "year", "month", "latitude", "longitude", 
+"haul_dur", "area_swept", "gear", "depth", "accepted_name"))
+
+datras_raw_zeros <- datras_raw_zeros[is.na(wgt_cpue), wgt_cpue := 0]
+```
+
+Check that the spatial domain of each region is fixed over time 
+
+```{r check domain}
+namer_coords <- unique(namer_raw_zeros[,.(lat, lon, region, year)])[,lat_round := (round(lat/0.25)*0.25)][,lon_round := (round(lon/0.25)*0.25)][,coords_round := paste0(lon_round, ", ", lat_round)]
+
+namer_coords_expand <- NULL
+for(i in unique(namer_coords$region)) {
+  # get all possible quarter-cells per region 
+  regdat <- namer_coords[region==i]
+  expdat <- as.data.table(expand.grid(coords_round = unique(regdat$coords_round), year=unique(regdat$year)))
+  expdat$region <- i
+  
+  # get the number of years each one was surveyed 
+  survdat <- unique(namer_coords[region==i][,.(year, coords_round)])
+  survdat$surveyed <- 1
+  
+  expdat <- merge(expdat, survdat, all.x=TRUE)
+  expdat <- expdat[is.na(surveyed), surveyed := 0]
+  
+  namer_coords_expand <- rbind(namer_coords_expand, expdat)
+}
+
+namer_coords_expand[,coords_n := sum(surveyed), by=.(region, coords_round)][,coords_prop := coords_n / max(coords_n), by=region]
+
+ggplot(namer_coords_expand, aes(x=coords_prop)) +
+  geom_histogram() + 
+  facet_wrap(~region, scales="free_y")
+
+```
+
+```{r tidy data}
+# get start months for each survey 
+# starting with the haul data because oceanadapt outputs do not retain the date or month
+namer_survey_months <- fread(here("processed-data","compiled_haul_data.csv"))
+
+# because compiled_haul_data has no QA/QC checks, need to drop the hauls that aren't in the actual data (which has been QA/QCed) before getting the start months! 
+
+namer_survey_months <- namer_survey_months[haulid %in% unique(namer_raw_zeros$haulid)]
+
+namer_survey_months[,month := lubridate::month(datetime)]
+namer_survey_months <- namer_survey_months[,.(startmonth = min(month)), by=region] # calculate earliest month of each survey 
+setDT(namer_survey_months)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'=""))]
+namer_survey_months <- namer_survey_months[,.(startmonth = min(startmonth)), by=region] # re-calculate after pooling seasonal surveys within a region 
+
+norway_survey_month <- min(nor_raw$month)
+
+# here, we split up all the Europe surveys to select only the fall / winter surveys and correctly assign start months # most are from the supplementary material for Maureaud et al. 10.1098/rspb.2019.1189
+# the rest are from the data itself and pers. comm. A. Maureaud
+
+# pers. comm. A. Maureaud re: work by L. Pecuchet and R. Frelat
+#baltic
+bits_raw_zeros <- datras_raw_zeros[survey=='BITS'& month %in% c(2, 3)][,startmonth := min(month)] 
+# bay of biscay
+evhoe_raw_zeros <- datras_raw_zeros[survey=='EVHOE'& month %in% c(10, 11, 12)][,startmonth := min(month)] 
+# east english channel 
+fr_cgfs_raw_zeros <- datras_raw_zeros[survey=='FR-CGFS'& month %in% c(10, 11, 12)][,startmonth := min(month)] 
+# ireland
+ie_igfs_raw_zeros <- datras_raw_zeros[survey=='IE-IGFS'& month %in% c(10, 11, 12)][,startmonth := min(month)] 
+# north sea
+ns_ibts_raw_zeros <- datras_raw_zeros[survey=='NS-IBTS'& month %in% c(1, 2, 3)][,startmonth := min(month)] 
+
+# portugal - OK to derive start mo from raw data
+pt_ibts_raw_zeros <- datras_raw_zeros[survey=='PT-IBTS'][,startmonth := min(month)] 
+
+# rockall - OK to derive start mo from raw data
+rockall_raw_zeros <- datras_raw_zeros[survey=='ROCKALL'][,startmonth := min(month)] 
+
+# scottish west coast
+swc_ibts_raw_zeros <-datras_raw_zeros[survey=='SWC-IBTS' & month %in% c(1, 2, 3)][,startmonth := min(month)] 
+  
+# make tidy dataframe 
+namer_cpue <- copy(namer_raw_zeros)[!wtcpue==Inf] 
+setDT(namer_cpue)[, region := stringr::str_replace_all(region, c(' Summer'="",' Fall'="",' Winter'="",' Spring'=""))] # pool seasons
+
+# calculate species-level mean CPUE in every year and region
+namer_cpue <- namer_cpue[,.(wtcpue_mean = mean(wtcpue)), by=c("region", "spp", "year")]  
+
+# join start months
+namer_cpue <- merge(namer_cpue, namer_survey_months, all.x=TRUE, by="region")
+
+# repeat for Norway
+nor_cpue <- copy(nor_raw_zeros)
+nor_cpue[,spp := accepted_name][,region := survey]
+nor_cpue <- nor_cpue[,.(wtcpue_mean = mean(wgt_cpue)), by=c("region", "spp", "year")] 
+nor_cpue$startmonth  <- norway_survey_month
+
+# repeat for Europe 
+datras_cpue <- rbind(swc_ibts_raw_zeros, rockall_raw_zeros, pt_ibts_raw_zeros, ns_ibts_raw_zeros, ie_igfs_raw_zeros, fr_cgfs_raw_zeros, evhoe_raw_zeros, bits_raw_zeros) 
+datras_cpue <- datras_cpue[,.(wtcpue_mean = mean(wgt_cpue)), by=.(survey, accepted_name, year, startmonth)]
+datras_cpue[,spp := accepted_name][,region := survey]
+datras_cpue$accepted_name <- NULL
+datras_cpue$survey <- NULL
+
+# get year interval -- how often is survey conducted?
+nor_intervals <- copy(nor_cpue)
+nor_intervals <- unique(nor_intervals[,.(region, year)])
+nor_intervals <- nor_intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag")]
+
+datras_intervals <- copy(datras_cpue)
+datras_intervals <- unique(datras_intervals[,.(region, year)])
+datras_intervals <- datras_intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=region]
+
+namer_intervals <- copy(namer_cpue)
+namer_intervals <- unique(namer_intervals[,.(region, year)])
+namer_intervals[,year := as.numeric(year)]
+namer_intervals <- namer_intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=region]
+```
+
+# Write out processed biomass data
+
+```{r write out}
+fwrite(namer_cpue, here("processed-data","biomass_time_namer.csv"))
+fwrite(nor_cpue, here("processed-data","biomass_time_norway.csv"))
+fwrite(datras_cpue, here("processed-data", "biomass_time_datras.csv"))
+```

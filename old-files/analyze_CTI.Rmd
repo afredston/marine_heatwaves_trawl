@@ -1,0 +1,108 @@
+---
+title: "analyze_CTI"
+author: "Alexa Fredston"
+date: "5/21/2021"
+output:
+  github_document: default
+---
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(eval=TRUE, echo=FALSE, results=TRUE, message=FALSE, warning=FALSE) # set options for all chunks
+```
+
+```{r packages, results=FALSE}
+library(tidyverse)
+library(here)
+```
+
+
+```{r data, results=FALSE}
+mhwSurvSummary <- read_csv(here("processed-data","survey_MHW_summary_stats.csv"))
+#mhwYrTidy <- read_csv(here("processed-data","MHW_calendar_year_anomaly.csv"))
+namerSummary <-read_csv(here("processed-data","survey_region_biomass_with_MHWs.csv"))
+namerSppSummary <- read_csv(here("processed-data","survey_species_biomass_with_MHWs.csv"))
+#survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
+
+cti <- read_csv(here("raw-data/6855203","mxesr.csv")) # https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1
+```
+
+```{r prep}
+ctiNamer <- namerSppSummary %>% 
+  inner_join(cti %>% select(speciesName, hadsstwannp50), by=c('spp'='speciesName') # keep only the species with CTIs, and use the hadsstwannp50 index (see dataset description in source file for CTI data)
+             ) %>% 
+  rename('STI' = hadsstwannp50) %>% 
+  group_by(ref_year) %>% 
+  mutate(CTI = weighted.mean(STI, w=wtMt))
+
+ctiNamerSummary <- namerSummary %>% 
+  inner_join(ctiNamer %>% select(ref_year, CTI) %>% distinct(), by="ref_year") %>% 
+  inner_join(mhwSurvSummary, by="ref_year") %>% 
+  group_by(region) %>% 
+  arrange(year) %>% 
+  mutate(ctiDiff = CTI - lag(CTI),
+         ctiDiffProp = ctiDiff / lag(CTI),
+         ctiAnom = CTI - mean(CTI),
+         ctiAnomProp = ctiAnom / mean(CTI),
+         ctiZ = (CTI - mean(CTI)) / sd(CTI),
+         ctiLog = log(CTI / lag(CTI)))
+
+write_csv(ctiNamerSummary, here('processed-data','survey_CTI_with_MHWs.csv'))
+```
+
+```{r CTI-lineplots, fig.cap="CTI Change vs. MHWs", fig.height=7}
+ctiNamerSummary %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=anomDays/100, color="Number of SST Anomaly-Days Divided by 100")) +
+  geom_line(aes(y=anomSev/100, color="MHW Severity (year sum) Divided by 100")) +
+  geom_line(aes(y=ctiDiffProp, color="Prop. Change CTI vs. Last Year")) +
+    geom_line(aes(y=ctiAnomProp, color="Prop. Change CTI vs. Mean")) +
+scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue",
+                                           "Number of SST Anomaly-Days Divided by 100" = "turquoise1",
+                                           "MHW Severity (year sum) Divided by 100" = "royalblue1",
+                                           "Yearly MHW Index" = "darkblue",
+                                           "Prop. Change CTI vs. Mean" = "palevioletred2",
+                                           "Prop. Change CTI vs. Last Year" = "darkred")
+                     ) +
+  facet_wrap(~region, ncol=3) +
+  labs(x="Year") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  guides(color=guide_legend(nrow=4,byrow=TRUE)) +
+  NULL
+```
+```{r boxplot, fig.cap="Distribution of CTIs in MHW-Years vs. non-MHW Years"}
+ctiNamerSummary %>% 
+  group_by(ref_year) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes" ,"no")) %>% 
+  ggplot(aes(x=mhwYesNo, y=CTI)) +
+  geom_boxplot() + 
+  theme_bw()
+```
+
+```{r reg boxplot, fig.cap="Distribution of Regional CTIs in MHW-Years vs. non-MHW Years"}
+ctiNamerSummary %>% 
+  group_by(ref_year) %>% 
+  mutate(mhwYesNo = ifelse(anomDays > 0, "yes" ,"no")) %>% 
+  ggplot(aes(x=mhwYesNo, y=CTI)) +
+  geom_boxplot() + 
+  facet_wrap(~region, scales="free_y") +
+  theme_bw()
+```
+
+
+```{r lm}
+summary(lm(ctiDiffProp ~ anomIntC, data=ctiNamerSummary))
+
+summary(lm(ctiAnomProp ~ anomIntC, data=ctiNamerSummary))
+
+summary(lm(ctiDiffProp ~ anomIntC + anomIntC * region, data=ctiNamerSummary))
+
+summary(lm(ctiAnomProp ~ anomIntC + anomIntC * region, data=ctiNamerSummary))
+
+library(lme4)
+lmer(ctiAnomProp ~ anomIntC + (1 | region), data=ctiNamerSummary)
+```

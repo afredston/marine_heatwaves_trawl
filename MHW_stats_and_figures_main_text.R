@@ -35,10 +35,34 @@ survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv"))
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
-
+survey_names <- data.frame(survey=c("AI", "BITS", "EVHOE", "FR-CGFS", "IE-IGFS", "NIGFS", "NS-IBTS", 
+                                    "PT-IBTS", "SWC-IBTS", "EBS", "GMEX", "GOA", "NEUS", "Nor-BTS", 
+                                    "SCS", "SEUS", "WCANN"), title=c('Aleutian Islands','Baltic Sea','France','English Channel','Ireland','Northern Ireland','North Sea','Portugal','Scotland','Eastern Bering Sea','Gulf of Mexico','Gulf of Alaska','Northeast US','Norway','Maritimes','Southeast US','West Coast US'))
 ######
 # figures
 ######
+
+# generate many small panels for Fig 1
+for(reg in survey_names$survey) {
+tmp <- mhw_summary_sat_sst_5_day %>% 
+  left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
+  left_join(survey_names) %>% 
+  left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
+  filter(survey==reg)
+coeff = 5 
+tmpplot <- ggplot(tmp) +
+  geom_col(aes(x=year, y=n / coeff), color="white", fill="gray85") +
+  geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
+  scale_color_gradient(low="#1e03cd", high="#b80d06") +
+  scale_y_continuous("MHW duration", sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
+  labs(title=tmp$title, x="Year") +
+  theme_bw()  +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  )+
+  NULL
+ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=4, width=4, scale=0.8)
+}
 
 gg_mhw_biomass_hist <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys

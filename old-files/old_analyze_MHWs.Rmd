@@ -1,0 +1,394 @@
+---
+title: "Untitled"
+author: "Alexa Fredston"
+date: "5/20/2021"
+output: html_document
+---
+
+
+# Older plots / models
+
+### Characterizing MHWs in North America
+
+How frequent and severe have heatwaves been in North America since 1982 (the start of the MHW data)? 
+
+```{r namer-mhw-freq,  fig.cap="Frequency of MHW Events in North America", fig.height=5}
+ggMhwNamerFreq <- mhwYrTidy %>% 
+  filter(region %in% namerRegs) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=anomDays)) +
+  theme_bw() + 
+  labs(x="MHW Days per Year", y="Frequency") +
+  facet_wrap(~region) + 
+  NULL
+
+ggMhwNamerFreq
+```
+
+
+```{r namer-mhw-anom, fig.cap="Anomaly of MHW Events in North America", fig.height=8}
+
+ggMhwNamerAnom <- mhwTidy %>% 
+  filter(region %in% namerRegs) %>% 
+  ggplot(aes(x=date)) +
+  geom_line(aes(y=anomIntC, color="Cumulative Mean Intensity")) +
+  geom_line(aes(y=sstAnom, color="Single-Day Anomaly")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean Intensity" = "darkblue", "Single-Day Anomaly" = "darkgreen")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly") +
+  theme_bw() + 
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) +
+  NULL
+
+ggMhwNamerAnom
+```
+
+### MHWs vs. CPUE
+
+Let's look at annual cumulative mean intensity (sum of SST anomalies in the calendar year / number of MHW-days in the calendar year) vs. trends in aggregate abundance (total CPUE across all species) for the whole region. The two metrics of CPUE change used are proportion change CPUE vs. last year ((cpueThisYear - cpueLastYear)/cpueLastYear), and proportion change CPUE relative to the long-term mean ((cpueThisYear - cpueSeriesMean)/cpueSeriesMean). 
+
+```{r namer-mhw-cpue-time, fig.cap="MHW Cumulative Mean Intensity and Change in Total CPUE Over Time", fig.height=8}
+ggMhwNamerCpue <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+
+ggMhwNamerCpue_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_line(aes(y=anomIntC, color="Cumulative Mean MHW Intensity")) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Cumulative Mean MHW Intensity" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region, ncol=4) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+ggsave(ggMhwNamerCpue_save, filename=here("results","line_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
+
+ggMhwNamerCpue
+```
+
+Rather than comparing both MHW intensity and CPUE trends over time, we can just plot cumulative mean intensity against the CPUE trend in that year:
+
+```{r namer-mhw-vs-cpue, fig.cap="MHW Cumulative Mean Intensity vs. Change in Total CPUE", fig.height=8}
+ggMhwNamerCpue3 <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~region) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggMhwNamerCpue3_save <- namerSummary %>% 
+  filter(year>=1982) %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~region, ncol=4) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+ggsave(ggMhwNamerCpue3_save, filename=here("results","scatter_plots_MHW_CPUE_north_america.png"), dpi=160, width=8, height=4)
+
+
+ggMhwNamerCpue3
+```
+
+
+```{r namer-mhw-5-spp, fig.cap="MHW Cumulative Mean Intensity vs. Single-Species Change in Total CPUE", fig.height=8, fig.scale=1.2}
+
+ggMhwNamerCpue2 <- namerSppSummary %>% 
+  mutate(sppReg = paste0(region, spp)) %>% 
+  filter(sppReg %in% topspp$sppReg,
+         wtMtDiffProp < 5) %>% # Keep only spp*region combos of interest
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=anomIntC, y=wtMtDiffProp)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~sppReg, ncol=5) +
+  labs(x="SST Anomaly",y="Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom",
+    strip.text = element_text(size = 5)
+  ) +
+  NULL
+
+ggMhwNamerCpue2
+```
+
+### Evaluating a yearly MHW index
+
+At Thomas's suggestion, let's try using a yearly definition of MHWs rather than a daily one, to match the time scale of the trawl data. In the histograms below I've imputed zeros for NA values (no MHW) just to see the data distribution.
+
+```{r namer-mhw-yearly, fig.cap="Distributions of Yearly MHW Estimates Across Regions", fig.height=6, fig.scale=1.2}
+
+ggMhwYrNamerFreq <- mhwYrTidy %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% # replace all na values with zeros
+  filter(region %in% namerRegs) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=sstYrAnom)) +
+  theme_bw() + 
+  labs(x="Yearly Anomaly", y="Frequency") +
+  facet_wrap(~region) + 
+  NULL
+
+ggMhwYrNamerFreq
+```
+
+This approach calculated exactly 3 MHW-years per region, I think because we took the 90th percentile of the same number of years: 
+
+```{r namer-mhw-yearly-stats}
+mhwYrTidy %>% 
+  filter(!is.na(sstYrAnom)) %>% 
+  group_by(region) %>% 
+  summarise(mhw_years=n())
+```
+
+Let's see what happened to CPUE in those regions in those years; these are the same plots as above but now MHW years are indicated with an asterisk. In plots with fewer than three asterisks, there aren't trawl data available in the MHW year. 
+
+```{r namer-mhw-yearly-cpue, fig.cap="Yearly MHWs and Change in Total CPUE Over Time", fig.height=8}
+
+ggMhwYrNamerCpue <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Yearly MHW Index" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggMhwYrNamerCpue_save <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  ggplot(aes(x=year)) + 
+  geom_point(aes(y=sstYrAnom, color="Yearly MHW Index"), shape=8, size=2.5) +
+  geom_line(aes(y=wtMtDiffProp, color="Prop. Change CPUE vs. Last Year")) + 
+  geom_line(aes(y=wtMtAnomProp, color="Prop. Change CPUE vs. Mean")) +
+  scale_color_manual(name = "", values = c("Yearly MHW Index" = "darkblue", 
+                                           "Prop. Change CPUE vs. Last Year" = "darkred",
+                                           "Prop. Change CPUE vs. Mean" = "darkorange")) +
+  facet_wrap(~region, ncol=4) +
+  labs(x="Year",y="SST Anomaly or Prop. Change CPUE") + 
+  theme_bw() +
+  theme(
+    legend.position="bottom"
+  ) +
+  NULL
+
+ggsave(ggMhwYrNamerCpue_save, filename=here('results','line_plots_MHW_yr_CPUE_north_america.png'), dpi=160, width=8, height=4)
+
+ggMhwYrNamerCpue
+```
+
+How does catch vary in MHW years vs. non-MHW years?
+
+```{r namer-mhw-yearly-boxplot1, fig.cap="CPUE Proportional Anomaly in MHW vs. non-MHW years", fig.height=8}
+
+ggMhwYrNamerCpueBox1 <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtAnomProp)) + 
+  facet_wrap(~region) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+
+ggMhwYrNamerCpueBox1
+```
+
+Here are the same plots using proportional difference from the last year instead of CPUE anomaly. 
+
+```{r namer-mhw-yearly-boxplot2, fig.cap="CPUE Proportional Year-Over-Year Difference in MHW vs. non-MHW years", fig.height=8}
+
+ggMhwYrNamerCpueBox2 <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtDiffProp)) + 
+  facet_wrap(~region) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+
+ggMhwYrNamerCpueBox2_save <- namerSummary %>% 
+  left_join (mhwYrTidy %>% filter(region %in% namerRegs), by=c("region","year")) %>% 
+  mutate(MHW = ifelse(!is.na(sstYrAnom), "yes","no")) %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=MHW, y=wtMtDiffProp)) + 
+  facet_wrap(~region, ncol=4) +
+  theme_bw() +
+  theme(
+    legend.position="none"
+  ) +
+  NULL
+ggsave(ggMhwYrNamerCpueBox2_save, filename=here("results","boxplot_MHW_yr_CPUE_north_america.png"),dpi=160,width=8,height=4)
+
+ggMhwYrNamerCpueBox2
+```
+
+Fitting a mixed-effects model to all the species-level data (not just top species) with random slopes and intercepts for species and region, `wtMtDiffPropAbs ~ sstYrAnom + (1 + sstYrAnom|spp) + (1 + sstYrAnom|region)` (note this is *absolute* change, so we are treating species that had increases or decreases in biomass as equivalent):
+
+Note that the previous runs of this model had `NA` for years when there was no SST anomaly; replacing those values with 0 changed the results. 
+
+```{r lme, results='asis'}
+library(lme4)
+library(broom.mixed)
+library(kableExtra)
+
+namerSppMhw <- namerSppSummary %>% 
+  left_join(mhwYrTidy, by=c("year","region")) %>% 
+  mutate(mhw_yes_no = ifelse(is.na(sstYrAnom),"no","yes"),
+         sstYrAnom = replace_na(sstYrAnom, 0)) %>%  # after identifying MHW years, replace NAs with zeros
+  filter(!is.na(wtMtDiffPropAbs),
+         wtMtDiffPropAbs < Inf,
+         wtMtDiffPropAbsLog < Inf,
+         wtMtDiffPropAbsLog > -Inf) 
+
+# LME pooled across all regions
+lme1 <- lmer(wtMtDiffPropAbs ~ sstYrAnom + (1 + sstYrAnom|spp) + (1 + sstYrAnom|region), data = namerSppMhw) %>% tidy() # note that results are totally different if non-MHW years are classified as 0 rather than NA
+
+kable(lme1) %>% kable_classic(html_font = "Cambria")
+
+
+# for(i in unique(namerSppMhw$region)) {
+#   lme1 <- lmer(wtMtDiffPropAbs ~ sstYrAnom + (1|spp), data=namerSppMhw[namerSppMhw$region==i,]) %>% 
+#     tidy() 
+#   
+#   kable(lme1, caption=paste0(i)) %>% 
+#     kable_classic(html_font = "Cambria")
+# }
+
+```
+
+With the response variable on a log scale: `wtMtDiffPropAbsLog ~ sstYrAnom + (1 + sstYrAnom|spp) + (1 + sstYrAnom|region)`
+
+```{r lme2, results='asis'}
+
+# LME pooled across all regions
+lme2 <- lmer(wtMtDiffPropAbsLog ~ sstYrAnom + (1 + sstYrAnom|spp) + (1 + sstYrAnom|region), data = namerSppMhw) %>% tidy() # note that results are totally different if non-MHW years are classified as 0 rather than NA
+
+kable(lme2) %>% kable_classic(html_font = "Cambria")
+
+```
+
+Fitting a series of single-species models and plotting the results
+
+```{r single-spp models}
+library(purrr)
+
+namerSppLm <- namerSppMhw %>% 
+  group_by(spp, region) %>% 
+  nest() %>% 
+  mutate(
+    model = map(data, ~lm(wtMtDiffProp ~ sstYrAnom, data = .x)), # not using absolute vals here on purpose -- curious about the sign of change 
+    tidymodel = map(model, tidy) 
+  ) %>% 
+  unnest(tidymodel) %>% 
+  filter(!term=="(Intercept)") %>%
+  select(-data, -model) %>%
+  ungroup()
+
+namerSppLm %>% 
+  arrange(desc(spp)) %>% 
+  filter(estimate < 10000) %>% # get rid of ridiculous outliers
+  mutate(spp = factor(spp, unique(spp)),
+         signif = ifelse(p.value <= 0.05, "p <= 0.05","p > 0.05")) %>%
+  ggplot(aes(x=spp, y=estimate, ymin=estimate-std.error, ymax=estimate+std.error, color=signif, fill=signif)) +
+  geom_pointrange(size=0.7) +
+  scale_color_manual(values=c('p <= 0.05'='#3A4ED0','p > 0.05'='grey85')) +
+  geom_hline(yintercept=0, color="black") +
+  labs(x=NULL, y="Proportional Biomass Change \n                 ") +
+  #  scale_y_continuous(breaks=seq(-30, 20, 10), limits=c(-35, 20)) + 
+  coord_flip() + # after this point x and y are reversed 
+  facet_wrap(~region, ncol=length(unique(namerSppMhw$region)), scales = "free_x") + 
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        #     text=element_text(family="sans",size=12,color="black"),
+        #      axis.title=element_text(family="sans",size=14,color="black"),
+        #      axis.text=element_text(family="sans",size=12,color="black"),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank()
+        #      plot.margin=unit(c(5.5, 15, 5.5, 5.5), "points")
+  ) +
+  NULL
+
+```
+
+I already removed one major outlier, but it's still hard to see what's going on around the zero line. Let's zoom in: 
+
+```{r single-spp models 2}
+
+namerSppLm %>% 
+  arrange(desc(spp)) %>% 
+  filter(estimate < 10000) %>% # get rid of ridiculous outliers
+  mutate(spp = factor(spp, unique(spp)),
+         signif = ifelse(p.value <= 0.05, "p <= 0.05","p > 0.05")) %>%
+  ggplot(aes(x=spp, y=estimate, ymin=estimate-std.error, ymax=estimate+std.error, color=signif, fill=signif)) +
+  geom_pointrange(size=0.7) +
+  scale_color_manual(values=c('p <= 0.05'='#3A4ED0','p > 0.05'='grey85')) +
+  geom_hline(yintercept=0, color="black") +
+  labs(x=NULL, y="Proportional Biomass Change \n                 ") +
+  scale_y_continuous(limits=c(-50, 50), breaks=seq(-50, 50, 25)) + 
+  coord_flip() + # after this point x and y are reversed 
+  facet_wrap(~region, ncol=length(unique(namerSppMhw$region))) + 
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank()
+  ) +
+  NULL
+
+
+```
+
