@@ -36,7 +36,8 @@ mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sb
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv"))
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
-  rename('spp'=accepted_name)
+  rename('spp'=accepted_name) %>% 
+  mutate(wt_mt_log = as.numeric(wt_mt_log)) 
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv"))
@@ -98,6 +99,8 @@ gg_mhw_biomass_point_soda <- survey_summary %>%
 gg_mhw_biomass_point_soda
 
 ```
+
+# Appendix: Robustness to metrics of community change and variability
 
 # Appendix: Predictors of regional biomass change
 
@@ -208,6 +211,8 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 gg_mhw_biomass_point_lags
 ```
 
+### Species traits
+
 # Appendix: Predictors of species-level change
 
 Our focus on net change in biomass in temperate marine fish assemblages
@@ -216,5 +221,66 @@ address this is our analysis (presented in the main text) of shifts in
 community composition and Community Temperature Index. Here, we also
 explore patterns in species-level biomass change in the context of
 marine heatwaves.
+
+# Appendix: Case study of the Northeast Pacific
+
+The Northeast Pacific 2014-2016 is perhaps the best-documented and most intense MHW in modern history. 
+
+```{r fig-ebs-spp, fig.cap="Biomass trends and historical MHWs in the top species (measured by biomass) in the NE Pacific. In each region, a small number of species is responsible for most of the biomass (the sixth most common species contributes <20% of the biomass as the most common species, for example)."}
+topspp <- survey_spp_summary %>% 
+  filter(survey %in% c('EBS','GOA','AI','WCANN')) %>% 
+  group_by(survey, spp) %>% 
+  summarise(tot = sum(wt_mt)) %>% 
+  arrange(-tot) %>% 
+  slice(1:5) %>% 
+  mutate(id = paste0(survey, spp))
+
+cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
+
+cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
+
+boop <- survey_spp_summary %>% 
+  mutate(id = paste0(survey, spp)) %>% 
+  filter(id %in% topspp$id) %>% 
+  bind_rows(survey_spp_summary %>% filter(survey %in% c('EBS','GOA','AI'), !spp %in% topspp$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  mutate(bar1 = ifelse(mhw_yes_no == "yes", max(wt_mt, na.rm=TRUE), 0)) %>% 
+  ggplot() +
+  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+    geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+scale_y_continuous(limits=c(0,36), breaks=seq(0, 35, 5)) +
+  scale_color_manual(values=cbpal2) +
+    scale_fill_manual(values=cbpal2) +
+facet_wrap(~survey) +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position="bottom") + 
+  labs(x="Year",y="Biomass (mt)") +
+  NULL
+
+# survey_spp_summary %>% 
+#   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+#     filter(survey %in% c('EBS','GOA','AI'),
+#            spp %in% topspp$spp,
+#          wt_mt_log > -Inf, 
+#          wt_mt_log < Inf) %>% 
+#   bind_rows(survey_summary %>% filter(survey %in% c('EBS','GOA','AI')) %>% select(ref_yr, year, survey, wt_mt_log) %>% distinct() %>% mutate(spp="All") %>% filter(!is.na(wt_mt_log))) %>% 
+#   mutate(bar1 = ifelse(mhw_yes_no == "yes", max(wt_mt_log), 0), 
+#          bar2 = ifelse(mhw_yes_no == "yes", min(wt_mt_log), 0)) %>% 
+#   ggplot() +
+#   geom_col(aes(x=year, y=bar1), color="grey70", line = "white") +
+#   geom_col(aes(x=year, y=bar2), color="grey70", line = "white") +
+#   geom_line(aes(x=year, y=wt_mt_log, color=spp)) + 
+#   scale_y_continuous(limits=c(-5.5, 5.5), breaks=seq(-5, 5, 1)) +
+#   scale_color_manual(values=cbpal) +
+#   facet_wrap(~survey) +
+#   theme_bw() + 
+#     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#           legend.position="bottom") + 
+#   labs(x="Year",y="Biomass log ratio") +
+# NULL
+
+```
+
 
 # References
