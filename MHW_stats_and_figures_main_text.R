@@ -15,6 +15,7 @@ library(ggrepel)
 library(patchwork)
 # load data
 library(pwr)
+library(knitr)
 
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
@@ -51,17 +52,24 @@ tmp <- mhw_summary_sat_sst_5_day %>%
   filter(survey==reg)
 coeff = 5 
 tmpplot <- ggplot(tmp) +
-  geom_col(aes(x=year, y=n / coeff), color="white", fill="gray85") +
+  geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
   geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
   scale_color_gradient(low="#1e03cd", high="#b80d06") +
-  scale_y_continuous("MHW duration", sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
-  labs(title=tmp$title, x="Year") +
+  scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
+  labs(title=tmp$title) +
   theme_bw()  +
   theme(legend.position = "none",
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.x=element_text(angle = 45, vjust=1),
+    #    axis.title.x=element_text(vjust=5),
+    #    plot.title.position = "plot",
+    plot.title = element_text(hjust=0.3, vjust = -7)
   )+
   NULL
-ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=4, width=4, scale=0.8)
+ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=3, scale=0.7, dpi=160)
+plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
 gg_mhw_biomass_hist <- survey_summary %>% 
@@ -141,23 +149,46 @@ sti_list <- survey_spp_summary %>%
 
 gg_mhw_biomass_point_spp <- survey_spp_summary %>% 
   left_join(reg_cti) %>% 
-  mutate(STI_diff = STI - CTI) %>% 
+  mutate(STI_diff = STI - CTI,
+         wt_mt_log = as.numeric(wt_mt_log)) %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
   filter(!is.na(STI_diff), mhw_yes_no=="yes") %>% 
-  ggplot(aes(x=anom_days, y=wt_mt_log, color=STI_diff, fill=STI_diff)) +
+  ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_days, fill=anom_days)) +
   geom_point(size=0.5, position="jitter") + 
-  scale_color_gradient2(midpoint=0, low="#1F78B4", mid="grey",
-                        high="#E31A1C") +
-  scale_fill_gradient2(midpoint=0, low="#1F78B4", mid="grey",
-                       high="#E31A1C")+
+  scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
+  scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
+ # geom_smooth(method="lm")+
   theme_bw() + 
   coord_cartesian(clip = "off") +
-  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  labs(x="Species thermal bias", y="Biomass log ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="none")
+  geom_vline(aes(xintercept=0), linetype="dashed", color="black") +
+  scale_y_continuous(limits=c(-10, 10)) +
+  scale_x_continuous(limits=c(-20, 20)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        legend.position="bottom",
+        legend.margin=margin(t=-10)) +
+ # facet_wrap(~survey) +
+  NULL
+gg_mhw_biomass_point_spp
+ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
 
-#gg_mhw_biomass_point_spp
-ggsave(gg_mhw_biomass_point_spp, filename=here("figures","final_sti_cti.png"))
+
+gg_mhw_cti_hist <- survey_summary %>%
+  inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
+  mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
+  ggplot(aes(x=cti_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
+  geom_freqpoly(binwidth=0.05, alpha=0.8, size=2) +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+  theme_bw() + 
+  labs(x="CTI log ratio", y="Frequency") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "none")
+gg_mhw_cti_hist
+ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.png"), width=50, height=50, units="mm")
 
 ######
 # models and stats 
@@ -234,7 +265,7 @@ my.fitted.cti <- fitted(my.seg1.cti)
 my.model.cti <- data.frame(anom_days = modeldat$anom_days, cti_log = my.fitted.cti)
 AIC(my.lm.cti, my.seg1.cti)
 ########
-# plots
+# old plots
 ########
 
 gg_mhw_biomass_hist <- survey_summary %>% 
@@ -283,18 +314,6 @@ gg_mhw_biomass_point_models <- survey_summary %>%
   labs(x="Marine Heatwave Duration (days)", y="Biomass Log Ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 gg_mhw_biomass_point_models
-
-gg_mhw_cti_hist <- survey_summary %>%
-  inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
-  mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
-  ggplot(aes(x=cti_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
-  geom_freqpoly(binwidth=0.05, alpha=0.8, size=2) +
-  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
-  scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
-  theme_bw() + 
-  labs(x="CTI Log Ratio", y="Frequency (Survey-Years)") +
-  theme(legend.position = "none")
-gg_mhw_cti_hist
 
 gg_mhw_cti_point <- survey_summary %>%
   inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys 
