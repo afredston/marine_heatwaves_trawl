@@ -606,7 +606,7 @@ diverging_bars_scaled <- plot_grid(anomalydays_divbar + theme(legend.position = 
 
 diverging_bars_legend_scaled <- get_legend(richness_divbar)
 
-diverging_bars_wlegend_scaled <- plot_grid(diverging_bars_legend, diverging_bars, ncol = 1, rel_heights = c(1,10))
+diverging_bars_wlegend_scaled <- plot_grid(diverging_bars_legend_scaled, diverging_bars_scaled, ncol = 1, rel_heights = c(1,10))
 
 ggsave(diverging_bars_wlegend_scaled, path = here::here("figures","beta_diversity"),
        filename = "diverging_bars_wlegend_scaled.pdf",height = 10, width = 10, unit = "in")
