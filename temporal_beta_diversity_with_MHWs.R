@@ -558,7 +558,7 @@ bray_dissim_divbar_scaled <- ggplot(survey_CTI_temporal_diversity_with_MHWs[comp
   geom_bar(stat='identity', fill = "black")  +
   labs(x = "Reference Year-Region", y = "Bray Curtis Turnover Dissimilarity\nYear t versus t-1, Scaled by Region") + 
   coord_flip() +
-  ylim(0,1) +
+  ylim(-1,1) +
   theme_classic() +
   theme(axis.ticks.y = element_blank())
 
