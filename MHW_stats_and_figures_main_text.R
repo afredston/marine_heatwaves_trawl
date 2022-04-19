@@ -16,6 +16,19 @@ library(patchwork)
 # load data
 library(pwr)
 library(knitr)
+library(data.table)
+library(rgdal)
+library(raster)
+library(sp)
+library(rnaturalearthdata)
+library(rgeos)
+library(geosphere)  #to calculate distance between lat lon of grid cells
+library(googledrive)
+library(cowplot)
+library(pals)
+library(concaveman)
+library(ggforce)
+library("robinmap")
 
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
@@ -24,9 +37,9 @@ mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # m
 mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
 
 # calendar year MHW data for plotting
-mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
-mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
-mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
+# mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
+# mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
+# mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
 
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv"))
@@ -34,42 +47,171 @@ survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.c
   rename('spp'=accepted_name)
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
-haul_info <- read_csv(here("processed-data","haul_info.csv"))
+haul_info <- read_csv(here("processed-data","haul_info.csv")) %>% filter(!survey=='AI')
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
 survey_names <- data.frame(survey=c("AI", "BITS", "EVHOE", "FR-CGFS", "IE-IGFS", "NIGFS", "NS-IBTS", 
                                     "PT-IBTS", "SWC-IBTS", "EBS", "GMEX", "GOA", "NEUS", "Nor-BTS", 
                                     "SCS", "SEUS", "WCANN"), title=c('Aleutian Islands','Baltic Sea','France','English Channel','Ireland','Northern Ireland','North Sea','Portugal','Scotland','Eastern Bering Sea','Gulf of Mexico','Gulf of Alaska','Northeast US','Norway','Maritimes','Southeast US','West Coast US'))
+
+# map data 
+haul_info_map <- fread(here::here("processed-data","haul_info.csv"))[!survey=='AI']
+
 ######
 # figures
 ######
 
+# map
+# get MHW columns 
+map_prep <- mhw_summary_sat_sst_5_day %>% 
+  group_by(survey) %>% 
+  summarise(class = ifelse(max(anom_days<50)))
+
+#if positive, subtract 360
+haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
+
+#delete if NA for longitude or latitude
+haul_info_map.r <- haul_info_map[complete.cases(haul_info_map[,.(longitude, latitude)])]
+
+haul_info.r.split <- split(haul_info_map.r, haul_info_map.r$survey)
+haul_info.r.split.sf <- lapply(haul_info.r.split, st_as_sf, coords = c("longitude", "latitude"))
+haul_info.r.split.concave <- lapply(haul_info.r.split.sf, concaveman, concavity = 3, length_threshold = 2)
+haul_info.r.split.concave.binded <- do.call('rbind', haul_info.r.split.concave)
+haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
+
+haul_info.r.split.concave.binded.spdf$survey <- levels(as.factor(haul_info_map.r[!haul_info_map.r$survey=='AI',]$survey))
+
+# get other objects needed for map plot 
+survey_palette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
+                    "#16FF32","#3283FE","#FEAF16","#B00068", 
+                    "#1CFFCE","#90AD1C","#2ED9FF","#DEA0FD", 
+                    "#AA0DFE","#F8A19F","#325A9B","#C4451C", 
+                    "#1C8356","#66B0FF")
+x_lines <- seq(-120,180, by = 60)
+
+data("wrld_simpl", package = "maptools")                                                                            
+wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  
+
+survey_regions_polar_polygon <- ggplot() +
+  geom_polygon(data = haul_info.r.split.concave.binded.spdf,
+               aes(x = long, y = lat, group = group, fill = group, color = group),
+               alpha = 0.8) +
+  scale_color_manual(values = survey_palette) +
+  scale_fill_manual(values = survey_palette)  +
+  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
+               # colour = "black"
+               #,
+               # alpha = 0.8
+  ) +
+  
+  # Adds axes
+  geom_hline(aes(yintercept = 22), size = 1)  +
+  geom_segment(aes(y = 22, yend = 90, x = x_lines, xend = x_lines), linetype = "dashed", alpha = 0.3) +
+  
+  # Convert to polar coordinates
+  coord_map("ortho", orientation = c(50, -50, -20)) +
+  scale_y_continuous(breaks = seq(0, 90, by = 5), labels = NULL) +
+  
+  #axis
+  geom_text(aes(x = x_lines, y = 15, label = c("120°W", "60°W", "0°", "60°E", "120°E", "180°W"))) +
+  
+  # Change theme to remove axes and ticks
+  theme_classic() +
+  theme(axis.text = element_blank(), axis.title = element_blank(),
+        axis.line = element_blank(), axis.ticks = element_blank(),
+        legend.position = "none")
+
+#save global map
+ggsave(survey_regions_polar_polygon, path = here::here("figures"),
+       filename = "survey_regions_polar_polygon.jpg",height = 5, width = 6, unit = "in")
+
+# map color-coded by MHW duration and biomass response 
+# check that there are no years tied for longest MHWs
+survey_summary %>% 
+  left_join(mhw_summary_sat_sst_5_day) %>% 
+  group_by(survey) %>% 
+  summarise(max_mhw=max(anom_days, na.rm = TRUE)) %>% 
+  arrange(survey)
+
+# generate columns for map fill
+mapfill <- survey_summary %>% 
+  left_join(mhw_summary_sat_sst_5_day) %>% 
+  group_by(survey) %>% 
+  mutate(max_mhw=max(anom_days, na.rm = TRUE),
+         sd = sd(wt_mt_log, na.rm=TRUE)) %>% 
+  filter(anom_days == max_mhw) %>% 
+  mutate(case = case_when(
+    abs(wt_mt_log) < 0.1 & anom_days<50 ~ "low_null",
+    abs(wt_mt_log) < 0.1 & anom_days>=50 ~ "high_null",
+    wt_mt_log >= 0.1 & anom_days<50 ~ "low_gain",
+    wt_mt_log >= 0.1 & anom_days>=50 ~ "high_gain",
+    wt_mt_log <= -0.1 & anom_days<50 ~ "low_loss",
+    wt_mt_log <= -0.1 & anom_days>=50 ~ "high_loss"))
+
+# generate filled map 
+
+haul_info_map2 <- merge(copy(haul_info_map), mapfill, all.x=TRUE, by=c("survey","year")) # get columns for map fill 
+
+#if positive, subtract 360
+haul_info_map2[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
+
+#delete if NA for longitude or latitude
+haul_info_map2 <- haul_info_map2[complete.cases(haul_info_map2[,.(longitude, latitude)])]
+
+# split_prep <- split(haul_info_map2, haul_info_map2$case)
+# split_sf <- lapply(split_prep, st_as_sf, coords = c("longitude", "latitude"))
+# split_conc <- lapply(split_sf, concaveman, concavity = 3, length_threshold = 2)
+
+prep_sf <- st_as_sf(haul_info_map2, coords = c("longitude", "latitude"))
+prep_conc <- concaveman(prep_sf, concavity=3, length_threshold=2)
+prep_conc_sf <- as(prep_conc, "sf")
+haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
+prep_conc_sf$survey <- levels(as.factor(haul_info_map2$case))
+
+boop <- st_as_sf(haul_info.r.split.concave.binded.spdf) %>% 
+  left_join(mapfill)
+
+ggplot() + 
+  geom_sf(boop, mapping=aes(fill=survey, color=survey, group=survey, geometry=geometry)) +
+  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
+               # colour = "black"
+               #,
+               # alpha = 0.8
+  ) +
+  
+  # Adds axes
+  geom_hline(aes(yintercept = 22), size = 1)  +
+  geom_segment(aes(y = 22, yend = 90, x = x_lines, xend = x_lines), linetype = "dashed", alpha = 0.3) +
+  
+  # Convert to polar coordinates
+  coord_map("ortho", orientation = c(50, -50, -20)) +
+  scale_y_continuous(breaks = seq(0, 90, by = 5), labels = NULL)
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
-tmp <- mhw_summary_sat_sst_5_day %>% 
-  left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
-  left_join(survey_names) %>% 
-  left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
-  filter(survey==reg)
-coeff = 5 
-tmpplot <- ggplot(tmp) +
-  geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
-  geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
-  scale_color_gradient(low="#1e03cd", high="#b80d06") +
-  scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
-  labs(title=tmp$title) +
-  theme_bw()  +
-  theme(legend.position = "none",
-        axis.title.x=element_blank(),
-        axis.title.y=element_blank(),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x=element_text(angle = 45, vjust=1),
-    #    axis.title.x=element_text(vjust=5),
-    #    plot.title.position = "plot",
-    plot.title = element_text(hjust=0.3, vjust = -7)
-  )+
-  NULL
-ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=3, scale=0.7, dpi=160)
-plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
+  tmp <- mhw_summary_sat_sst_5_day %>% 
+    left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
+    left_join(survey_names) %>% 
+    left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
+    filter(survey==reg)
+  coeff = 5 
+  tmpplot <- ggplot(tmp) +
+    geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
+    geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
+    scale_color_gradient(low="#1e03cd", high="#b80d06") +
+    scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
+    labs(title=tmp$title) +
+    theme_bw()  +
+    theme(legend.position = "none",
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          axis.text.x=element_text(angle = 45, vjust=1),
+          #    axis.title.x=element_text(vjust=5),
+          #    plot.title.position = "plot",
+          plot.title = element_text(hjust=0.3, vjust = -7)
+    )+
+    NULL
+  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=3, scale=0.7, dpi=160)
+  plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
 gg_mhw_biomass_hist <- survey_summary %>% 
@@ -157,7 +299,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   geom_point(size=0.5, position="jitter") + 
   scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
   scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
- # geom_smooth(method="lm")+
+  # geom_smooth(method="lm")+
   theme_bw() + 
   coord_cartesian(clip = "off") +
   labs(x="Species thermal bias", y="Biomass log ratio") +
@@ -169,7 +311,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
         panel.grid.minor = element_blank(), 
         legend.position="bottom",
         legend.margin=margin(t=-10)) +
- # facet_wrap(~survey) +
+  # facet_wrap(~survey) +
   NULL
 gg_mhw_biomass_point_spp
 ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
@@ -207,6 +349,16 @@ pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.
 pwr.t.test(n = NULL, d = 0.1, sig.level = 0.05, power = 0.8, type="one.sample") 
 pwr.t.test(n = 200, d = NULL, sig.level = 0.05, power = 0.8, type="one.sample") 
 
+cti_no_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
+  pull(cti_log)
+cti_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
+  pull(cti_log)
+t.test(cti_no_mhw, cti_mhw)
+
 modeldat <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
   filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
@@ -216,6 +368,7 @@ summary(lm(wt_mt_log ~ anom_days + med_lat + med_lat * anom_days, data = modelda
 summary(lm(wt_mt_log ~ anom_days + med_lat, data = modeldat))
 summary(lm(depth_wt ~ anom_days, data = modeldat %>% filter(mhw_yes_no=="yes")))
 summary(lm(wt_mt_log ~ anom_days, data = modeldat %>% filter(mhw_yes_no=="yes")))
+summary(lm(cti_log ~ anom_days, data = modeldat %>% filter(!is.na(cti_log), mhw_yes_no=="yes")))
 
 # Define the model
 model = list(
