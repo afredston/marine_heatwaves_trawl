@@ -1,0 +1,17 @@
+'data.frame':   2941 obs. of  16 variables:,Description
+" $ speciesName           : Factor w/ 2941 levels ""Abalistes stellatus"",..: 1 2 3 4 5 6 7 8 9 10 ...",Species name
+ $ hadsstwannp50         : num  27.96 26.9 21.99 18.57 9.56 ...,Species Temperature Index (STI) based on median HadISST temperature across the modelled global species range
+ $ en4sstwannp50         : num  28.4 27.2 22.2 19 9.2 ...,STI based on median EN4 surface temperature across the modelled global species range
+ $ en4sbtwannp50         : num  1.47 1.38 4 0.99 7.1 ...,STI based on median EN4 seabed temperature across the modelled global species range
+ $ maxent_wtd.quantile50.: num  28.07 27.35 19.48 18.87 9.59 ...,STI based on median HadISST temperature across the modelled global species range using an alternate species distribution model. Not used in analysis]
+ $ wtd.quantile50.       : num  27.8 26.4 18.6 18.6 11 ...,STI based on median HadISST temperature across the observed global species in OBIS and GBIS records from 1960 to 2009
+ $ hadsstwannp90         : num  28.7 27.9 27.9 22.7 12.8 ...,90th percentile of HadISST temperature across the modelled global species range
+ $ en4sstwannp90         : num  29.2 28.3 28.1 23.3 12.3 ...,90th percentile of EN4 surface temperature across the modelled global species range
+ $ en4sbtwannp90         : num  16.72 4.12 13.67 2.83 10.94 ...,90th percentile of  EN4 seabed temperature across the modelled global species range
+ $ maxent_wtd.quantile90.: num  28.7 28 27.1 21.1 13 ...,90th percentile of HadISST temperature across the modelled global species range using an alternate species distribution model. Not used in analysis]
+ $ wtd.quantile90.       : num  28.6 27.9 27.2 21 12.7 ...,90th percentile of HadISST temperature across the observed global species in OBIS and GBIS records from 1960 to 2009
+ $ hadsstwannp10         : num  24.85 24.29 16.31 14.48 1.45 ...,10th percentile of HadISST temperature across the modelled global species range
+ $ en4sstwannp10         : num  25.25 24.59 16.06 15.06 1.59 ...,10th percentile of EN4 surface temperature across the modelled global species range
+ $ en4sbtwannp10         : num  0.979 0.991 2.104 0.455 1.164 ...,10th percentile of  EN4 seabed temperature across the modelled global species range
+ $ maxent_wtd.quantile10.: num  26.5 25.1 14.9 15.8 4.5 ...,10th percentile of HadISST temperature across the modelled global species range using an alternate species distribution model. Not used in analysis]
+ $ wtd.quantile10.       : num  25.15 21.29 14.99 15.88 7.62 ...,10th percentile of HadISST temperature across the observed global species in OBIS and GBIS records from 1960 to 2009
