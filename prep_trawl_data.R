@@ -112,7 +112,7 @@ raw <- rbind(raw, bits_raw, ebs_raw, evhoe_raw, fr_cgfs_raw, gmex_raw, goa_raw, 
 
 # update haulinfo 
 haul_info <- copy(haul_info)[haul_id %in% raw$haul_id]
-# haul_info %<>% merge(unique(raw[,.(survey, startmonth)]), all.x=TRUE, by="survey") # this gets added to raw so don't need to put it in haul_info, they're merged at the end anyway
+haul_info %<>% merge(unique(raw[,.(survey, startmonth)]), all.x=TRUE, by="survey") # this gets added to raw so don't need to put it in haul_info, they're merged at the end anyway
 
 # STANDARDIZE SURVEY FOOTPRINTS 
 
@@ -315,7 +315,7 @@ raw_zeros %<>%
   # left-join haul info to all spp*haul rows
   merge(haul_info, all.x=TRUE, by=c("haul_id","survey")) %>%
   # left-join actual obs data to all spp*haul rows
-  merge(raw, all.x=TRUE, by=c("survey", "haul_id", "accepted_name"))  
+  merge(raw[, !"startmonth"], all.x=TRUE, by=c("survey", "haul_id", "accepted_name")) 
 raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf] # replace NAs with 0s
 
 #########
