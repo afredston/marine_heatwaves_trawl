@@ -61,7 +61,7 @@ ns_ibts_hauls_del <- unique(raw[survey=='NS-IBTS' & year < 1980, haul_id]) # thi
 pt_ibts_hauls_del <- unique(raw[survey=='PT-IBTS' & year %in% c(2002, 2018), haul_id]) # also missing 2012 data, shouldn't be an issue, just introduces one 2-year gap 
 scs_hauls_del <- unique(raw[survey=='SCS' & (year < 1979 | year > 2017), haul_id])
 seus_hauls_del <- unique(raw[survey=='SEUS' & year < 1990, haul_id])
-swc_ibts_hauls_del <- unique(raw[survey=='SWC-IBTS' & (year < 1990 | year == 2010), haul_id])
+swc_ibts_hauls_del <- unique(raw[survey=='SWC-IBTS' & (year < 1990), haul_id])
 # wctri_hauls_del <- unique(raw[survey=='WCTRI' & year == 2004, haul_id]) # this year overlapped with the WCANN survey (which started in 2003), drop it to avoid double-counting 
 goa_hauls_del <- unique(raw[survey=='GOA' & year < 1999, haul_id]) #drop triennial years before it became a biennial survey
 
