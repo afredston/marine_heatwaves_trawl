@@ -132,7 +132,7 @@ dggs7 <- dgconstruct(res = 7, metric = T) # for Norway only
 unique_latlon_nor <- unique(FishGlob_nor[,.(latitude, longitude_s)])
 unique_latlon_else <- unique(FishGlob_else[,.(latitude, longitude_s)])
 unique_latlon_else[,cell := dgGEO_to_SEQNUM(dggs8, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
-unique_latlon_nor[,cell := dgGEO_to_SEQNUM(dggs7, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
+unique_latlon_nor[,cell := dgGEO_to_SEQNUM(dggs8, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
 
 #find cell centers
 cellcenters_else <- dgSEQNUM_to_GEO(dggs8, unique_latlon_else[,cell])
@@ -146,7 +146,7 @@ unique_latlon_nor[,cell_center_longitude_s := cellcenters_nor$lon_deg][,cell_cen
 FishGlob_else.dg <- merge(FishGlob_else, unique_latlon_else, by = c("latitude", "longitude_s"), all.x = TRUE)
 FishGlob_else.dg$dggs <- "8"
 FishGlob_nor.dg <- merge(FishGlob_nor, unique_latlon_nor, by = c("latitude", "longitude_s"), all.x = TRUE)
-FishGlob_nor.dg$dggs <- "7"
+FishGlob_nor.dg$dggs <- "8"
 
 FishGlob.dg <- rbind(FishGlob_else.dg, FishGlob_nor.dg)
 
