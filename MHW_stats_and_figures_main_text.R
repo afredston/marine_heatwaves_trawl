@@ -1,34 +1,47 @@
+###########
+# load data and packages
+###########
 
-# load packages
+# general data wrangling 
 library(tidyverse)
 library(here)
 library(lubridate) # for standardizing date format of MHW data
-library(kableExtra)
-library(broom)
+library(data.table)
+library(googledrive)
+
+# formatting 
+# library(kableExtra)
 library(gridExtra)
+library(patchwork)
+library(cowplot)
+library(pals)
+library(ggforce)
+
+# modeling 
+library(broom)
+library(pwr)
+library(mgcv)
+library(lme4)
+
+# making maps 
 library(sf)
 library(rnaturalearth)
 library(ggrepel)
-#library(mcp)
-#library(rjags)
-#library(segmented)
-library(patchwork)
-# load data
-library(pwr)
-library(knitr)
-library(data.table)
 library(rgdal)
 library(raster)
 library(sp)
 library(rnaturalearthdata)
 library(rgeos)
 library(geosphere)  #to calculate distance between lat lon of grid cells
-library(googledrive)
-library(cowplot)
-library(pals)
 library(concaveman)
-library(ggforce)
 library("robinmap")
+
+#library(mcp)
+#library(rjags)
+#library(segmented)
+# load data
+#library(knitr)
+select <- dplyr::select
 
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
@@ -49,12 +62,213 @@ survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv")) %>% filter(!survey=='AI')
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
-survey_names <- data.frame(survey=c("AI", "BITS", "EVHOE", "FR-CGFS", "IE-IGFS", "NIGFS", "NS-IBTS", 
-                                    "PT-IBTS", "SWC-IBTS", "EBS", "GMEX", "GOA", "NEUS", "Nor-BTS", 
-                                    "SCS", "SEUS", "WCANN"), title=c('Aleutian Islands','Baltic Sea','France','English Channel','Ireland','Northern Ireland','North Sea','Portugal','Scotland','Eastern Bering Sea','Gulf of Mexico','Gulf of Alaska','Northeast US','Norway','Maritimes','Southeast US','West Coast US'))
+survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
+                                    "PT-IBTS","SCS",
+                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','Queen Charlotte Sound','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Maritimes','Southeast US','Scotland','West Coast US'))
 
 # map data 
 haul_info_map <- fread(here::here("processed-data","haul_info.csv"))[!survey=='AI']
+
+######
+# stats 
+######
+
+# T-tests and power analysis
+
+wt_no_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "no", !is.na(wt_mt_log)) %>%
+  pull(wt_mt_log)
+wt_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "yes", !is.na(wt_mt_log)) %>%
+  pull(wt_mt_log)
+t.test(wt_mhw, wt_no_mhw)
+pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.05, power = NULL, alternative="two.sided")
+pwr.t.test(n = NULL, d = 0.1, sig.level = 0.05, power = 0.8, type="one.sample") 
+pwr.t.test(n = 200, d = NULL, sig.level = 0.05, power = 0.8, type="one.sample") 
+
+cti_no_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
+  pull(cti_log)
+cti_mhw <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
+  pull(cti_log)
+t.test(cti_no_mhw, cti_mhw)
+
+
+# models to explain biomass and CTI change 
+
+modeldat <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
+  left_join(med_lat) %>% 
+  mutate(
+    wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+    cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
+    anom_days_scale =  as.numeric(scale(anom_days, center=TRUE, scale=TRUE)),
+    med_lat_scale =  as.numeric(scale(med_lat, center=TRUE, scale=TRUE)),
+    depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
+  )
+
+# models of biomass and MHWs to compare 
+
+# LM of MHW duration on biomass
+wt_lm <- lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat)
+
+# LMEM of MHW duration on biomass
+wt_lme <- lmer(wt_mt_log_scale ~ anom_days_scale + 1|survey, data = modeldat)
+
+# GAM of MHW duration on biomass
+wt_gam <- gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat )
+
+# GAM of MHW duration on biomass with a random effect
+wt_gam_re <- gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
+
+# lagged effects of MHW duration on biomass 
+lags <- modeldat %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(lag1 = lag(anom_days_scale, 1),
+         lag2 = lag(anom_days_scale, 2),
+         lag3 = lag(anom_days_scale, 3),
+         lag4 = lag(anom_days_scale, 4)) %>% 
+  ungroup() %>% 
+  select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3, lag4)
+
+mlag0 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:2]), data=dat ) # regular GAM
+}
+mlag1 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:3]), data=dat )
+}
+mlag2 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:4]), data=dat )
+}
+mlag3 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:5]), data=dat )
+}
+mlag4 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:6]), data=dat )
+}
+wt_gam_lag1 = mlag1(lags)
+wt_gam_lag2 = mlag2(lags)
+wt_gam_lag3 = mlag3(lags)
+wt_gam_lag4 = mlag4(lags)
+
+# breakpoint regression 
+model = list(
+  wt_mt_log_scale ~ 1 + anom_days_scale,
+  ~ 0 +anom_days_scale
+)
+wt_bp = mcp(model, data=modeldat)
+
+# compare all biomass models 
+AIC(wt_lm, wt_lme, wt_gam, wt_gam_re, wt_gam_lag1, wt_gam_lag2, wt_gam_lag3, wt_gam_lag4)
+
+# lagged effects of MHW duration on biomass, by survey 
+wt_gam_lag_surv <- NULL
+for(i in unique(modeldat$survey)){
+  tmp <- modeldat %>% 
+    filter(survey==i) %>% 
+    arrange(year) %>% 
+    mutate(lag1 = lag(anom_days_scale, 1),
+           lag2 = lag(anom_days_scale, 2),
+           lag3 = lag(anom_days_scale, 3)) %>% 
+    ungroup() %>% 
+    select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3)
+  
+  # manual stop for regions where GAM throws this error without decreasing df:
+  #  Error in smooth.construct.tp.smooth.spec(object, dk$data, dk$knots) : 
+  # A term has fewer unique covariate combinations than specified maximum degrees of freedom 
+  if(i %in% c('FR-CGFS','GOA','DFO-QCS','WCANN','PT-IBTS','NIGFS')){
+    tmp0 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:2], k=3), data=tmp )
+    ), 'survey'=i,'model'='mlag0',kreduce = TRUE)    
+    tmp1 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:3], k=3), data=tmp )
+    ), 'survey'=i,'model'='mlag1',kreduce = TRUE)    
+    tmp2 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:4], k=3), data=tmp )
+    ), 'survey'=i,'model'='mlag2',kreduce = TRUE)    
+    tmp3 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:5], k=3), data=tmp )
+    ), 'survey'=i,'model'='mlag3',kreduce = TRUE)
+  } else{
+    
+    tmp0 <- cbind(glance(mlag0(tmp)), 'survey'=i,'model'='mlag0',kreduce = FALSE)
+    tmp1 <- cbind(glance(mlag1(tmp)), 'survey'=i,'model'='mlag1',kreduce = FALSE)
+    tmp2 <- cbind(glance(mlag2(tmp)), 'survey'=i,'model'='mlag2',kreduce = FALSE)
+    tmp3 <- cbind(glance(mlag3(tmp)), 'survey'=i,'model'='mlag3',kreduce = FALSE)
+  }
+  wt_gam_lag_surv <- rbind(wt_gam_lag_surv, tmp0, tmp1, tmp2, tmp3)
+}
+ggplot(wt_gam_lag_surv) +
+  geom_col(aes(x=survey, y=AIC, color=model, group=model, fill=model), position="dodge") +
+  scale_color_brewer(palette=8, type="seq") + 
+  scale_fill_brewer(palette=8, type="seq") +
+  theme_bw()
+write_csv(wt_gam_lag_surv, here('processed-data','lag_gam_summary.csv'))
+
+# LM of MHW duration on CTI (MHW-years only)
+summary(lm(cti_log_scale ~ anom_days_scale, data = modeldat %>% filter(!is.na(cti_log_scale), mhw_yes_no=="yes") ))
+
+# LMEM of MHW duration on CTI (MHW-years only)
+summary(lmer(cti_log_scale ~ anom_days_scale + 1|survey, data = modeldat %>% filter(!is.na(cti_log_scale), mhw_yes_no=="yes")))
+
+# LM of MHW duration on depth (MHW-years only)
+summary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat %>% filter(mhw_yes_no=="yes")))
+
+# LM of MHW duration + latitude on biomass 
+summary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale + med_lat_scale * anom_days_scale, data = modeldat))
+summary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat))
+
+# Define the model
+# model = list(
+#   wt_mt_log ~ 1 + anom_days, 
+#   ~ 0 +anom_days
+# )
+# fit = mcp(model, data=modeldat)
+# 
+# plot(fit)
+# 
+# model_null = list(
+#   wt_mt_log ~ 1 + anom_days
+# )
+# fit_null = mcp(model_null, data=modeldat)
+# plot(fit_null)
+# 
+# fit$loo = loo(fit)
+# fit_null$loo = loo(fit_null)
+# 
+# loo::loo_compare(fit$loo, fit_null$loo)
+# 
+# my.lm <- lm(wt_mt_log ~ anom_days, data = modeldat)
+# my.seg1 <- segmented(my.lm, seg.Z = ~ anom_days, npsi=1)
+# # my.seg2 <- segmented(my.lm, seg.Z = ~ anom_days, npsi=2)
+# # my.seg3 <- segmented(my.lm, seg.Z = ~ anom_int, psi = c(0.25, 0.5, 0.75), npsi=3)
+# # AIC(my.lm, my.seg1, my.seg2, my.seg3)
+# AIC(my.lm, my.seg1)$AIC - min(AIC(my.lm, my.seg1)$AIC)
+# # 
+# my.fitted <- fitted(my.seg1)
+# my.model <- data.frame(anom_days = modeldat$anom_days, wt_mt_log = my.fitted)
+# 
+# my.lm.abs <- lm(abs(wt_mt_log) ~ anom_days, data = modeldat)
+# my.seg1.abs <- segmented(my.lm.abs, seg.Z = ~ anom_days, npsi=1)
+# my.fitted.abs <- fitted(my.seg1.abs)
+# my.model.abs <- data.frame(anom_days = modeldat$anom_days, wt_mt_log_abs = my.fitted.abs)
+# 
+# my.lm.int <- lm(wt_mt_log ~ anom_int, data = modeldat)
+# my.seg1.int <- segmented(my.lm.int, seg.Z = ~ anom_int, npsi=1)
+# my.fitted.int <- fitted(my.seg1.int)
+# my.model.int <- data.frame(anom_int = modeldat$anom_int, wt_mt_log = my.fitted.int)
+# AIC(my.lm.int, my.seg1.int)
+# 
+# 
+# my.lm.cti <- lm(cti_log ~ anom_days, data = modeldat)
+# my.seg1.cti <- segmented(my.lm.cti, seg.Z = ~ anom_days, npsi=1)
+# my.fitted.cti <- fitted(my.seg1.cti)
+# my.model.cti <- data.frame(anom_days = modeldat$anom_days, cti_log = my.fitted.cti)
+# AIC(my.lm.cti, my.seg1.cti)
+
 
 ######
 # figures
@@ -336,87 +550,6 @@ ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.png")
 # models and stats 
 ######
 
-wt_no_mhw <- survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(mhw_yes_no == "no", !is.na(wt_mt_log)) %>%
-  pull(wt_mt_log)
-wt_mhw <- survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(mhw_yes_no == "yes", !is.na(wt_mt_log)) %>%
-  pull(wt_mt_log)
-t.test(wt_mhw, wt_no_mhw)
-pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.05, power = NULL, alternative="two.sided")
-pwr.t.test(n = NULL, d = 0.1, sig.level = 0.05, power = 0.8, type="one.sample") 
-pwr.t.test(n = 200, d = NULL, sig.level = 0.05, power = 0.8, type="one.sample") 
-
-cti_no_mhw <- survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
-  pull(cti_log)
-cti_mhw <- survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
-  pull(cti_log)
-t.test(cti_no_mhw, cti_mhw)
-
-modeldat <- survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
-  left_join(med_lat)
-
-summary(lm(wt_mt_log ~ anom_days + med_lat + med_lat * anom_days, data = modeldat))
-summary(lm(wt_mt_log ~ anom_days + med_lat, data = modeldat))
-summary(lm(depth_wt ~ anom_days, data = modeldat %>% filter(mhw_yes_no=="yes")))
-summary(lm(wt_mt_log ~ anom_days, data = modeldat %>% filter(mhw_yes_no=="yes")))
-summary(lm(cti_log ~ anom_days, data = modeldat %>% filter(!is.na(cti_log), mhw_yes_no=="yes")))
-
-# Define the model
-model = list(
-  wt_mt_log ~ 1 + anom_days, 
-  ~ 0 +anom_days
-)
-fit = mcp(model, data=modeldat)
-
-plot(fit)
-
-model_null = list(
-  wt_mt_log ~ 1 + anom_days
-)
-fit_null = mcp(model_null, data=modeldat)
-plot(fit_null)
-
-fit$loo = loo(fit)
-fit_null$loo = loo(fit_null)
-
-loo::loo_compare(fit$loo, fit_null$loo)
-
-my.lm <- lm(wt_mt_log ~ anom_days, data = modeldat)
-my.seg1 <- segmented(my.lm, seg.Z = ~ anom_days, npsi=1)
-# my.seg2 <- segmented(my.lm, seg.Z = ~ anom_days, npsi=2)
-# my.seg3 <- segmented(my.lm, seg.Z = ~ anom_int, psi = c(0.25, 0.5, 0.75), npsi=3)
-# AIC(my.lm, my.seg1, my.seg2, my.seg3)
-AIC(my.lm, my.seg1)$AIC - min(AIC(my.lm, my.seg1)$AIC)
-# 
-my.fitted <- fitted(my.seg1)
-my.model <- data.frame(anom_days = modeldat$anom_days, wt_mt_log = my.fitted)
-
-my.lm.abs <- lm(abs(wt_mt_log) ~ anom_days, data = modeldat)
-my.seg1.abs <- segmented(my.lm.abs, seg.Z = ~ anom_days, npsi=1)
-my.fitted.abs <- fitted(my.seg1.abs)
-my.model.abs <- data.frame(anom_days = modeldat$anom_days, wt_mt_log_abs = my.fitted.abs)
-
-my.lm.int <- lm(wt_mt_log ~ anom_int, data = modeldat)
-my.seg1.int <- segmented(my.lm.int, seg.Z = ~ anom_int, npsi=1)
-my.fitted.int <- fitted(my.seg1.int)
-my.model.int <- data.frame(anom_int = modeldat$anom_int, wt_mt_log = my.fitted.int)
-AIC(my.lm.int, my.seg1.int)
-
-
-my.lm.cti <- lm(cti_log ~ anom_days, data = modeldat)
-my.seg1.cti <- segmented(my.lm.cti, seg.Z = ~ anom_days, npsi=1)
-my.fitted.cti <- fitted(my.seg1.cti)
-my.model.cti <- data.frame(anom_days = modeldat$anom_days, cti_log = my.fitted.cti)
-AIC(my.lm.cti, my.seg1.cti)
 ########
 # old plots
 ########
