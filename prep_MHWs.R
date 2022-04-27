@@ -430,7 +430,7 @@ write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
 write_csv(mhw_summary_sat_sst_any, here("processed-data","MHW_satellite_sst.csv"))
 write_csv(mhw_summary_sat_sst_5_day, here("processed-data","MHW_satellite_sst_5_day_threshold.csv"))
 write_csv(mhw_summary_soda_sst, here("processed-data","MHW_soda_sst.csv"))
-write_csv(mhw_summary_soda_sst, here("processed-data","MHW_soda_sbt.csv"))
+write_csv(mhw_summary_soda_sbt, here("processed-data","MHW_soda_sbt.csv"))
 
 # calendar year datasets -- for summary statistics and plots only, no trawl data analysis
 write_csv(mhw_calendar_sat_sst_5_day, here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))

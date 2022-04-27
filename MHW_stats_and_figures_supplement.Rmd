@@ -1,6 +1,6 @@
 ---
-title: "Supplementary information for TITLE"
-author: "Fredston, A. [insert other authors]"
+title: "Supplementary Information"
+author: "Fredston et al."
 date: 2022
 output: pdf_document
 editor_options: 
@@ -15,13 +15,15 @@ bibliography: references.bib
 library(tidyverse)
 library(here)
 library(lubridate) # for standardizing date format of MHW data
-# library(kableExtra)
-# library(broom)
-# library(gridExtra)
 library(sf)
 library(rnaturalearth)
-# library(ggrepel)
-
+#library(kableExtra)
+library(modelsummary)
+library(ggpubr)
+library(broom)
+library(mcp)
+library(lme4)
+library(mgcv)
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
 mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
@@ -29,9 +31,9 @@ mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # m
 mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
 
 # calendar year MHW data for plotting
-mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
-mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
-mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
+# mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
+# mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
+# mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
 
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv"))
@@ -41,6 +43,10 @@ survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.c
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv"))
+#biomass_time <- read_csv(here("processed-data","biomass_time.csv"))
+#footprint <- read_csv(here("processed-data","spatial_standardization_summary.csv"))
+med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
+
 ```
 
 ```{r, setup2, include=FALSE}
@@ -49,60 +55,222 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Appendix: Robustness to metrics of biomass and MHWs
+# Supplementary Methods
 
-```{r fig-abs-biomass, fig.cap="Caption"}
+# Supplementary Tables
+
+```{r tab-models-wt }
+
+modeldat <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
+  left_join(med_lat) %>% 
+  mutate(
+    wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+    cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
+    anom_days_scale =  as.numeric(scale(anom_days, center=TRUE, scale=TRUE)),
+    med_lat_scale =  as.numeric(scale(med_lat, center=TRUE, scale=TRUE)),
+    depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
+  )
+
+# models of biomass and MHWs to compare 
+
+# LM of MHW duration on biomass
+# wt_lm <- lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat)
+
+# LMEM of MHW duration on biomass
+# wt_lme <- lmer(wt_mt_log_scale ~ anom_days_scale + 1|survey, data = modeldat)
+
+# GAM of MHW duration on biomass
+# wt_gam <- gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat )
+
+# GAM of MHW duration on biomass with a random effect
+# wt_gam_re <- gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
+
+# lagged effects of MHW duration on biomass 
+lags <- modeldat %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(lag1 = lag(anom_days_scale, 1),
+         lag2 = lag(anom_days_scale, 2),
+         lag3 = lag(anom_days_scale, 3),
+         lag4 = lag(anom_days_scale, 4)) %>% 
+  ungroup() %>% 
+  select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3, lag4)
+
+mlag0 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:2]), data=dat ) # regular GAM
+}
+mlag1 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:3]), data=dat )
+}
+mlag2 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:4]), data=dat )
+}
+mlag3 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:5]), data=dat )
+}
+mlag4 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:6]), data=dat )
+}
+#wt_gam_lag1 = mlag1(lags)
+#wt_gam_lag2 = mlag2(lags)
+#wt_gam_lag3 = mlag3(lags)
+#wt_gam_lag4 = mlag4(lags)
+
+# breakpoint regression 
+# model = list(
+#   wt_mt_log_scale ~ 1 + anom_days_scale,
+#   ~ 0 +anom_days_scale
+# )
+# wt_bp = mcp(model, data=modeldat)
+
+# compare all biomass models 
+#AIC(wt_lm, wt_lme, wt_gam, wt_gam_re, wt_gam_lag1, wt_gam_lag2, wt_gam_lag3, wt_gam_lag4)
+
+models <- list(
+  "LM" = lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat),
+  "LME" = lmer(wt_mt_log_scale ~ anom_days_scale + 1|survey, data = modeldat),
+  "GAM" = gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat ), 
+  "GAM + RE" = gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey))), 
+  # "Breakpoint Regression" = mcp(list(
+  # wt_mt_log_scale ~ 1 + anom_days_scale,
+  # ~ 0 +anom_days_scale), data=modeldat),
+  "GAM Lag 1" = mlag1(lags), 
+  "GAM Lag 2" = mlag2(lags), 
+  "GAM Lag 3" = mlag3(lags), 
+  "GAM Lag 4" = mlag4(lags)
+)
+
+modelsummary(models) # doesn't work yet because of GAM format issues 
+# lagged effects of MHW duration on biomass, by survey 
+# wt_gam_lag_surv <- NULL
+# for(i in unique(modeldat$survey)){
+#   tmp <- modeldat %>% 
+#     filter(survey==i) %>% 
+#     arrange(year) %>% 
+#     mutate(lag1 = lag(anom_days_scale, 1),
+#            lag2 = lag(anom_days_scale, 2),
+#            lag3 = lag(anom_days_scale, 3)) %>% 
+#     ungroup() %>% 
+#     select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3)
+#   
+#   # manual stop for regions where GAM throws this error without decreasing df:
+#   #  Error in smooth.construct.tp.smooth.spec(object, dk$data, dk$knots) : 
+#   # A term has fewer unique covariate combinations than specified maximum degrees of freedom 
+#   if(i %in% c('FR-CGFS','GOA','DFO-QCS','WCANN','PT-IBTS','NIGFS')){
+#     tmp0 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:2], k=3), data=tmp )
+#     ), 'survey'=i,'model'='mlag0',kreduce = TRUE)    
+#     tmp1 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:3], k=3), data=tmp )
+#     ), 'survey'=i,'model'='mlag1',kreduce = TRUE)    
+#     tmp2 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:4], k=3), data=tmp )
+#     ), 'survey'=i,'model'='mlag2',kreduce = TRUE)    
+#     tmp3 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:5], k=3), data=tmp )
+#     ), 'survey'=i,'model'='mlag3',kreduce = TRUE)
+#   } else{
+#     
+#     tmp0 <- cbind(glance(mlag0(tmp)), 'survey'=i,'model'='mlag0',kreduce = FALSE)
+#     tmp1 <- cbind(glance(mlag1(tmp)), 'survey'=i,'model'='mlag1',kreduce = FALSE)
+#     tmp2 <- cbind(glance(mlag2(tmp)), 'survey'=i,'model'='mlag2',kreduce = FALSE)
+#     tmp3 <- cbind(glance(mlag3(tmp)), 'survey'=i,'model'='mlag3',kreduce = FALSE)
+#   }
+#   wt_gam_lag_surv <- rbind(wt_gam_lag_surv, tmp0, tmp1, tmp2, tmp3)
+# }
+# ggplot(wt_gam_lag_surv) +
+#   geom_col(aes(x=survey, y=AIC, color=model, group=model, fill=model), position="dodge") +
+#   scale_color_brewer(palette=8, type="seq") + 
+#   scale_fill_brewer(palette=8, type="seq") +
+#   theme_bw()
+# write_csv(wt_gam_lag_surv, here('processed-data','lag_gam_summary.csv'))
+```
+
+```{r}
+# LM of MHW duration on CTI (MHW-years only)
+summary(lm(cti_log_scale ~ anom_days_scale, data = modeldat %>% filter(!is.na(cti_log_scale), mhw_yes_no=="yes") ))
+
+# LMEM of MHW duration on CTI (MHW-years only)
+summary(lmer(cti_log_scale ~ anom_days_scale + 1|survey, data = modeldat %>% filter(!is.na(cti_log_scale), mhw_yes_no=="yes")))
+
+# LM of MHW duration on depth (MHW-years only)
+summary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat %>% filter(mhw_yes_no=="yes")))
+
+# LM of MHW duration + latitude on biomass 
+summary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale + med_lat_scale * anom_days_scale, data = modeldat))
+summary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat)) 
+
+
+```
+
+# Supplementary Figures
+
+## MHW metrics
+
+```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and cumulative mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
+gg_mhw_metric <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  pivot_longer(cols=c(anom_days, anom_sev, anom_int), values_to = "value", names_to = "metric") %>% 
+  mutate(metric = recode(metric, anom_days='Duration (days)',anom_sev= 'Severity (°C)',anom_int= 'Cumulative mean intensity (°C/day)')) %>% 
+ggplot(aes(x=value, y=wt_mt_log)) +
+  geom_point() + 
+  geom_smooth(method="lm") +
+  facet_wrap(~metric, scales="free_x") +
+  stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
+  labs(x="MHW metric",y="Biomass log ratio") +
+  theme_bw() + 
+  NULL
+gg_mhw_metric
+```
+
+```{r fig-mhw-alt, fig.cap="Biomass change (log ratio) and MHW severity from three data products. Severity is calculated as the total anomaly (°C) over the 12-month interval to which each biomass log ratio is paired. Note that the greater magnitude of severity values in OISST (see x-axis) are due to its higher (daily) temporal resolution revealing greater temperature anomalies than those that appear in the monthly SODA datasets."}
+gg_mhw_alt <- mhw_summary_soda_sbt%>% 
+  mutate(source = "SODA SBT") %>% 
+  select(-anomMonths) %>% 
+  bind_rows(mhw_summary_soda_sst %>% mutate(source = "SODA SST") %>% select(-anomMonths)) %>%
+  bind_rows(mhw_summary_sat_sst_any %>% mutate(source = "OISST") %>% select(-anom_days)) %>% 
+  left_join(survey_summary, by="ref_yr") %>% 
+  ggplot(aes(x=anom_sev, y=wt_mt_log)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="MHW severity (total anomaly, °C)", y="Biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  facet_wrap(~source, scales="free_x") +
+  stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
+  NULL
+gg_mhw_alt
+
+```
+
+# Appendix: Community change and variability
+
+Extreme events can increase ecological variability. One possible
+explanation for some of our results is that MHWs might lead to greater
+increases *and* decreases in biomass. We tested for this by comparing
+MHW duration to the absolute biomass log ratio and found no relationship
+between the two; notably, all of the largest-magnitude biomass log
+ratios ocurred in years with no MHWs or relatively short MHWs
+@ref(fig:fig-abs-biomass).
+
+```{r fig-abs-biomass, fig.cap="MHW duration and absolute value of biomass log ratio. "}
 
 gg_mhw_biomass_point_abs <- survey_summary %>% 
   inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
   ggplot(aes(x=anom_days, y=abs(wt_mt_log))) +
   geom_point() +
   theme_bw() + 
-  geom_smooth(method="lm", color="blue", se=FALSE) +
-  geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
-  geom_smooth(method="loess", color="green", se=FALSE) +
-  geom_line(data = my.model.abs, aes(x=anom_days, y=wt_mt_log_abs), colour = "yellow", size=1) +
-  labs(x="Marine Heatwave Duration (days)", y="Biomass Log Ratio") +
+  geom_smooth(method="lm", color="blue") +
+  #geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
+#  geom_smooth(method="loess", color="green", se=FALSE) +
+  #geom_line(data = my.model.abs, aes(x=anom_days, y=wt_mt_log_abs), colour = "yellow", size=1) +
+  labs(x="MHW duration (days)", y="Absolute biomass log ratio") +
+    stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 gg_mhw_biomass_point_abs
 
 ```
 
-```{r fig-intensity, fig.cap="Caption"}
-
-gg_mhw_biomass_point_models_int <- survey_summary %>% 
-  inner_join (mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
-  ggplot(aes(x=anom_int, y=wt_mt_log)) +
-  geom_point() +
-  theme_bw() + 
-  geom_smooth(method="lm", color="blue", se=FALSE) +
-  geom_smooth(method="lm", formula = y ~ poly(x, degree=3), color="red", se=FALSE) +
-  geom_smooth(method="loess", color="green", se=FALSE) +
-  geom_line(data = my.model.int, aes(x=anom_int, y=wt_mt_log), colour = "yellow", size=1) +
-  labs(x="Marine Heatwave Cumulative Mean Intensity", y="Biomass Log Ratio") +
-  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
-gg_mhw_biomass_point_models_int
-
-```
-
-```{r fig-soda, fig.cap=""}
-
-gg_mhw_biomass_point_soda <- survey_summary %>% 
-  inner_join(mhw_summary_soda_sbt, by="ref_yr") %>% # get MHW data matched to surveys
-  ggplot(aes(x=anomMonths, y=wt_mt_log, label=ref_yr)) +
-  geom_point() +
-  geom_text_repel(aes(label=ifelse(anomMonths>4|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
-  theme_bw() + 
-  coord_cartesian(clip = "off") +
-  labs(x="Bottom Marine Heatwave Duration (months)", y="Biomass Log Ratio") +
-  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
-gg_mhw_biomass_point_soda
-
-```
-
-# Appendix: Robustness to metrics of community change and variability
-
-# Appendix: Predictors of regional biomass change
+# Appendix: Predictors of biomass change
 
 We explored a number of additional predictors of biomass change in the
 trawl surveys beyond marine heatwaves in the preceding 12 months (the
@@ -211,20 +379,97 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 gg_mhw_biomass_point_lags
 ```
 
-### Species traits
+### Species-level predictors
 
-# Appendix: Predictors of species-level change
+Species frequently exhibit individualistic responses to global change
+@fredston2021. We explored whether species taxonomy, species traits, and
+regional identity help to predict species-level biomass change at all
+and in the context of marine heatwaves. All fish species traits were
+obtained from the database in @beukhof2019. The pattern of no
+relationship between MHW duration and biomass log ratio persists when
+data are grouped by trophic level \@ref(fig:fig-spp-tl), feeding mode
+\@ref(fig:fig-spp-feed), or habitat \@ref(fig:fig-spp-hab).
 
-Our focus on net change in biomass in temperate marine fish assemblages
-may obscure important species-level changes in abundance. One way we
-address this is our analysis (presented in the main text) of shifts in
-community composition and Community Temperature Index. Here, we also
-explore patterns in species-level biomass change in the context of
-marine heatwaves.
+```{r tab-lm-spp, fig.cap="C", eval=FALSE}
+sppscaled <- survey_spp_summary %>% 
+  left_join(mhw_summary_sat_sst_5_day) %>% 
+  filter(wt_mt_log > -Inf, wt_mt_log < Inf) %>% 
+  mutate(log_scaled = scale(wt_mt_log, scale=TRUE, center=TRUE),
+         days_scaled = scale(anom_days, scale=TRUE, center=TRUE)) 
+summary(lm(formula = "wt_mt_log ~ survey + anom_days",data=sppscaled))
+lmer(formula = wt_mt_log ~ anom_days + (1|survey) + (anom_days|survey),data=sppscaled)
+
+```
+
+```{r fig-spp-tl, fig.cap="Biomass log ratio and MHW duration grouped by trophic level of each taxon."}
+traits <- read_csv(here("raw-data","TraitCollectionFishNAtlanticNEPacificContShelf.csv")) %>% 
+  select(taxon, tl, feeding.mode, habitat) %>% 
+  distinct() %>% 
+  group_by(taxon, feeding.mode, habitat) %>% 
+  summarise(tl = mean(tl)) %>% 
+  group_by(taxon) %>% 
+  mutate(n=n()) 
+
+tl <- survey_spp_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day) %>% 
+  inner_join(traits %>% select(taxon, tl) %>% distinct(), by=c('spp'='taxon')) %>% 
+  mutate(tl_cat = ifelse(tl>4, "4-5", ifelse(tl>3, "3-4","2-3")))
+
+ggplot(tl %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt_mt_log) )+
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  facet_wrap(~tl_cat) +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+
+```
+
+```{r fig-spp-feed, fig.cap="Biomass log ratio and MHW duration grouped by feeding mode of each taxon."}
+feed <- survey_spp_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day) %>% 
+  inner_join(traits %>% select(taxon, feeding.mode, n) %>% distinct() %>% filter(!is.na(feeding.mode)) %>% group_by(taxon) %>% mutate(n=n()) %>% filter(n==1), # get a list of taxa with exactly one feeding mode record 
+             by=c('spp'='taxon')) 
+
+ggplot(feed %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt_mt_log) )+
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  facet_wrap(~feeding.mode) +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+
+```
+
+```{r fig-spp-hab, fig.cap="Biomass log ratio and MHW duration grouped by habitat preference of each taxon."}
+hab <- survey_spp_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day) %>% 
+  inner_join(traits %>% select(taxon, habitat, n) %>% distinct() %>% filter(!is.na(habitat)) %>% group_by(taxon) %>% mutate(n=n()) %>% filter(n==1), # get a list of taxa with exactly one feeding mode record 
+             by=c('spp'='taxon')) 
+
+ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt_mt_log) )+
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  facet_wrap(~habitat) +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") + 
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
+
+```
+
+Of the `r length(unique(survey_spp_summary$spp))` taxa used in the
+analysis, `r length(unique(tl$spp))` had trophic level data (used in
+\@ref(ref:fig-spp-tl)), `r length(unique(feed$spp))` had feeding mode
+data (used in \@ref(ref:fig-spp-feed)), and `r length(unique(hab$spp))`
+had feeding mode data (used in \@ref(ref:fig-spp-hab)).
 
 # Appendix: Case study of the Northeast Pacific
 
-The Northeast Pacific 2014-2016 is perhaps the best-documented and most intense MHW in modern history. 
+The Northeast Pacific 2014-2016 is perhaps the best-documented and most
+intense MHW in modern history.
 
 ```{r fig-ebs-spp, fig.cap="Biomass trends and historical MHWs in the top species (measured by biomass) in the NE Pacific. In each region, a small number of species is responsible for most of the biomass (the sixth most common species contributes <20% of the biomass as the most common species, for example)."}
 topspp <- survey_spp_summary %>% 
@@ -242,16 +487,17 @@ cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6
 boop <- survey_spp_summary %>% 
   mutate(id = paste0(survey, spp)) %>% 
   filter(id %in% topspp$id) %>% 
-  bind_rows(survey_spp_summary %>% filter(survey %in% c('EBS','GOA','AI'), !spp %in% topspp$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% 
+  bind_rows(survey_spp_summary %>% filter(survey %in% c('EBS','GOA','AI'), !spp %in% topspp$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
+  filter(survey=="AI") %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
   mutate(bar1 = ifelse(mhw_yes_no == "yes", max(wt_mt, na.rm=TRUE), 0)) %>% 
   ggplot() +
   geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
-    geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
-scale_y_continuous(limits=c(0,36), breaks=seq(0, 35, 5)) +
+  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+  scale_y_continuous(limits=c(0,36), breaks=seq(0, 35, 5)) +
   scale_color_manual(values=cbpal2) +
-    scale_fill_manual(values=cbpal2) +
-facet_wrap(~survey) +
+  scale_fill_manual(values=cbpal2) +
+  #  facet_wrap(~survey, scales = "free") +
   theme_bw() + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position="bottom") + 
@@ -281,6 +527,5 @@ facet_wrap(~survey) +
 # NULL
 
 ```
-
 
 # References
