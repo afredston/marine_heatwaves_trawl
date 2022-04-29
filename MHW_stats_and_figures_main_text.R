@@ -168,7 +168,17 @@ summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
 # my.model.cti <- data.frame(anom_days = modeldat$anom_days, cti_log = my.fitted.cti)
 # AIC(my.lm.cti, my.seg1.cti)
 
+# NE Pacific
 
+# what was the percentage change in biomass from 2015 to 2017?
+survey_summary %>% 
+  filter(survey %in% c('EBS','GOA','WCANN'), year %in% c(2015, 2017)) %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(wtdiff = (wt_mt - lag(wt_mt)) / lag(wt_mt)) %>% 
+  select(survey, wtdiff) %>% 
+  filter(!is.na(wtdiff))
+           
 ######
 # figures
 ######
@@ -438,110 +448,6 @@ gg_mhw_cti_hist <- survey_summary %>%
 gg_mhw_cti_hist
 ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.png"), width=50, height=50, units="mm")
 
-####### NE Pacific
-
-gg_goa <- ggplot() + 
-  geom_point(data = survey_summary %>% filter(survey=="gulf_of_alaska"), aes(x=year, y=wt_mt_log), color="blue") + 
-  geom_point(data = cti_sst %>% filter(survey=="gulf_of_alaska"), aes(x=year, y=ctiLog), color="red") + 
-  theme_bw() +
-  labs(title="GOA", y="Log Ratio") +
-  scale_x_continuous(breaks=seq(1982, 2018, 2)) 
-gg_goa
-
-gg_ebs <- ggplot() + 
-  geom_point(data = survey_summary %>% filter(survey=="eastern_bering_sea"), aes(x=year, y=wt_mt_log), color="blue") + 
-  geom_point(data = cti_sst %>% filter(survey=="eastern_bering_sea"), aes(x=year, y=ctiLog), color="red") + 
-  theme_bw() +
-  labs(title="EBS", y="Log Ratio") +
-  scale_x_continuous(breaks=seq(1982, 2018, 2)) 
-gg_ebs
-
-
-gg_goa_spp <- survey_spp_summary %>% 
-  filter(survey=="gulf_of_alaska", spp %in% c("Gadus macrocephalus","Gadus chalcogrammus")) %>% 
-  ggplot(aes(x=year, y=wt_mt_log, color=spp, group=spp, fill=spp)) + 
-  geom_point() +
-  geom_line() +
-  theme_bw() +
-  labs(title="GOA - Cod and Pollock", y="Log Ratio") +
-  scale_x_continuous(breaks=seq(1982, 2018, 2)) +
-  theme(legend.position = c(0.2,0.8))
-gg_goa_spp
-
-gg_ebs_spp <- survey_spp_summary %>% 
-  filter(survey=="eastern_bering_sea", spp %in% c("Gadus macrocephalus","Gadus chalcogrammus")) %>% 
-  ggplot(aes(x=year, y=wt_mt_log, color=spp, group=spp, fill=spp)) + 
-  geom_point() +
-  geom_line() +
-  theme_bw() +
-  labs(title="EBS - Cod and Pollock", y="Log Ratio") +
-  scale_x_continuous(breaks=seq(1982, 2018, 2)) +
-  theme(legend.position = c(0.2,0.2))
-gg_ebs_spp
-
-
-# try cluster analysis
-tmp <- survey_summary %>% 
-  inner_join(mhw_summary_sst, by="ref_yr") %>% 
-  select(ref_yr, wt_mt_log, anom_int) %>% 
-  data.frame(., row.names=1) %>% 
-  na.omit() %>% 
-  scale()
-ktmp <- kmeans(tmp, centers=2)
-tmp %>%
-  as_tibble() %>%
-  mutate(cluster = ktmp$cluster,
-         ref_yr = row.names(tmp)) %>%
-  ggplot(aes(wt_mt_log, anom_int, color = factor(cluster), label = ref_yr)) +
-  theme_bw() +
-  geom_text()
-
-#######
-# stats
-#######
-
-# what magnitude of (absolute) change followed MHWs vs non-MHWs?
-survey_summary %>% 
-  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
-  group_by(mhw_yes_no) %>% 
-  summarise(mean_abs_log_ratio = mean(abs_wt_mt_log, na.rm=TRUE))
-survey_summary %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
-  group_by(mhw_yes_no) %>% 
-  summarise(mean_abs_log_ratio = mean(abs_wt_mt_log, na.rm=TRUE))
-
-# how much did biomass decline in the Gulf of Alaska in 2014-2016?
-survey_summary %>% 
-  filter(survey=="GOA") %>% 
-  filter(year %in% c(2013, 2015, 2017)) %>% 
-  select(year, wt_mt) %>% 
-  mutate(relative_to_2013 = (wt_mt-wt_mt[1])/wt_mt[1])
-
-# specifically for cod and pollock
-survey_spp_summary %>% 
-  filter(survey=="GOA", spp %in% c("Gadus macrocephalus","Gadus chalcogrammus"), year %in% c(2013, 2015, 2017)) %>% 
-  select(year, spp, wt_mt) %>% 
-  group_by(spp) %>% 
-  arrange(year) %>% 
-  mutate(relative_to_2013 = (wt_mt-wt_mt[1])/wt_mt[1]) %>% 
-  ungroup()
-
-# how much did biomass change on the West Coast?
-survey_summary %>% 
-  filter(survey=="WCANN") %>% 
-  filter(year >= 2014) %>% 
-  select(year, wt_mt) %>% 
-  arrange(year) %>% 
-  mutate(relative_to_2014 = (wt_mt-wt_mt[1])/wt_mt[1])
-
-# Northeast 2012 MHW
-survey_summary %>% 
-  filter(survey=="NEUS") %>% 
-  filter(year >= 2012) %>% 
-  select(year, wt_mt) %>% 
-  arrange(year) %>% 
-  mutate(relative_to_2012 = (wt_mt-wt_mt[1])/wt_mt[1])
 
 #########
 # maps
