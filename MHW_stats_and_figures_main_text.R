@@ -204,6 +204,68 @@ x_lines <- seq(-120,180, by = 60)
 data("wrld_simpl", package = "maptools")                                                                            
 wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  
 
+
+# ---------------------------- #
+#### Juliano's Map tweeks #####
+# ---------------------------- #
+
+survey_regions_polar_polygon_jepa <- ggplot() +
+  geom_polygon(data = haul_info.r.split.concave.binded.spdf,
+               aes(x = long, y = lat, group = group, fill = group, color = group),
+               alpha = 0.8) +
+  scale_color_manual(values = survey_palette, guide = "none") +
+  scale_fill_manual(values = survey_palette, guide = "none") +
+  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
+  ) + 
+  scale_y_continuous(breaks = seq(-90,180,15)) +
+  scale_x_continuous(breaks = c(-100,-45,0)) +
+  coord_map("ortho", orientation = c(50, -45, 0),
+            xlim=c(-180,180),
+            ylim=c(35,90)) +
+  theme_bw() +
+  theme(panel.grid = element_line(colour="grey"),
+        panel.grid.major = element_line(size=0.1),
+        #panel.border = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()
+  )
+
+#save global map
+ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
+       filename = "survey_regions_polar_polygon_jepa.jpg",height = 5, width = 6, unit = "in") # JEPA
+
+
+
+# Labeles to correclty allocate mini maps on big map
+
+labels <- haul_info_map %>% 
+  group_by(survey) %>% 
+  summarise(
+    lon = mean(longitude),
+    lat = mean(latitude)
+  )
+
+ggplot(haul_info_map) +
+  geom_point(
+    aes(
+      x = longitude,
+      y = latitude,
+      color = survey
+    )
+  ) +
+  coord_map("ortho", orientation = c(50, -45, 0),
+            xlim=c(-180,180),
+            ylim=c(35,90)) +
+  geom_label(data = labels,
+             aes(x = lon,
+                 y = lat,
+                 label = survey))
+
+# ---------------------------- #
+# -----------end JEPA--------- #
+# ---------------------------- #
+
+
 survey_regions_polar_polygon <- ggplot() +
   geom_polygon(data = haul_info.r.split.concave.binded.spdf,
                aes(x = long, y = lat, group = group, fill = group, color = group),
@@ -309,7 +371,7 @@ for(reg in survey_names$survey) {
     geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
     scale_color_gradient(low="#1e03cd", high="#b80d06") +
     scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
-    labs(title=tmp$title) +
+    labs(title=tmp$title) + 
     theme_bw()  +
     theme(legend.position = "none",
           axis.title.x=element_blank(),
@@ -318,10 +380,10 @@ for(reg in survey_names$survey) {
           axis.text.x=element_text(angle = 45, vjust=1),
           #    axis.title.x=element_text(vjust=5),
           #    plot.title.position = "plot",
-          plot.title = element_text(hjust=0.3, vjust = -7)
-    )+
+          # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
+    ) +
     NULL
-  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=3, scale=0.7, dpi=160)
+  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=5, scale=0.7, dpi=160)
   plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
