@@ -43,6 +43,7 @@ library("robinmap")
 # load data
 #library(knitr)
 select <- dplyr::select
+set.seed(42)
 
 # marine heatwave data for joining with survey data
 # mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
@@ -77,7 +78,7 @@ haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
 # stats 
 ######
 
-# T-tests and power analysis
+# T-tests 
 
 wt_no_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "no", !is.na(wt_mt_log)) %>%
@@ -87,10 +88,10 @@ wt_mhw <- survey_summary %>%
   pull(wt_mt_log)
 t.test(wt_mhw, wt_no_mhw)
 pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.05, power = NULL, alternative="two.sided")
-d = (abs(log(1)-log(0.94/1)) / sd(c(wt_mhw, wt_no_mhw)))
-pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = d, sig.level = 0.05, power = NULL, alternative="two.sided")
-pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = .8, alternative="two.sided")
-pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = NULL, sig.level = 0.05, power = 0.8, alternative="two.sided")
+# d = (abs(log(1)-log(0.94/1)) / sd(c(wt_mhw, wt_no_mhw)))
+# pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = d, sig.level = 0.05, power = NULL, alternative="two.sided")
+# pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = .8, alternative="two.sided")
+# pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = NULL, sig.level = 0.05, power = 0.8, alternative="two.sided")
 
 cti_no_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
@@ -100,12 +101,138 @@ cti_mhw <- survey_summary %>%
   pull(cti_log)
 t.test(cti_no_mhw, cti_mhw)
 
+###########
 # power analysis
+###########
 
+# STEP 1: simulate data for each region with gamma from Cheung et al. 2021
+
+powerdat <- survey_summary %>%
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(lagwt = lag(wt, 1))
 # based on the effect sizes in Cheung et al. (6% overall biomass loss in worst-case scenario), how much data would we have needed, given the actual variance in the data? 
-d = abs(log(1 / 1.06)) / sd(c(wt_no_mhw, wt_mhw))
-pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = 0.8, type="one.sample") 
-pwr.t.test(n = nrow(survey_summary), d = d, sig.level = 0.05, power = NULL, type="one.sample") 
+# d = abs(log(1 / 1.06)) / sd(c(wt_no_mhw, wt_mhw))
+# pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = 0.8, type="one.sample") 
+# pwr.t.test(n = nrow(survey_summary), d = d, sig.level = 0.05, power = NULL, type="one.sample") 
+
+powerout <- NULL
+for(surv in survey_names$survey){
+  Data = powerdat %>% filter(survey==surv)
+  Gompertz = lm( log(wt) ~ 1 + log(lagwt) + mhw_yes_no, data=Data )
+  
+  # Gompertz parameters
+  alpha = Gompertz$coef['(Intercept)']
+  beta = Gompertz$coef['log(lagwt)']
+  conditional_sd = sqrt(mean(Gompertz$residuals^2))
+  
+  # set simulation length 
+  n_years = 110
+  
+  # MHW frequency and intensity
+  prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
+  #gamma = Gompertz$coef['mhw_yes_noyes']
+  gamma = log(0.94) # from Cheung et al. 2021
+  
+  # Stationary properties (for initial condition)
+  marginal_sd = conditional_sd / (1-beta)^2
+  marginal_mean = alpha / (1-beta)
+  
+  #
+  logB_t = rep(NA,n_years)
+  MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
+  
+  # Initialize
+ #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+  logB_t[1] = mean = marginal_mean # variance was too big for initializing 
+  
+  # Project
+  #  Gompertz:  log(N(t+1)) = alpha + beta * log(N(t)) + effects + error
+  for( tI in 2:n_years){
+    logB_t[tI] = alpha + beta*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+  }
+  
+  tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = gamma, survey = unique(Data$survey))
+  
+  powerout <- rbind(powerout, tmp)
+}
+
+# STEP 2: analyze that data the same way we did the actual data 
+
+powertest <- powerout %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(wt_mt_log = log(wt / lag(wt))) %>% 
+  filter(wt_mt_log > -Inf, wt_mt_log < Inf) 
+
+powertest_mhw <- powertest %>% 
+  filter(mhw_yes_no == 1) %>% 
+  pull(wt_mt_log)
+
+powertest_no_mhw <- powertest %>% 
+  filter(mhw_yes_no == 0) %>% 
+  pull(wt_mt_log)
+
+t.test(powertest_no_mhw, powertest_mhw) 
+
+# STEP 3: given the data we have, what effect size could we detect? 
+
+effectout <- NULL
+for(surv in survey_names$survey){
+  Data = powerdat %>% filter(survey==surv)
+  Gompertz = lm( log(wt) ~ 1 + log(lagwt) + mhw_yes_no, data=Data )
+  
+  # Gompertz parameters
+  alpha = Gompertz$coef['(Intercept)']
+  beta = Gompertz$coef['log(lagwt)']
+  conditional_sd = sqrt(mean(Gompertz$residuals^2))
+  
+  #
+  n_years = length(unique(Data$year))
+  
+  # MHW frequency and intensity
+  prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
+
+    gamma = log(0.90) # vary to evaluate how much of a decrease we could detect 
+  
+  # Stationary properties (for initial condition)
+  marginal_sd = conditional_sd / (1-beta)^2
+  marginal_mean = alpha / (1-beta)
+  
+  #
+  logB_t = rep(NA,n_years)
+  MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
+  
+  # Initialize
+ #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+  logB_t[1] = mean = marginal_mean # variance was too big for initializing 
+  
+  # Project
+  #  Gompertz:  log(N(t+1)) = alpha + beta * log(N(t)) + effects + error
+  for( tI in 2:n_years){
+    logB_t[tI] = alpha + beta*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+  }
+  
+  tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = gamma, survey = unique(Data$survey))
+  
+  effectout <- rbind(effectout, tmp)
+}
+
+effecttest <- effectout %>% 
+  group_by(survey) %>% 
+  arrange(year) %>% 
+  mutate(wt_mt_log = log(wt / lag(wt))) %>% 
+  filter(wt_mt_log > -Inf, wt_mt_log < Inf) 
+
+effecttest_mhw <- effecttest %>% 
+  filter(mhw_yes_no == 1) %>% 
+  pull(wt_mt_log)
+
+effecttest_no_mhw <- effecttest %>% 
+  filter(mhw_yes_no == 0) %>% 
+  pull(wt_mt_log)
+
+t.test(effecttest_no_mhw, effecttest_mhw) 
 
 # models to explain biomass and CTI change 
 
@@ -178,19 +305,13 @@ survey_summary %>%
   mutate(wtdiff = (wt_mt - lag(wt_mt)) / lag(wt_mt)) %>% 
   select(survey, wtdiff) %>% 
   filter(!is.na(wtdiff))
-           
+
 ######
 # figures
 ######
 
-# map
-# get MHW columns 
-map_prep <- mhw_summary_sat_sst_5_day %>% 
-  group_by(survey) %>% 
-  summarise(class = ifelse(max(anom_days<50)))
-
 #if positive, subtract 360
-haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
+# haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
 
 #delete if NA for longitude or latitude
 haul_info_map.r <- haul_info_map[complete.cases(haul_info_map[,.(longitude, latitude)])]
@@ -201,7 +322,7 @@ haul_info.r.split.concave <- lapply(haul_info.r.split.sf, concaveman, concavity 
 haul_info.r.split.concave.binded <- do.call('rbind', haul_info.r.split.concave)
 haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
 
-haul_info.r.split.concave.binded.spdf$survey <- levels(as.factor(haul_info_map.r[!haul_info_map.r$survey=='AI',]$survey))
+haul_info.r.split.concave.binded.spdf$survey <- levels(as.factor(haul_info_map.r$survey))
 
 # get other objects needed for map plot 
 survey_palette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
@@ -225,8 +346,8 @@ survey_regions_polar_polygon_jepa <- ggplot() +
                alpha = 0.8) +
   scale_color_manual(values = survey_palette, guide = "none") +
   scale_fill_manual(values = survey_palette, guide = "none") +
-  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
-  ) + 
+  # geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
+  # ) + 
   scale_y_continuous(breaks = seq(-90,180,15)) +
   scale_x_continuous(breaks = c(-100,-45,0)) +
   coord_map("ortho", orientation = c(50, -45, 0),
@@ -244,7 +365,58 @@ survey_regions_polar_polygon_jepa <- ggplot() +
 ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
        filename = "survey_regions_polar_polygon_jepa.jpg",height = 5, width = 6, unit = "in") # JEPA
 
+# map filled by MHW impacts 
 
+# get the most severe MHW in each region, and its biomass impacts 
+mapfill <- survey_summary %>% 
+  group_by(survey) %>% 
+  filter(anom_days == max(anom_days)) %>% 
+  select(survey, anom_days, wt_mt_log) %>% 
+  mutate(fill = case_when(
+    anom_days > 60 & wt_mt_log > 0 ~ "big_MHW_gain",
+    anom_days <= 60 & wt_mt_log > 0 ~ "small_MHW_gain",
+    anom_days > 60 & wt_mt_log < 0 ~ "big_MHW_loss",
+    anom_days <= 60 & wt_mt_log < 0 ~ "small_MHW_loss"
+  )) %>% 
+  arrange(survey)
+# nrow(mapfill) == length(unique(survey_summary$survey)) # check no duplicates
+mapfill$id = as.character(1:nrow(mapfill))
+
+# attach the map fill column to the spdf
+mhw_map_spdf <- as_Spatial(haul_info.r.split.concave.binded)
+mhw_map_spdf$survey <- levels(as.factor(haul_info_map.r$survey))
+mhw_map_fort <- fortify(mhw_map_spdf) %>% 
+  left_join(mapfill, by="id")
+
+# map 
+mhw_map <- ggplot() +
+  geom_polygon(data = mhw_map_fort,
+               aes(x = long, y = lat, group=group, fill=fill, color=fill),
+               alpha = 0.8) +
+  scale_color_manual(values = c("#960867","#8a0620","#670e96","#2f4578"), labels=c("Long MHW + biomass","Long MHW - biomass", "Short MHW + biomass", "Short MHW - biomass")) +
+  scale_fill_manual(values = c("#960867","#8a0620","#670e96","#2f4578"), labels=c("Long MHW + biomass","Long MHW - biomass", "Short MHW + biomass", "Short MHW - biomass")) +
+  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4" ) + 
+  scale_y_continuous(breaks = seq(-90,180,15)) +
+  scale_x_continuous(breaks = c(-100,-45,0)) +
+  coord_map("ortho", orientation = c(50, -45, 0),
+            xlim=c(-180,180),
+            ylim=c(35,90)) +
+  theme_bw() +
+  theme(panel.grid = element_line(colour="grey"),
+        panel.grid.major = element_line(size=0.1),
+        #panel.border = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(), 
+        legend.position="bottom", 
+        legend.title = element_blank(),
+        axis.title.x = element_blank(),
+  ) +
+  guides(colour = guide_legend(nrow = 2))
+
+#save global map
+ggsave(mhw_map, path = here("figures"),
+       filename = "map_mhw_fill.jpg",height = 5, width = 6, unit = "in") 
 
 # Labeles to correclty allocate mini maps on big map
 
