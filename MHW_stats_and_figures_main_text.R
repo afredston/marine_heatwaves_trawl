@@ -589,6 +589,7 @@ lm.final1 <- lm(wt_mt_log ~ anom_days, data = lm.dat1)
 lm.predict1 <- data.frame(wt_mt_log = predict(lm.final1, lm.dat1), anom_days=lm.dat1$anom_days)
 
 gg_mhw_biomass_point_final <- survey_summary %>% 
+  filter(wt_mt_log > -2) %>% # getting rid of Norway 1997 which has a -2.7 biomass ratio decline
   ggplot(aes(x=anom_days, y=wt_mt_log, group = mhw_yes_no)) +
   geom_point() +
   geom_smooth(method="lm", color = "gray35") +
