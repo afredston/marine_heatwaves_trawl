@@ -546,30 +546,32 @@ for(reg in survey_names$survey) {
     left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
     left_join(survey_names) %>% 
     left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
-    filter(survey==reg)
+    filter(survey=="NIGFS")
   coeff = 5 
   tmpplot <- ggplot(tmp) +
     geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
     geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
     scale_color_gradient(low="#1e03cd", high="#b80d06") +
     scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
+    # scale_x_continuous(breaks = c(2010,2012,2014,2016,2018))+
     labs(title=tmp$title) + 
     theme_bw()  +
     theme(legend.position = "none",
           axis.title.x=element_blank(),
           axis.title.y=element_blank(),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          axis.text.x=element_text(angle = 45, vjust=1),
+          axis.text.x=element_text(angle = 45, vjust=0.5, size = 13),
+          axis.text.y=element_text(size = 12),
           #    axis.title.x=element_text(vjust=5),
           #    plot.title.position = "plot",
           # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
     ) +
     NULL
   ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=5, scale=0.7, dpi=160)
-  plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
+  # plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
-gg_mhw_biomass_hist <- survey_summary %>% 
+  gg_mhw_biomass_hist <- survey_summary %>% 
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
   ggplot(aes(x=wt_mt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
   geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) +
