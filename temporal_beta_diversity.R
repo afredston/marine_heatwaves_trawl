@@ -21,12 +21,13 @@ library(betapart)
 biomass_time <- fread(here("processed-data","biomass_time.csv"))
 
 #delete any observations not identified to species
-biomass_time <- biomass_time[grepl(" ",biomass_time$accepted_name)] #this deletes any accepted_name values without a space, and therefore only a genus with no species 
+biomass_time <- biomass_time[grepl(" ",biomass_time$accepted_name)][,#this deletes any accepted_name values without a space, and therefore only a genus with no species 
+         ref_yr := paste0(survey,"-",startmonth,"-",year)] #at the same time, add ref_yr code
 
 #survey names
 survey_names <- sort(unique(biomass_time$survey))
 
-biomass_time_temporal_beta <- unique(biomass_time[,.(survey,year)])
+biomass_time_temporal_beta <- unique(biomass_time[,.(survey,year,ref_yr)])
 
 biomass_time_temporal_beta <- biomass_time_temporal_beta[
   ,jaccard_dissimilarity_turnover := as.numeric()][
@@ -54,7 +55,7 @@ for (i in 1:length(survey_names)) {
   #cycle through years
   for (j in 1:length(survey_years)) { #for  each year calculate 
     if(j == 1) {
-      biomass_time_temporal_beta[survey == survey_names[i] & year == survey_years[i],
+      biomass_time_temporal_beta[survey == survey_names[i] & year == survey_years[i] & ref_yr == ref_yr[i],
                                  c(
                                    "jaccard_dissimilarity_turnover",
                                    "bray_dissimilarity_turnover",
@@ -134,7 +135,7 @@ fwrite(biomass_time_temporal_beta, file = here::here("processed-data","survey_te
 biomass_time_temporal_beta[,type := ifelse(biomass_time_temporal_beta.l)]
 
 #wide form to long form 
-biomass_time_temporal_beta.l <- melt(biomass_time_temporal_beta, id.vars = 1:2, measure.vars = 3:10,
+biomass_time_temporal_beta.l <- melt(biomass_time_temporal_beta, id.vars = 1:3, measure.vars = 4:11,
                                      variable.name = "beta_diversity_metric")
 
 #reorder levels
