@@ -236,16 +236,51 @@ t.test(effecttest_no_mhw, effecttest_mhw)
 
 # models to explain biomass and CTI change 
 
-# community turnover 
-bc_mhw <- beta_div %>% 
+# community turnover using biomass metrics
+bc_mhw_turnover <- beta_div %>% 
   filter(anom_days>0, !is.na(bray_dissimilarity_turnover)) %>% 
   pull(bray_dissimilarity_turnover)
-bc_no_mhw <- beta_div %>% 
+bc_no_mhw_turnover <- beta_div %>% 
   filter(anom_days==0, !is.na(bray_dissimilarity_turnover)) %>% 
   pull(bray_dissimilarity_turnover)
 
-t.test(bc_mhw, bc_no_mhw)
+t.test(bc_mhw_turnover, bc_no_mhw_turnover)
 summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
+
+#community nestedness using biomass metrics
+bc_mhw_nestedness <- beta_div %>% 
+  filter(anom_days>0, !is.na(bray_dissimilarity_nestedness)) %>% 
+  pull(bray_dissimilarity_nestedness)
+bc_no_mhw_nestedness <- beta_div %>% 
+  filter(anom_days==0, !is.na(bray_dissimilarity_nestedness)) %>% 
+  pull(bray_dissimilarity_nestedness)
+
+t.test(bc_mhw_nestedness, bc_no_mhw_nestedness)
+summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
+
+# community turnover using occurrence metrics
+j_mhw_turnover <- beta_div %>% 
+  filter(anom_days>0, !is.na(jaccard_dissimilarity_turnover)) %>% 
+  pull(jaccard_dissimilarity_turnover)
+j_no_mhw_turnover <- beta_div %>% 
+  filter(anom_days==0, !is.na(jaccard_dissimilarity_turnover)) %>% 
+  pull(jaccard_dissimilarity_turnover)
+
+t.test(j_mhw_turnover, j_no_mhw_turnover)
+summary(lm(jaccard_dissimilarity_turnover ~ anom_days, data=beta_div)) #not significant, p>0.05, but, p = 0.06, so close to significant
+                                                                        #suggests that there may be higher turnover of species in MHW years
+                                                                        #but this doesn't translate to a significant turnover in biomass
+
+#community nestedness using occurrence metrics
+j_mhw_nestedness <- beta_div %>% 
+  filter(anom_days>0, !is.na(jaccard_dissimilarity_nestedness)) %>% 
+  pull(jaccard_dissimilarity_nestedness)
+j_no_mhw_nestedness <- beta_div %>% 
+  filter(anom_days==0, !is.na(jaccard_dissimilarity_nestedness)) %>% 
+  pull(jaccard_dissimilarity_nestedness)
+
+t.test(j_mhw_nestedness, j_no_mhw_nestedness)
+summary(lm(jaccard_dissimilarity_nestedness ~ anom_days, data=beta_div))
 
 # Define the model
 # model = list(
