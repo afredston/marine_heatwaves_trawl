@@ -128,5 +128,37 @@ for (i in 1:length(survey_names)) {
 
 fwrite(biomass_time_temporal_beta, file = here::here("processed-data","survey_temporal_beta_diversity.csv"))
 
+#helpful plots of nestedness versus turnover versus total dissimilarity
 
+#reorder levels
+biomass_time_temporal_beta[,type := ifelse(biomass_time_temporal_beta.l)]
 
+#wide form to long form 
+biomass_time_temporal_beta.l <- melt(biomass_time_temporal_beta, id.vars = 1:2, measure.vars = 3:10,
+                                     variable.name = "beta_diversity_metric")
+
+#reorder levels
+#key column
+biomass_time_temporal_beta.l[grepl(pattern = "jaccard", x = beta_diversity_metric) == T,type := "jaccard"][
+  grepl(pattern = "bray", x = beta_diversity_metric) == T,type := "bray"][
+    grepl(pattern = "richness", x = beta_diversity_metric) == T,type := "richness"]
+
+biomass_time_temporal_beta.l[,beta_diversity_metric := factor(beta_diversity_metric, levels = 
+                                                                c("jaccard_dissimilarity_turnover","jaccard_dissimilarity_nestedness","jaccard_dissimilarity_total",
+                                                                  "bray_dissimilarity_turnover","bray_dissimilarity_nestedness" , "bray_dissimilarity_total",       
+                                                                  "delta_richness","richness_percent_change"))]
+
+#plot metrics over time
+beta_diversity_metric_year <- ggplot(data = biomass_time_temporal_beta.l[type != "richness",]) +
+  geom_line(aes(x = as.numeric(year), y = value, color = beta_diversity_metric), size = 0.5) +
+  scale_color_manual(values = c("#0825DC","#A6AFEA","black","#B50E0E","#EF8E8E","black")) +
+  facet_wrap(~survey+type, scales = "free") +
+  theme_classic()
+
+richness_metric_year <- ggplot(data = biomass_time_temporal_beta.l[type == "richness",]) +
+  geom_line(aes(x = as.numeric(year), y = value)) +
+  facet_wrap(~survey, scales = "free") +
+  theme_classic()
+
+ggsave(beta_diversity_metric_year, file = "beta_diversity_metric_year.jpg", path = "figures/beta_diversity", width = 15, height = 9, unit = "in")
+ggsave(richness_metric_year, file = "richness_metric_year.jpg", path = "figures/beta_diversity", width = 10, height = 4, unit = "in")
