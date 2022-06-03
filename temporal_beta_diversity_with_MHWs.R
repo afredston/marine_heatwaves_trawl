@@ -185,7 +185,7 @@ jaccard_turnover_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MH
   facet_wrap(~survey) +
   theme_classic()
 
-ggsave(jaccard_turnover_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "jaccard_turnover_boxplot_MHWs_survey.jpg", width = 10, height = 4)
+ggsave(jaccard_turnover_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "jaccard_turnover_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
 #unscaled
 bray_turnover_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MHWs[complete.cases(mhw_yes_no),], aes(x = mhw_yes_no, y = bray_dissimilarity_turnover)) +
@@ -194,7 +194,7 @@ bray_turnover_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MHWs[
   facet_wrap(~survey) +
   theme_classic()
 
-ggsave(bray_turnover_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "bray_turnover_boxplot_MHWs_survey.jpg", width = 10, height = 4)
+ggsave(bray_turnover_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "bray_turnover_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
 #some surprising patterns jump out here when you look at individual regions
   #For portugal, non MHW years exhibit higher dissimilarity than MHW years
@@ -491,7 +491,7 @@ jaccard_nestedness_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_
   facet_wrap(~survey) +
   theme_classic()
 
-ggsave(jaccard_nestedness_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "jaccard_nestedness_boxplot_MHWs_survey.jpg", width = 10, height = 4)
+ggsave(jaccard_nestedness_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "jaccard_nestedness_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
 #interesting observations
   #higher dissimilarity in nestedness for non-heatwave years for DFO-QCS
