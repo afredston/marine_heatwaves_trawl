@@ -15,7 +15,7 @@ library(data.table)
 library(betapart)
 
 ########
-# load data
+# load data (run most recently on June 2, 2022 by Zoë)
 ########
 #bring in biomass_time data (prepped on annotate)
 biomass_time <- fread(here("processed-data","biomass_time.csv")) #biomass_time is created on annotate

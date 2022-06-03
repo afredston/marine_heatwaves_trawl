@@ -21,25 +21,19 @@ library(pals)
 library(concaveman)
 library(ggforce)
 
-#pacific centered base
-# install.packages("remotes")
-remotes::install_github("FRBCesab/robinmap")
-library("robinmap")
-
 ##Load Data
 haul_info <- fread(here::here("processed-data","haul_info.csv"))
-
-
-#if positive, subtract 360
-haul_info[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
 
 #delete if NA for longitude or latitude
 haul_info.r <- haul_info[complete.cases(haul_info[,.(longitude, latitude)])]
 
-#alternative
 
+#if positive, subtract 360
+#haul_info[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))] #unhash if you're working with survey that crosses dateline
+
+#basemap from maptools package
 data("wrld_simpl", package = "maptools")                                                                            
-wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  
+wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  #set extent to center around ~Atlantic of Northern hemisphere
 
 # Defines the x axes required
 x_lines <- seq(-120,180, by = 60)
@@ -70,24 +64,28 @@ theme_classic() +
         axis.line = element_blank(), axis.ticks = element_blank())
   
   
-##########
-#distinctive color palette
+###############################
+##Add survey regions to basemap
+###############################
+
+#distinctive color palette (this is for 18 regions, adjust depending on number of regions)
 survey_palette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
                      "#16FF32","#3283FE","#FEAF16","#B00068", 
                      "#1CFFCE","#90AD1C","#2ED9FF","#DEA0FD", 
                      "#AA0DFE","#F8A19F","#325A9B","#C4451C", 
                      "#1C8356","#66B0FF")
-#add survey points
-survey_regions_polar <- basemap_polar + geom_point(data = haul_info.r, aes(x = longitude, y = latitude, color = survey), alpha = 0.8, shape = 20, size = 0.00000000000001) +
+
+#add survey points to base polar map
+survey_regions_polar_points <- basemap_polar + geom_point(data = haul_info.r, aes(x = longitude, y = latitude, color = survey), alpha = 0.8, shape = 20, size = 0.00000000000001) +
   scale_color_manual(values = survey_palette) + theme(legend.position = "none")
 
-#save global map
-ggsave(survey_regions_polar, path = here::here("figures"), filename = "survey_regions_polar.jpg",height = 5, width = 6, unit = "in")
+#save global map with points
+ggsave(survey_regions_polar_points, path = here::here("figures"), filename = "survey_regions_polar_points.jpg",height = 5, width = 6, unit = "in")
 
-###polygons instead of points
+###add survey polygons to base polar map
 #leave out AI for now
 haul_info.r.noAI <- haul_info.r[survey != "AI",]
-haul_info.r.AI <- haul_info.r[survey == "AI",]
+#haul_info.r.AI <- haul_info.r[survey == "AI",] #unhash if keeping AI
 
 #split points into list all but ai
 haul_info.r.split <- split(haul_info.r.noAI, haul_info.r.noAI$survey)
@@ -96,30 +94,29 @@ haul_info.r.split.concave <- lapply(haul_info.r.split.sf, concaveman, concavity 
 haul_info.r.split.concave.binded <- do.call('rbind', haul_info.r.split.concave)
 haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
 
-#split AI points into list
-haul_info.r.AI.split <- split(haul_info.r.AI, haul_info.r.AI$survey)
-haul_info.r.AI.split.sf <- lapply(haul_info.r.AI.split, st_as_sf, coords = c("longitude_s", "latitude"))
-haul_info.r.AI.split.concave <- lapply(haul_info.r.AI.split.sf, concaveman, concavity = 5, length_threshold = 2)
-haul_info.r.AI.split.concave.binded <- do.call('rbind', haul_info.r.AI.split.concave)
-haul_info.r.AI.split.concave.binded.spdf <- as_Spatial(haul_info.r.AI.split.concave.binded)
+#split AI points into list (unhash if you want to add back in AI, or another survey that crosses dateline)
+#haul_info.r.AI.split <- split(haul_info.r.AI, haul_info.r.AI$survey)
+#haul_info.r.AI.split.sf <- lapply(haul_info.r.AI.split, st_as_sf, coords = c("longitude_s", "latitude"))
+#haul_info.r.AI.split.concave <- lapply(haul_info.r.AI.split.sf, concaveman, concavity = 5, length_threshold = 2)
+#haul_info.r.AI.split.concave.binded <- do.call('rbind', haul_info.r.AI.split.concave)
+#haul_info.r.AI.split.concave.binded.spdf <- as_Spatial(haul_info.r.AI.split.concave.binded)
 
 
-#merge
-haul_info.r.split.concave.binded_merge <- rbind(haul_info.r.AI.split.concave.binded,
-                                                   haul_info.r.split.concave.binded)
+#merge if you want to re-include AI (will just match haul_info.r.split.concave.binded if no AI)
+haul_info.r.split.concave.binded_merge <- ifelse(exists("haul_info.r.AI.split.concave.binded"),
+                                                 rbind(haul_info.r.AI.split.concave.binded,
+                                                   haul_info.r.split.concave.binded),
+                                                 haul_info.r.split.concave.binded)
 
-#haul_info.r.split.concave.binded_merge.spdf <- as_Spatial(haul_info.r.AI.split.concave.binded_merge)
-# Alexa hacky fix to drop AI
 haul_info.r.split.concave.binded_merge.spdf <- as_Spatial(haul_info.r.split.concave.binded)
-
-haul_info.r.split.concave.binded_merge.spdf$survey <- levels(as.factor(haul_info.r[!haul_info.r$survey=='AI',]$survey))
 
 
 #add these polygons to map
 #add survey polygons
 #and rearrange order
 
-survey_regions_polar_polygon <- ggplot() +
+#Here, continents overlay polygons (helpful, because making points into polygons that don't intersect land masses isn't immediately intuitive)
+survey_regions_polar_polygon_background <- ggplot() +
   geom_polygon(data = haul_info.r.split.concave.binded_merge.spdf,
                aes(x = long, y = lat, group = group, fill = group, color = group),
                alpha = 0.8) +
@@ -150,12 +147,13 @@ survey_regions_polar_polygon <- ggplot() +
         legend.position = "none")
 
 #save global map
-ggsave(survey_regions_polar_polygon, path = here::here("figures"),
-       filename = "survey_regions_polar_polygon.jpg",height = 5, width = 6, unit = "in")
+ggsave(survey_regions_polar_polygon_background, path = here::here("figures"),
+       filename = "survey_regions_polar_polygon_background.jpg",height = 5, width = 6, unit = "in")
 
 
+#Here, polygons overlay continents
 
-survey_regions_polar_polygon <- basemap_polar +
+survey_regions_polar_polygon_foreground <- basemap_polar +
   geom_polygon(data = haul_info.r.split.concave.binded_merge.spdf,
           aes(x = long, y = lat, group = group, fill = group, color = group),
                alpha = 0.8) +
@@ -163,5 +161,6 @@ survey_regions_polar_polygon <- basemap_polar +
   scale_fill_manual(values = survey_palette)  +  
   theme(legend.position = "none")
 
-#what abouttt
-
+#save global map with polygons on top
+ggsave(survey_regions_polar_polygon_foreground, path = here::here("figures"),
+       filename = "survey_regions_polar_polygon_foreground.jpg",height = 5, width = 6, unit = "in")
