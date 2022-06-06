@@ -20,6 +20,9 @@ here <- here::here
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
+# what's going on with norway pre-data-trimming?
+nor_cod_pre <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
+
 ##############
 # trim datasets
 ##############
@@ -144,7 +147,7 @@ dggs7 <- dgconstruct(res = 7, metric = T) # for Norway only
 unique_latlon_nor <- unique(FishGlob_nor[,.(latitude, longitude_s)])
 unique_latlon_else <- unique(FishGlob_else[,.(latitude, longitude_s)])
 unique_latlon_else[,cell := dgGEO_to_SEQNUM(dggs8, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
-unique_latlon_nor[,cell := dgGEO_to_SEQNUM(dggs8, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
+unique_latlon_nor[,cell := dgGEO_to_SEQNUM(dggs7, longitude_s, latitude)] #get corresponding grid cells for this region/survey combo
 
 #find cell centers
 cellcenters_else <- dgSEQNUM_to_GEO(dggs8, unique_latlon_else[,cell])
@@ -158,9 +161,9 @@ unique_latlon_nor[,cell_center_longitude_s := cellcenters_nor$lon_deg][,cell_cen
 FishGlob_else.dg <- merge(FishGlob_else, unique_latlon_else, by = c("latitude", "longitude_s"), all.x = TRUE)
 FishGlob_else.dg$dggs <- "8"
 FishGlob_nor.dg <- merge(FishGlob_nor, unique_latlon_nor, by = c("latitude", "longitude_s"), all.x = TRUE)
-FishGlob_nor.dg$dggs <- "8"
+FishGlob_nor.dg$dggs <- "7"
 
-FishGlob.dg <- rbind(FishGlob_else.dg, FishGlob_nor.dg)
+FishGlob.dg <- rbind(FishGlob_else.dg, FishGlob_nor.dg) # from here on, Norway is treated the same as the other surveys
 
 # check that they have the same number of rows and replace raw with the data.table that has spatial standardization columns
 if(nrow(FishGlob.dg==nrow(raw))){
@@ -223,11 +226,11 @@ for(i in 1:length(survs)){
 # explore Norway missingness 
 # boop <- FishGlob_nor.dg[, .(nhaul = length(unique(haul_id))), by=.(cell_center_longitude_s, cell_center_latitude, cell)]
 # boop <- merge(boop, summtmp, by="cell", all.x=TRUE)
-# ggplot() + geom_point(data=boop, aes(x=cell_center_longitude_s, y=cell_center_latitude, fill=nhaul, color=nhaul),size=1) + scale_color_viridis_c() + scale_fill_viridis_c() + geom_polygon(data=map_data("world"), aes(x=long, y=lat,group=group)) + coord_cartesian(xlim=c(-21, 71), ylim=c(60, 85))
-# moop <- year_cell_count.dt[survey=='Nor-BTS']
-# moop %<>% merge(., unique(unique_latlon_nor[, .(cell, cell_center_longitude_s, cell_center_latitude)]), by="cell", keep.x='TRUE')
-# moop[.(nhaul = 0, to = NA), on = "nhaul", nhaul := i.to] # recode zeros to NAs for plotting
-# ggplot() + geom_point(data=moop, aes(x=cell_center_longitude_s, y=cell_center_latitude, fill=nhaul),size=1.5, shape=21) + geom_polygon(data=map_data("world"), aes(x=long, y=lat,group=group)) + coord_cartesian(xlim=c(-21, 71), ylim=c(60, 85)) + facet_wrap(~year) + scale_fill_gradient(low="lightskyblue",high="firebrick3", na.value="white")
+#  ggplot() + geom_point(data=boop, aes(x=cell_center_longitude_s, y=cell_center_latitude, fill=nhaul, color=nhaul),size=1) + scale_color_viridis_c() + scale_fill_viridis_c() + geom_polygon(data=map_data("world"), aes(x=long, y=lat,group=group)) + coord_cartesian(xlim=c(-21, 71), ylim=c(60, 85))
+#  moop <- year_cell_count.dt[survey=='Nor-BTS']
+#  moop %<>% merge(., unique(unique_latlon_nor[, .(cell, cell_center_longitude_s, cell_center_latitude)]), by="cell", keep.x='TRUE')
+#  moop[.(nhaul = 0, to = NA), on = "nhaul", nhaul := i.to] # recode zeros to NAs for plotting
+#  ggplot() + geom_point(data=moop, aes(x=cell_center_longitude_s, y=cell_center_latitude, fill=nhaul),size=1.5, shape=21) + geom_polygon(data=map_data("world"), aes(x=long, y=lat,group=group)) + coord_cartesian(xlim=c(-21, 71), ylim=c(60, 85)) + facet_wrap(~year) + scale_fill_gradient(low="lightskyblue",high="firebrick3", na.value="white")
 # 
 
 # loop through each survey. Couldn't figure out how to do this without a loop.
@@ -313,6 +316,10 @@ haul_info <- haul_info[keep_90==TRUE] # get hauls that pass spatial standardizat
 
 raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name, startmonth)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
+
+# what's going on with norway post-data-trimming?
+nor_cod_post <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
+
 # get expanded grid for each region
 raw_zeros <- NULL
 for(i in unique(raw$survey)){
@@ -367,4 +374,6 @@ stats_dat <- data.frame(
 fwrite(raw_cpue, here("processed-data","biomass_time.csv"))
 fwrite(haul_info, here("processed-data","haul_info.csv"))
 fwrite(trim.dt, here("processed-data","spatial_standardization_summary.csv"))
+fwrite(nor_cod_pre, here("processed-data","norway_cod_pre_trimming.csv"))
+fwrite(nor_cod_post, here("processed-data","norway_cod_post_trimming.csv"))
 write.csv(stats_dat, here("processed-data","stats_about_raw_data.csv"))
