@@ -26,6 +26,15 @@ raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
 # in what years was each sampled, and with how many samples? 
 # year_freq <- raw[, by=.(survey, year), .(nhaul = length(unique(haul_id)))][order(survey, year)][, interval := year - lag(year), by=survey]
+# for paper:
+survs <- c("NEUS", "SCS", "NS-IBTS", "Nor-BTS", "EBS", "GSL-S", "GMEX", 
+  "SEUS", "SWC-IBTS", "EVHOE", "FR-CGFS", "GOA", "BITS", "DFO-QCS", 
+  "IE-IGFS", "WCANN", "PT-IBTS", "NIGFS")
+stats <- copy(raw)[survey %in% survs]
+length(unique(stats$haul_id))
+length(unique(stats$accepted_name))
+length(unique(stats[rank=='Species']$accepted_name)) / length(unique(stats$accepted_name))
+length(unique(stats[rank=='Genus']$accepted_name)) / length(unique(stats$accepted_name))
 
 # trim out surveys that are sampled inconsistently, rarely (more than 2 year intervals) and/or CPUE has been immensely variable based on the summary plots in FISHGLOB. 
 bad_surveys <- c('GSL-N','ROCKALL','AI','WCTRI','DFO-SOG') # gsl-n has very odd cpue patterns as seen in the fishglob summary pdf and the rest are sampled inconsistently/rarely
@@ -67,6 +76,9 @@ goa_hauls_del <- unique(raw[survey=='GOA' & year < 1999, haul_id]) #drop trienni
 
 # collate list and add in other problematic hauls
 bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s_hauls_del, neus_hauls_del, nigfs_hauls_del, nor_bts_hauls_del, ns_ibts_hauls_del, pt_ibts_hauls_del, scs_hauls_del, seus_hauls_del, swc_ibts_hauls_del,goa_hauls_del, "EVHOE 2019 4 FR 35HT GOV X0510 64", neus_bad_hauls) #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
+
+# trim out all data in or before 1980, the earliest year for which we are using temperature data 
+haul_info <- haul_info[year>1981]
 
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
@@ -341,9 +353,18 @@ raw_cpue %<>% merge(raw_depth, all.x=TRUE, by=c("survey", "accepted_name", "year
 # intervals <- unique(intervals[,.(survey, year)])
 # intervals <- intervals[order(year)][,year_interval := year - shift(year, n=1, type="lag"), by=.(survey)]
 
+stats <- stats[haul_id %in% haul_info$haul_id] # update stats to only hauls being analyzed
+stats_dat <- data.frame(
+  'n_obs'=nrow(raw_zeros), 
+  'n_hauls'=nrow(haul_info), 
+  'n_taxa'=length(unique(stats$accepted_name)), 
+  'prop_ID_species'=(length(unique(stats[rank=='Species']$accepted_name)) / length(unique(stats$accepted_name))), 
+  'prop_ID_genus'=(length(unique(stats[rank=='Genus']$accepted_name)) / length(unique(stats$accepted_name))))
+
 #########
 # Write out processed biomass data
 #########
 fwrite(raw_cpue, here("processed-data","biomass_time.csv"))
 fwrite(haul_info, here("processed-data","haul_info.csv"))
 fwrite(trim.dt, here("processed-data","spatial_standardization_summary.csv"))
+write.csv(stats_dat, here("processed-data","stats_about_raw_data.csv"))
