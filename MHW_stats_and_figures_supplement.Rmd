@@ -47,7 +47,7 @@ haul_info <- read_csv(here("processed-data","haul_info.csv"))
 #biomass_time <- read_csv(here("processed-data","biomass_time.csv"))
 #footprint <- read_csv(here("processed-data","spatial_standardization_summary.csv"))
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
-
+survey_names <- read_csv(here("processed-data","survey_names.csv"))
 # traits data
 traits <- read_csv(here("raw-data","TraitCollectionFishNAtlanticNEPacificContShelf.csv")) %>% 
   select(taxon, tl, feeding.mode, habitat) %>% 
@@ -550,9 +550,9 @@ ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt
 
 ```
 
-```{r fig-ebs-spp, fig.cap="Biomass trends and historical MHWs in NE Pacific surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
-topspp <- survey_spp_summary %>% 
-  filter(survey %in% c('EBS','GOA','WCANN')) %>% 
+```{r fig-nep-spp, fig.cap="Biomass trends and historical MHWs in Northeast Pacific surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
+topspp_nep <- survey_spp_summary %>% 
+  filter(survey %in% c('EBS','GOA','WCANN','DFO-QCS')) %>% 
   group_by(survey, spp) %>% 
   summarise(tot = sum(wt_mt)) %>% 
   arrange(-tot) %>% 
@@ -565,18 +565,23 @@ cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6
 
 survey_spp_summary %>% 
   mutate(id = paste0(survey, spp)) %>% 
-  filter(id %in% topspp$id) %>% 
-  bind_rows(survey_spp_summary %>% filter(survey %in% c('EBS','GOA','WCANN'), !spp %in% topspp$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
+  filter(id %in% topspp_nep$id) %>% 
+  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nep$survey, !spp %in% topspp_nep$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  mutate(bar1 = ifelse(mhw_yes_no == "yes", 30, 0),
-         survey = recode(survey, EBS = "Eastern Bering Sea", GOA = "Gulf of Alaska", WCANN = "West Coast US")) %>% 
+  group_by(survey, year) %>% 
+  mutate(tot = sum(wt_mt)) %>% # set up height for MHW rectangle
+  group_by(survey) %>% 
+  mutate(maxtot = max(tot)) %>% 
+  ungroup() %>% 
+  mutate(bar1 = ifelse(mhw_yes_no == "yes", maxtot, 0)) %>% 
+  left_join(survey_names) %>% 
   ggplot() +
   geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
   geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
-  scale_y_continuous(limits=c(0,30), breaks=seq(0, 30, 5)) +
+ #  coord_cartesian(ylim=c(0,30)) +
   scale_color_manual(values=cbpal2) +
   scale_fill_manual(values=cbpal2) +
-    facet_wrap(~survey, scales = "free", ncol=1) +
+    facet_wrap(~title, scales = "free", ncol=1) +
   theme_bw() + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         legend.position="right",
@@ -608,4 +613,75 @@ survey_spp_summary %>%
 
 ```
 
+```{r fig-nwa-spp, fig.cap="Biomass trends and historical MHWs in Northwest Atlantic surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
+topspp_nwa <- survey_spp_summary %>% 
+  filter(survey %in% c('NEUS','GSL-S','GMEX','SEUS','SCS')) %>% 
+  group_by(survey, spp) %>% 
+  summarise(tot = sum(wt_mt)) %>% 
+  arrange(-tot) %>% 
+  slice(1:5) %>% 
+  mutate(id = paste0(survey, spp))
+
+cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
+
+cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
+
+survey_spp_summary %>% 
+  mutate(id = paste0(survey, spp)) %>% 
+  filter(id %in% topspp_nwa$id) %>% 
+  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nwa$survey, !spp %in% topspp_nwa$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  left_join(survey_names) %>% 
+  ggplot() +
+  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+  scale_y_continuous(limits=c(0,30), breaks=seq(0, 30, 5)) +
+  scale_color_manual(values=cbpal2) +
+  scale_fill_manual(values=cbpal2) +
+    facet_wrap(~title, scales = "free", ncol=1) +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position="right",
+        legend.title = element_blank()) + 
+  labs(x="Year",y="Biomass (mt)") +
+  NULL
+
+```
+
+
+```{r fig-nea-spp, fig.cap="Biomass trends and historical MHWs in Northeast Atlantic surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
+topspp_nea <- survey_spp_summary %>% 
+  filter(survey %in% c('Nor-BTS','NS-IBTS','SWC-IBTS','EVHOE','FR-CGFS','BITS','IE-IGFS','PT-IBTS','NIGFS')) %>% 
+  group_by(survey, spp) %>% 
+  summarise(tot = sum(wt_mt)) %>% 
+  arrange(-tot) %>% 
+  slice(1:5) %>% 
+  mutate(id = paste0(survey, spp))
+
+cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
+
+cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
+
+
+survey_spp_summary %>% 
+  mutate(id = paste0(survey, spp)) %>% 
+  filter(id %in% topspp_nea$id) %>% 
+  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nea$survey, !spp %in% topspp_nea$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  left_join(survey_names) %>% 
+  ggplot() +
+  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+  scale_y_continuous(limits=c(0,30), breaks=seq(0, 30, 5)) +
+  scale_color_manual(values=cbpal2) +
+  scale_fill_manual(values=cbpal2) +
+    facet_wrap(~title, scales = "free", ncol=1) +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position="right",
+        legend.title = element_blank()) + 
+  labs(x="Year",y="Biomass (mt)") +
+  NULL
+
+```
 # References
