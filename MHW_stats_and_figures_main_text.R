@@ -65,7 +65,8 @@ coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv")) 
 survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
                                     "PT-IBTS","SCS",
-                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','Queen Charlotte Sound','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Maritimes','Southeast US','Scotland','West Coast US'))
+                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US'))
+write_csv(survey_names, here('processed-data','survey_names.csv'))
 beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
   left_join(survey_start_times) %>% # add in the ref_yr column 
   select(-month_year, -survey_date) %>% 
@@ -86,6 +87,10 @@ wt_no_mhw <- survey_summary %>%
 wt_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "yes", !is.na(wt_mt_log)) %>%
   pull(wt_mt_log)
+mean(wt_mhw)
+sd(wt_mhw)
+mean(wt_no_mhw)
+sd(wt_no_mhw)
 t.test(wt_mhw, wt_no_mhw)
 pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.05, power = NULL, alternative="two.sided")
 # d = (abs(log(1)-log(0.94/1)) / sd(c(wt_mhw, wt_no_mhw)))
