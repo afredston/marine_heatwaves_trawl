@@ -521,6 +521,9 @@ ggsave(jaccard_nestedness_boxplot_MHWs_survey, path = here::here("figures","beta
 
 #interesting observations
   #higher dissimilarity in nestedness for non-heatwave years for DFO-QCS
+  #let's dig into this
+  queen_charlotte_sound_data <- survey_temporal_diversity_with_MHWs[survey  == "DFO-QCS",]
+  #5/10 years are heatwave years,  so not super robust
 
 
 bray_nestedness_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MHWs[complete.cases(mhw_yes_no),], aes(x = mhw_yes_no, y = bray_dissimilarity_nestedness)) +
@@ -533,7 +536,14 @@ ggsave(bray_nestedness_boxplot_MHWs_survey, path = here::here("figures","beta_di
 
 #interesting observations
   #higher nestedness dissimilarity for portugal in heatwave years than non heatwave years
-
+  #let's dig into this
+  portugal_data <- survey_temporal_diversity_with_MHWs[survey  == "PT-IBTS",]
+  #3/12 years are non heatwave years, so not super robust
+  
+  #lower nestedness dissimilarity for ireland in heatwave years than non heatwave years
+  #let's dig into this
+  ireland_data <- survey_temporal_diversity_with_MHWs[survey  == "NIGFS",]
+  #4/10 years are heatwave years,  so not super robust
 
 ###########################
 ###### Heat Wave Cumulative Mean Intensity
@@ -726,3 +736,6 @@ ggsave(diverging_bars_wlegend_scaled, path = here::here("figures","beta_diversit
        filename = "diverging_bars_wlegend_scaled.pdf",height = 10, width = 13, unit = "in")
 
 
+#Out of curiousity, what's the highest  scaled value of dissimilarity we find?
+#when does it happen?
+View(survey_temporal_diversity_with_MHWs)
