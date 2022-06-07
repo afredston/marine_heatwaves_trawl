@@ -187,6 +187,32 @@ jaccard_turnover_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MH
 
 ggsave(jaccard_turnover_boxplot_MHWs_survey, path = here::here("figures","beta_diversity"), filename = "jaccard_turnover_boxplot_MHWs_survey.jpg", width = 10, height = 10)
 
+#here, we see possibly significant difference for NEUS, let's look closer
+  #"I'd guess the NEUS one is driven by 2012 and maybe 2016, but let's check! I'll put a note in the draft." Alexa
+  t.test(survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "yes",]$jaccard_dissimilarity_turnover,
+         survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "no",]$jaccard_dissimilarity_turnover)
+  #p = 0.015
+  
+  #what if we exclude 2011?
+  t.test(survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "yes" & ref_yr != "NEUS-9-2011",]$jaccard_dissimilarity_turnover,
+         survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "no" & ref_yr != "NEUS-9-2011",]$jaccard_dissimilarity_turnover)
+  #p  = 0.017
+  
+  #what if we exclude 2012?
+  t.test(survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "yes" & ref_yr != "NEUS-9-2012",]$jaccard_dissimilarity_turnover,
+         survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "no" & ref_yr != "NEUS-9-2012",]$jaccard_dissimilarity_turnover)
+  #p  = 0.015
+  
+  #what if we exclude 2016?
+  t.test(survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "yes" & ref_yr != "NEUS-9-2016",]$jaccard_dissimilarity_turnover,
+         survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "no" & ref_yr != "NEUS-9-2016",]$jaccard_dissimilarity_turnover)
+  #p = 0.020
+  
+  #what if we exclude 2017?
+  t.test(survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "yes" & ref_yr != "NEUS-9-2017",]$jaccard_dissimilarity_turnover,
+         survey_temporal_diversity_with_MHWs[survey == "NEUS" & mhw_yes_no == "no" & ref_yr != "NEUS-9-2017",]$jaccard_dissimilarity_turnover)
+  #p = 0.024
+  
 #unscaled
 bray_turnover_boxplot_MHWs_survey <- ggplot(survey_temporal_diversity_with_MHWs[complete.cases(mhw_yes_no),], aes(x = mhw_yes_no, y = bray_dissimilarity_turnover)) +
   geom_boxplot() +
