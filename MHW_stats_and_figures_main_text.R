@@ -16,6 +16,7 @@ library(patchwork)
 library(cowplot)
 library(pals)
 library(ggforce)
+library(ggExtra)
 
 # modeling 
 library(broom)
@@ -79,6 +80,35 @@ haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
 # stats 
 ######
 
+# EBS 2017
+survey_summary %>% 
+  filter(survey=='EBS',year==2017) %>% 
+  select(wt_mt_log, anom_days)%>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# GOA 2017
+survey_summary %>% 
+  filter(survey=='GOA',year==2017) %>% 
+  select(wt_mt_log, anom_days)%>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# NEUS 2012
+survey_summary %>% 
+  filter(survey=='NEUS', year==2012) %>% 
+  select(wt_mt_log, anom_days) %>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# GSL 2012-2013
+survey_summary %>% 
+  filter(survey=='GSL-S', year %in% c(2011, 2012, 2013)) %>% 
+  select(year, wt_mt_log, anom_days) 
+
+# Norway 2015
+survey_summary %>% 
+  filter(survey=='Nor-BTS', year==1995) %>% 
+  select(wt_mt_log, anom_days) %>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
 # T-tests 
 
 wt_no_mhw <- survey_summary %>% 
@@ -104,7 +134,22 @@ cti_no_mhw <- survey_summary %>%
 cti_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
   pull(cti_log)
+mean(cti_no_mhw)
+sd(cti_no_mhw)
+mean(cti_mhw)
+sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw)
+
+# regressions
+
+lm_wt <- lm(wt_mt_log ~ anom_days, data = survey_summary)
+summary(lm_wt)
+# lm.predict1 <- data.frame(wt_mt_log = predict(lm_wt, survey_summary), anom_days=survey_summary$anom_days)
+lm_cti <- lm(cti_log ~ anom_days, data = survey_summary)
+summary(lm_cti)
+
+# what percentage of biomass changes after MHWs fall within one SD of the mean change after no MHW?
+length(abs(wt_mhw)[abs(wt_mhw)<sd(wt_no_mhw)]) / length(abs(wt_mhw))
 
 ###########
 # power analysis
@@ -148,7 +193,7 @@ for(surv in survey_names$survey){
   MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
   
   # Initialize
- #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+  #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
   logB_t[1] = mean = marginal_mean # variance was too big for initializing 
   
   # Project
@@ -197,8 +242,8 @@ for(surv in survey_names$survey){
   
   # MHW frequency and intensity
   prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
-
-    gamma = log(0.90) # vary to evaluate how much of a decrease we could detect 
+  
+  gamma = log(0.90) # vary to evaluate how much of a decrease we could detect 
   
   # Stationary properties (for initial condition)
   marginal_sd = conditional_sd / (1-beta)^2
@@ -209,7 +254,7 @@ for(surv in survey_names$survey){
   MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
   
   # Initialize
- #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+  #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
   logB_t[1] = mean = marginal_mean # variance was too big for initializing 
   
   # Project
@@ -273,8 +318,8 @@ j_no_mhw_turnover <- beta_div %>%
 
 t.test(j_mhw_turnover, j_no_mhw_turnover)
 summary(lm(jaccard_dissimilarity_turnover ~ anom_days, data=beta_div)) #not significant, p>0.05, but, p = 0.06, so close to significant
-                                                                        #suggests that there may be higher turnover of species in MHW years
-                                                                        #but this doesn't translate to a significant turnover in biomass
+#suggests that there may be higher turnover of species in MHW years
+#but this doesn't translate to a significant turnover in biomass
 
 #community nestedness using occurrence metrics
 j_mhw_nestedness <- beta_div %>% 
@@ -611,7 +656,7 @@ for(reg in survey_names$survey) {
   # plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
-  gg_mhw_biomass_hist <- survey_summary %>% 
+gg_mhw_biomass_hist <- survey_summary %>% 
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
   ggplot(aes(x=wt_mt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
   geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) +
@@ -624,19 +669,33 @@ for(reg in survey_names$survey) {
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()
   )
 
+gg_mhw_biomass_point_marg <- survey_summary %>% 
+  ggplot(aes(x=anom_days, y=wt_mt_log)) +
+  geom_point(aes(color=mhw_yes_no, group = mhw_yes_no), alpha=0.8) +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  geom_point(color="black") +
+  geom_smooth(method="lm", color = "gray35") +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(
+    legend.position = "none", 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+margplot <- ggMarginal(gg_mhw_biomass_point_marg,type="density", margins="y", groupColour = TRUE, yparams = list(size=2, alpha=0.5))
+margplot
 
-lm.dat1 <- survey_summary %>% 
-  filter(anom_days>0)
-lm.final1 <- lm(wt_mt_log ~ anom_days, data = lm.dat1)
-lm.predict1 <- data.frame(wt_mt_log = predict(lm.final1, lm.dat1), anom_days=lm.dat1$anom_days)
+
+
 
 gg_mhw_biomass_point_final <- survey_summary %>% 
-  filter(wt_mt_log > -2) %>% # getting rid of Norway 1997 which has a -2.7 biomass ratio decline
   ggplot(aes(x=anom_days, y=wt_mt_log, group = mhw_yes_no)) +
   geom_point() +
   geom_smooth(method="lm", color = "gray35") +
-  # geom_smooth(data = lm.dat1, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+  # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
   #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
+ # ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
   theme_bw() + 
   coord_cartesian(clip = "off") +
   labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
@@ -644,6 +703,19 @@ gg_mhw_biomass_point_final <- survey_summary %>%
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 gg_mhw_biomass_point_final
 
+# gg_mhw_cti_point_final <- survey_summary %>% 
+#   ggplot(aes(x=anom_days, y=cti_log, group = mhw_yes_no)) +
+#   geom_point() +
+#   geom_smooth(method="lm", color = "gray35") +
+#   # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+#   #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
+#   ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(cti_log)>0.3,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
+#   theme_bw() + 
+#   coord_cartesian(clip = "off") +
+#   labs(x="Marine heatwave duration (days)", y="CTI log ratio") +
+#   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+# gg_mhw_cti_point_final
 
 gg_mhw_biomass_box <- survey_summary %>% 
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No MHW", yes="MHW")) %>% 

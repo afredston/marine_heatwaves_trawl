@@ -385,6 +385,7 @@ survey_spp_summary <- cpue %>%
          depth_wt_log = log(depth_mean / lag(depth_mean))
   )  %>% 
   ungroup()
+# ignore warning message about NAs being produced in the depth column; this is a feature, not a bug! (we want it to show NA when the species wasn't recorded)
 
 # now add STI/CTI to the survey dataframes where available
 
