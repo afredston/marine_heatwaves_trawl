@@ -60,7 +60,8 @@ mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # m
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
-  rename('spp'=accepted_name)
+  rename('spp'=accepted_name) %>% 
+  mutate(wt_mt_log = as.numeric(wt_mt_log))
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv")) 
@@ -151,6 +152,52 @@ summary(lm_cti)
 # what percentage of biomass changes after MHWs fall within one SD of the mean change after no MHW?
 length(abs(wt_mhw)[abs(wt_mhw)<sd(wt_no_mhw)]) / length(abs(wt_mhw))
 
+# CTI stats
+
+# Scotland
+# survey_summary %>% 
+#   filter(survey=='SWC-IBTS') %>% 
+#   select(-wt_mt) %>% 
+#   left_join(survey_spp_summary %>% filter(survey=='SWC-IBTS',spp %in% c('Scomber scombrus','Clupea harengus')) %>% select(spp, year, STI, wt_mt)) %>% ggplot() +
+#   geom_line(aes(x=year, y=wt_mt, color=spp)) +
+#   geom_line(aes(x=year, y=CTI, color="CTI")) 
+
+survey_spp_summary%>% 
+  filter(survey=='SWC-IBTS', spp=='Scomber scombrus', year %in% c(2004, 2005)) %>% 
+  select(spp, year, wt_mt_log, wt_mt) %>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+survey_summary %>% 
+  filter(survey=='SWC-IBTS', year %in% c(2004, 2005)) %>% 
+  select(survey, year, cti_log, CTI)
+
+survey_summary %>%
+  filter(survey=='WCANN', year==2015) %>% 
+  select(year, survey, cti_log, anom_days)
+
+# Scotian Shelf tropicalization 2013
+survey_summary %>%
+  filter(survey=='SCS', year==2013) %>% 
+  select(year, survey, cti_log, anom_days, CTI)
+
+survey_spp_summary %>% 
+  filter(survey=='SCS', spp=='Squalus acanthias', year %in% c(2012, 2013)) %>% 
+  select(year, spp, wt_mt, wt_mt_log, STI)
+
+# what happened after the 2014-2016 NE Pacific MHW?
+survey_summary %>% 
+  filter(survey %in% c('WCANN','EBS','GOA','DFO-QCS'), year %in% seq(2015, 2017, 1)) %>% 
+  select(survey, year, wt_mt_log, wt_mt, CTI, cti_log) %>% 
+  mutate(cti_change = ifelse(cti_log<0, "cold","warm")) %>% 
+  group_by(cti_change) 
+
+survey_summary %>% 
+  filter(survey %in% c('WCANN','EBS','GOA','DFO-QCS'), year %in% seq(2015, 2017, 1)) %>% 
+  select(survey, year, wt_mt_log, wt_mt, CTI, cti_log) %>% 
+  mutate(cti_change = ifelse(cti_log<0, "cold","warm")) %>% 
+  group_by(cti_change) %>% 
+  summarise(n=n())
+  
 ###########
 # power analysis
 ###########
@@ -284,7 +331,10 @@ effecttest_no_mhw <- effecttest %>%
 
 t.test(effecttest_no_mhw, effecttest_mhw) 
 
-# models to explain biomass and CTI change 
+############
+# community turnover
+############
+
 
 # community turnover using biomass metrics
 bc_mhw_turnover <- beta_div %>% 
@@ -394,6 +444,70 @@ survey_summary %>%
 ######
 # figures
 ######
+
+# time-series of NE Pacific surveys
+nep <- survey_summary %>% 
+  left_join(beta_div) %>% 
+  filter(survey %in% c('DFO-QCS','EBS','GOA','WCANN')) %>% 
+  left_join(survey_names) %>% 
+  group_by(survey) %>% 
+  mutate(wt_scale = scale(wt_mt, center=TRUE, scale=TRUE), 
+         cti_scale = scale(CTI, center=TRUE, scale=TRUE)) %>% 
+  ungroup()
+
+# what happened with MHWs in 2015-2017?
+nep %>% 
+  select(year, survey, anom_days) %>% 
+  group_by(year) %>% 
+  pivot_wider(names_from=survey, values_from=anom_days) %>% 
+  filter(year %in% seq(2015, 2017, 1))
+
+gg_nep_wt <- nep %>% 
+  ggplot() +
+  geom_rect(aes(xmin=2015, xmax=2017, ymin=-2, ymax=3), color="grey", fill="grey", alpha=0.5) +
+  geom_line(aes(x=year, y=wt_scale, color=title, fill=title)) +
+  geom_point(aes(x=year, y=wt_scale, color=title, fill=title), ) +
+  scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+theme_bw() + 
+  labs(x=NULL, y=NULL, title="Biomass") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x=element_blank())
+gg_nep_wt
+
+gg_nep_cti <- nep %>% 
+  ggplot() +
+  geom_rect(aes(xmin=2015, xmax=2017, ymin=-3, ymax=2), color="grey", fill="grey", alpha=0.5) +
+  geom_line(aes(x=year, y=cti_scale, color=title, fill=title)) +
+  geom_point(aes(x=year, y=cti_scale, color=title, fill=title), ) +
+  scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  theme_bw() + 
+  labs(x=NULL, y=NULL, title="Community Temperature Index") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x=element_blank())
+gg_nep_cti
+
+gg_nep_bray <- nep %>% 
+  ggplot() +
+  geom_rect(aes(xmin=2015, xmax=2017, ymin=0, ymax=0.3), color="grey", fill="grey", alpha=0.5) +
+  geom_line(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title)) +
+  geom_point(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title), ) +
+  scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  theme_bw() + 
+  labs(x=NULL, y=NULL, title="Community Dissimilarity") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+gg_nep_bray
+ggsave(gg_nep_wt, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_biomass.png"), scale=1.5)
+ggsave(gg_nep_cti, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_cti.png"), scale=1.5)
+ggsave(gg_nep_bray, width=70, height=33, units="mm", dpi=300, filename=here("figures","nepacific_bray.png"), scale=1.5)
 
 #if positive, subtract 360
 # haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
@@ -656,22 +770,22 @@ for(reg in survey_names$survey) {
   # plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
 }
 
-gg_mhw_biomass_hist <- survey_summary %>% 
-  mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
-  ggplot(aes(x=wt_mt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
-  geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) +
-  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
-  scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
-  theme_bw() + 
-  labs(x="Biomass log ratio", y="Frequency") +
-  theme(legend.position = "none",
-        legend.title = element_blank(),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank()
-  )
+# gg_mhw_biomass_hist <- survey_summary %>% 
+#   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
+#   ggplot(aes(x=wt_mt_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
+#   geom_freqpoly(binwidth=0.1, alpha=0.8, size=2) +
+#   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+#   scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+#   theme_bw() + 
+#   labs(x="Biomass log ratio", y="Frequency") +
+#   theme(legend.position = "none",
+#         legend.title = element_blank(),
+#         panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+#   )
 
 gg_mhw_biomass_point_marg <- survey_summary %>% 
   ggplot(aes(x=anom_days, y=wt_mt_log)) +
-  geom_point(aes(color=mhw_yes_no, group = mhw_yes_no), alpha=0.8) +
+  geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   geom_point(color="black") +
   geom_smooth(method="lm", color = "gray35") +
@@ -683,55 +797,52 @@ gg_mhw_biomass_point_marg <- survey_summary %>%
     legend.position = "none", 
     panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank())
-margplot <- ggMarginal(gg_mhw_biomass_point_marg,type="density", margins="y", groupColour = TRUE, yparams = list(size=2, alpha=0.5))
+margplot <- ggMarginal(gg_mhw_biomass_point_marg,type="density", margins="y", groupColour = TRUE, groupFill=TRUE, yparams=list(size=0.9))
 margplot
 
-
-
-
-gg_mhw_biomass_point_final <- survey_summary %>% 
+gg_mhw_biomass_point_final <- survey_summary %>%
   ggplot(aes(x=anom_days, y=wt_mt_log, group = mhw_yes_no)) +
   geom_point() +
   geom_smooth(method="lm", color = "gray35") +
-  # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+  # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) +
   #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
- # ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
-  theme_bw() + 
+  ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
+  theme_bw() +
   coord_cartesian(clip = "off") +
   labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-gg_mhw_biomass_point_final
+# gg_mhw_biomass_point_final
 
-# gg_mhw_cti_point_final <- survey_summary %>% 
+# gg_mhw_cti_point_final <- survey_summary %>%
 #   ggplot(aes(x=anom_days, y=cti_log, group = mhw_yes_no)) +
 #   geom_point() +
 #   geom_smooth(method="lm", color = "gray35") +
-#   # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) + 
+#   # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) +
 #   #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
 #   ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(cti_log)>0.3,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
-#   theme_bw() + 
+#   theme_bw() +
 #   coord_cartesian(clip = "off") +
 #   labs(x="Marine heatwave duration (days)", y="CTI log ratio") +
 #   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
 #   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 # gg_mhw_cti_point_final
 
-gg_mhw_biomass_box <- survey_summary %>% 
-  mutate(mhw_yes_no = recode(mhw_yes_no, no="No MHW", yes="MHW")) %>% 
-  ggplot(aes(x=mhw_yes_no, y=wt_mt_log, group=mhw_yes_no, color=mhw_yes_no)) +
-  geom_boxplot() +
-  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
-  # scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
-  theme_bw() + 
-  labs(x="", y="Biomass log ratio") +
-  theme(legend.position = "none", 
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-gg_mhw_biomass_box
+# gg_mhw_biomass_box <- survey_summary %>% 
+#   mutate(mhw_yes_no = recode(mhw_yes_no, no="No MHW", yes="MHW")) %>% 
+#   ggplot(aes(x=mhw_yes_no, y=wt_mt_log, group=mhw_yes_no, color=mhw_yes_no)) +
+#   geom_boxplot() +
+#   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+#   # scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+#   theme_bw() + 
+#   labs(x="", y="Biomass log ratio") +
+#   theme(legend.position = "none", 
+#         panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+# gg_mhw_biomass_box
 
-ggsave(gg_mhw_biomass_point_final, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=135, units="mm")
-ggsave(gg_mhw_biomass_box, scale=0.8, filename=here("figures","final_biomass_box.png"), width=50, height=50, units="mm")
-ggsave(gg_mhw_biomass_hist, scale=0.8, filename=here("figures","final_biomass_hist.png"), width=50, height=50, units="mm")
+ggsave(margplot, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=110, units="mm")
+# ggsave(gg_mhw_biomass_box, scale=0.8, filename=here("figures","final_biomass_box.png"), width=50, height=50, units="mm")
+# ggsave(gg_mhw_biomass_hist, scale=0.8, filename=here("figures","final_biomass_hist.png"), width=50, height=50, units="mm")
 
 reg_cti <- survey_summary %>% 
   select(CTI, ref_yr) %>% 
