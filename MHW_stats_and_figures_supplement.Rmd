@@ -8,6 +8,7 @@ editor_options:
   markdown: 
     wrap: 72
 bibliography: references.bib
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/nature.csl
 ---
 
 ```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
@@ -25,6 +26,8 @@ library(broom)
 library(mcp)
 library(lme4)
 library(mgcv)
+select <- dplyr::select
+
 # marine heatwave data for joining with survey data
 mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
 mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
@@ -94,6 +97,15 @@ lags <- modeldat %>%
          lag4 = lag(anom_days_scale, 4)) %>% 
   ungroup() %>% 
   select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3, lag4)
+
+# make colorblind friendly palettes for plots of single species 
+# http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
+
+cbpal6 <- c('#2271B2','#3DB7E9','#F748A5','#359B73','#D55E00',"black")
+# cbpal12 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") 
+
+# cbpal16 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
+
 ```
 
 ```{r, setup2, include=FALSE}
@@ -102,17 +114,21 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Supplementary Methods
+# Supplementary methods
+
+All code used to conduct this analysis is publicly available at
+<https://github.com/afredston/marine_heatwaves_trawl>. Raw datasets are
+publicly available at [DOI LINK].
 
 ## Trawl data preparation
 
 To compare biomass across surveys with different methods, it must be
-converted into an index of catch per unit effort (here, kg / km\^2). To
-estimate the fish biomass from each sample, the minimum required
-information is: taxa specific weight or abundance at length data, swept
-area or information to estimate it from sampling duration, sampled
-distance and gear opening. When species weight needed to be estimated
-from abundance at length data for ICES surveys, length-weight
+converted into an index of catch per unit effort (CPUE; here, kg /
+km^2^). To estimate the fish biomass from each sample, the minimum
+required information is: taxa specific weight or abundance at length
+data, swept area or information to estimate it from sampling duration,
+sampled distance and gear opening. When species weight needed to be
+estimated from abundance at length data for ICES surveys, length-weight
 relationships were retrieved from locally relevant areas from
 [FishBase](https://www.fishbase.se/). Missing swept area information was
 estimated when relevant based on survey variables such as sampling ship,
@@ -124,12 +140,69 @@ and experts was used to correct taxonomic names. We omitted survey-years
 with very few samples, a change in the area sampled, or other
 methodological inconsistencies, and only analyzed surveys that were
 conducted annually or biennially for at least ten consecutive
-survey-years. A total of 18 surveys were incorporated, with a total of
-202,819 hauls covering 2088 taxa before spatio-temporal standardization
-of each survey region. 80% of those taxa were identified to species, 12%
-to genus, and the remaining 8% to higher taxonomic levels. We used all
-of the taxa for biomass analyses but only the species-level records for
-community analyses.
+survey-years (methods detailed below). A total of 18 surveys were
+incorporated, with a total of 202,819 hauls covering 2088 taxa before
+spatio-temporal standardization of each survey region. 80% of those taxa
+were identified to species, 12% to genus, and the remaining 8% to higher
+taxonomic levels. We used all of the taxa for biomass analyses but only
+the species-level records for community analyses.
+
+Data cleaning scripts from the [FISHGLOB
+project](https://www.fondationbiodiversite.fr/en/the-frb-in-action/programs-and-projects/le-cesab/fishglob/)
+are summarized below and contained in [CODE LINK]:
+
+The marine heatwave analysis began with the harmonized FISHGLOB v1.1
+public dataset, and additional data trimming measures are summarized
+below and contained in
+[prep_trawl_data.R](https://github.com/afredston/marine_heatwaves_trawl/blob/main/prep_trawl_data.R):
+
+-   Omit surveys in FISHGLOBv1.1 that show very inconsistent sampling
+    patterns in the summary PDFs [PDF LINK]
+
+-   Calculate CPUE for the one region for which it is not calculated in
+    FISHGLOB already: the Northeast US. This region does not report
+    swept area, but staff at the survey agency (NOAA) use a fixed value
+    for the swept area for all hauls, regardless of haul duration (the
+    fixed value is standardized to a 30-minute haul). To make this a
+    more reasonable assumption, we omit hauls that were shorter than 25
+    minutes or longer than 35 minutes, and then calculate CPUE
+
+-   Manually trim out years for which, based on the summary PDFs, our
+    expert opinion is that survey methods were not consistent (e.g., far
+    fewer hauls than usual). This step most frequently omits the early
+    years of a survey, when methods and sampling intensity were not yet
+    standardized; these years may also be too early to match to
+    temperature data, and thus would have been omitted later in the
+    analysis anyway
+
+-   Remove surveys that have fewer than 10 years of data, as our focus
+    is temporal dynamics. This step removes three small surveys in
+    Canada
+
+-   Trim each survey to one season, i.e., the most consistently or
+    frequently sampled three-month interval
+
+-   Standardize spatial footprints over time for each survey by creating
+    hexagonal cells covering the Earth's surface, pairing each haul with
+    a cell, and retaining only hauls in the cells that were sampled
+    every year. Cells were created using the dggridR
+    package[@barnes2020a]. We used a cell resolution of 8, corresponding
+    to a cell area of 7,774 km^2^, for all regions except the Norway
+    survey. Norway conducts an extremely large-scale scientific trawl
+    survey that has operated in the Norwegian and Barents Seas for
+    decades. Because this survey is larger-scale than all of the others,
+    we used a cell resolution of 7 ( cell area of 23,323 km^2^) to
+    standardize the footprint of this survey
+
+-   Impute zeros for true absences in every instance where a species
+    ever observed in a survey was *not* encountered in a given haul
+
+-   Calculate species-specific mean CPUE as the mean of every CPUE for
+    that species in a given survey and year (i.e., average over hauls)
+
+-   Calculate species-specific mean depth as the mean of depths where
+    hauls occurred in a given survey and year, weighted by the species'
+    CPUE in each haul
 
 ## Power analysis
 
@@ -161,7 +234,7 @@ across regions.
 
 In addition to the geographical shifts that may lead to changes in
 biomass and community composition in a fixed area, marine fishes may
-shift deeper in response to warming (@chaikin2022 @dulvy2008). We tested
+shift deeper in response to warming@chaikin2022 @dulvy2008. We tested
 for this by calculating depth log ratios that describe whether
 assemblages have gotten deeper or shallower from one survey to the next.
 Depth log ratio was quantified by: 1. Taking an average of depths at
@@ -177,18 +250,18 @@ changes that do and do not follow a MHW (Fig.
 
 Marine communities across latitudes have responded differently to
 climate change, with some declines in species richness recorded in the
-tropics and at equatorward range edges (@chaudhary2021 @hastings2020)
-and some increases in species richness recorded in colder oceans and at
-poleward range edges (@hastings2020 @english). We also tested for
+tropics and at equatorward range edges@chaudhary2021 @hastings2020 and
+some increases in species richness recorded in colder oceans and at
+poleward range edges@hastings2020 @english. We also tested for
 latitudinal trends in biomass log ratios, finding that the direction or
 magnitude of biomass change was not related to the latitude of the
 region \@ref(fig:fig-lat-point).
 
-Species frequently exhibit individualistic responses to global change
-(@fredston2021). We explored whether species taxonomy, species traits,
-and regional identity help to predict species-level biomass change at
-all and in the context of marine heatwaves. All fish species traits were
-obtained from the database in (@beukhof2019). Of the
+Species frequently exhibit individualistic responses to global
+change@fredston2021. We explored whether species taxonomy, species
+traits, and regional identity help to predict species-level biomass
+change at all and in the context of marine heatwaves. All fish species
+traits were obtained from the database in@beukhof2019. Of the
 `r length(unique(survey_spp_summary$spp))` taxa used in the analysis,
 `r length(unique(tl$spp))` had trophic level data (used in Fig.
 \@ref(fig:fig-spp-tl)), `r length(unique(feed$spp))` had feeding mode
@@ -199,9 +272,9 @@ duration and biomass log ratio persists when data are grouped by trophic
 level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 \@ref(fig:fig-spp-feed)), or habitat (Fig. \@ref(fig:fig-spp-hab)).
 
-# Supplementary Tables
+# Supplementary tables
 
-```{r tab-models-wt, caption="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey."}
+```{r tab-models-wt, caption="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect."}
 options(modelsummary_get="easystats")
 
 # models of biomass and MHWs to compare 
@@ -263,6 +336,11 @@ models <- list(
 )
 
 modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value")) 
+```
+
+
+```{r tab-models-wt2, caption="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey."}
+
 modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value")) 
 
 # lagged effects of MHW duration on biomass, by survey 
@@ -357,9 +435,18 @@ modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat))
 modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat)) 
 ```
 
-# Supplementary Figures
+```{r tab-lm-spp, fig.cap="C", eval=FALSE}
+sppscaled <- survey_spp_summary %>% 
+  left_join(mhw_summary_sat_sst_5_day) %>% 
+  filter(wt_mt_log > -Inf, wt_mt_log < Inf) %>% 
+  mutate(log_scaled = scale(wt_mt_log, scale=TRUE, center=TRUE),
+         days_scaled = scale(anom_days, scale=TRUE, center=TRUE)) 
+summary(lm(formula = "wt_mt_log ~ survey + anom_days",data=sppscaled))
+lmer(formula = wt_mt_log ~ anom_days + (1|survey) + (anom_days|survey),data=sppscaled)
 
-## MHW metrics
+```
+
+# Supplementary figures
 
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and cumulative mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
 gg_mhw_metric <- survey_summary %>% 
@@ -445,7 +532,7 @@ gg_mhw_biomass_hist_depth <- survey_summary %>% inner_join(mhw_summary_sat_sst_5
 gg_mhw_biomass_hist_depth
 ```
 
-```{r fig-lat-point, fig.cap="Caption"}
+```{r fig-lat-point, fig.cap="Biomass change (log ratio) and MHW duration, color-coded by median latitude of each survey region."}
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
 
 gg_mhw_biomass_point_latitude <- survey_summary %>% inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
@@ -464,19 +551,7 @@ gg_mhw_biomass_point_latitude
 
 ```
 
-### Temporal lags
-
-Some studies find that marine communities respond rapidly to
-environmental change (e.g., @flanagan2019 ). Others suggest that
-ecological responses may lag disturbances for years (e.g., @babcock2010
-). We explored whether marine heatwave records from further into the
-past --- specifically, 1-2 and 2-3 years before each trawl survey ---
-predict biomass responses. Analogous to our findings for marine
-heatwaves that occur up to 12 months before each survey reported in the
-main text, we found no evidence that biomass change is associated with
-marine heatwave duration from prior years \@ref(fig:fig-lag-point) .
-
-```{r fig-lag-point, fig.cap="Caption"}
+```{r fig-lag-point, fig.cap="Biomass change (log ratio) and MHW duration calculated the preceding year as in the main text (0-12 months), a one-year lag (12-24 months), and a two-year lag (24-36 months)."}
 
 gg_mhw_biomass_point_lags <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
@@ -499,14 +574,24 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 gg_mhw_biomass_point_lags
 ```
 
-```{r tab-lm-spp, fig.cap="C", eval=FALSE}
-sppscaled <- survey_spp_summary %>% 
-  left_join(mhw_summary_sat_sst_5_day) %>% 
-  filter(wt_mt_log > -Inf, wt_mt_log < Inf) %>% 
-  mutate(log_scaled = scale(wt_mt_log, scale=TRUE, center=TRUE),
-         days_scaled = scale(anom_days, scale=TRUE, center=TRUE)) 
-summary(lm(formula = "wt_mt_log ~ survey + anom_days",data=sppscaled))
-lmer(formula = wt_mt_log ~ anom_days + (1|survey) + (anom_days|survey),data=sppscaled)
+```{r fig-nhaul-wt, fig.cap="Absolute value of biomass log ratios vs. sampling intensity, defined as the average number of samples (hauls) per year in each region."}
+hauldat <- haul_info %>% 
+  group_by(survey) %>% 
+  summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
+  mutate(hyr = Hauls/Years) 
+
+survey_summary %>% 
+  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
+  filter(!is.na(abs_wt_mt_log)) %>% 
+  left_join(hauldat, by="survey") %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=hyr, y=abs_wt_mt_log, group=survey)) +
+  geom_smooth(method="lm", aes(x=hyr, y=abs_wt_mt_log)) +
+  stat_regline_equation(aes(x=hyr, y=abs_wt_mt_log, label=..rr.label..)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x="Samples (hauls) per year", y="Absolute value of biomass change (log ratio)")
+  theme_bw()
+  NULL
 
 ```
 
@@ -550,138 +635,49 @@ ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt
 
 ```
 
-```{r fig-nep-spp, fig.cap="Biomass trends and historical MHWs in Northeast Pacific surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
-topspp_nep <- survey_spp_summary %>% 
-  filter(survey %in% c('EBS','GOA','WCANN','DFO-QCS')) %>% 
-  group_by(survey, spp) %>% 
-  summarise(tot = sum(wt_mt)) %>% 
-  arrange(-tot) %>% 
-  slice(1:5) %>% 
-  mutate(id = paste0(survey, spp))
+```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual.")}
 
-cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
+plot_spp <- function(x){
+  topspp <- survey_spp_summary %>% 
+    filter(survey == x) %>% 
+    group_by(spp, survey) %>% 
+    summarise(tot = sum(wt_mt)) %>% 
+    ungroup() %>% 
+    arrange(-tot) %>% 
+    slice(1:5) 
+  
+  plot_prep <- survey_spp_summary %>% 
+    filter(survey == topspp$survey, spp %in% topspp$spp) %>% 
+    group_by(year, spp, ref_yr, survey) %>% 
+    summarise(wt_mt = sum(wt_mt)) %>% 
+    ungroup() %>% 
+    bind_rows(survey_spp_summary %>% filter(survey == topspp$survey, !spp %in% topspp$spp) %>% group_by(year, ref_yr, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% 
+    inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+    group_by(survey, year) %>% 
+    mutate(tot = sum(wt_mt)) %>% # set up height for MHW rectangle
+    group_by(survey) %>% 
+    mutate(maxtot = max(tot)) %>% 
+    ungroup() %>% 
+    mutate(bar1 = ifelse(mhw_yes_no == "yes", maxtot, 0)) %>% 
+    left_join(survey_names) %>% 
+    mutate(spp = factor(spp, levels=c(topspp$spp, "Others")))
+  
+ reg_plot <-  ggplot() +
+    geom_area(data=plot_prep, aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+    geom_col(data=plot_prep %>% select(year, bar1) %>% distinct(), aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+    scale_color_manual(values=cbpal6) +
+    scale_fill_manual(values=cbpal6) +
+    theme_bw() + 
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+          legend.position="right",
+          legend.title = element_blank()) + 
+    labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$title) +
+    NULL
+ 
+ print(reg_plot)
+}
 
-cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
-
-survey_spp_summary %>% 
-  mutate(id = paste0(survey, spp)) %>% 
-  filter(id %in% topspp_nep$id) %>% 
-  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nep$survey, !spp %in% topspp_nep$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  group_by(survey, year) %>% 
-  mutate(tot = sum(wt_mt)) %>% # set up height for MHW rectangle
-  group_by(survey) %>% 
-  mutate(maxtot = max(tot)) %>% 
-  ungroup() %>% 
-  mutate(bar1 = ifelse(mhw_yes_no == "yes", maxtot, 0)) %>% 
-  left_join(survey_names) %>% 
-  ggplot() +
-  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
-  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
- #  coord_cartesian(ylim=c(0,30)) +
-  scale_color_manual(values=cbpal2) +
-  scale_fill_manual(values=cbpal2) +
-    facet_wrap(~title, scales = "free", ncol=1) +
-  theme_bw() + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.position="right",
-        legend.title = element_blank()) + 
-  labs(x="Year",y="Biomass (mt)") +
-  NULL
-
-# survey_spp_summary %>% 
-#   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-#     filter(survey %in% c('EBS','GOA','AI'),
-#            spp %in% topspp$spp,
-#          wt_mt_log > -Inf, 
-#          wt_mt_log < Inf) %>% 
-#   bind_rows(survey_summary %>% filter(survey %in% c('EBS','GOA','AI')) %>% select(ref_yr, year, survey, wt_mt_log) %>% distinct() %>% mutate(spp="All") %>% filter(!is.na(wt_mt_log))) %>% 
-#   mutate(bar1 = ifelse(mhw_yes_no == "yes", max(wt_mt_log), 0), 
-#          bar2 = ifelse(mhw_yes_no == "yes", min(wt_mt_log), 0)) %>% 
-#   ggplot() +
-#   geom_col(aes(x=year, y=bar1), color="grey70", line = "white") +
-#   geom_col(aes(x=year, y=bar2), color="grey70", line = "white") +
-#   geom_line(aes(x=year, y=wt_mt_log, color=spp)) + 
-#   scale_y_continuous(limits=c(-5.5, 5.5), breaks=seq(-5, 5, 1)) +
-#   scale_color_manual(values=cbpal) +
-#   facet_wrap(~survey) +
-#   theme_bw() + 
-#     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#           legend.position="bottom") + 
-#   labs(x="Year",y="Biomass log ratio") +
-# NULL
-
+spp_plots <- purrr::map(survey_names$survey, ~plot_spp(.x))
 ```
 
-```{r fig-nwa-spp, fig.cap="Biomass trends and historical MHWs in Northwest Atlantic surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
-topspp_nwa <- survey_spp_summary %>% 
-  filter(survey %in% c('NEUS','GSL-S','GMEX','SEUS','SCS')) %>% 
-  group_by(survey, spp) %>% 
-  summarise(tot = sum(wt_mt)) %>% 
-  arrange(-tot) %>% 
-  slice(1:5) %>% 
-  mutate(id = paste0(survey, spp))
-
-cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
-
-cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
-
-survey_spp_summary %>% 
-  mutate(id = paste0(survey, spp)) %>% 
-  filter(id %in% topspp_nwa$id) %>% 
-  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nwa$survey, !spp %in% topspp_nwa$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  left_join(survey_names) %>% 
-  ggplot() +
-  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
-  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
-  scale_y_continuous(limits=c(0,30), breaks=seq(0, 30, 5)) +
-  scale_color_manual(values=cbpal2) +
-  scale_fill_manual(values=cbpal2) +
-    facet_wrap(~title, scales = "free", ncol=1) +
-  theme_bw() + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.position="right",
-        legend.title = element_blank()) + 
-  labs(x="Year",y="Biomass (mt)") +
-  NULL
-
-```
-
-
-```{r fig-nea-spp, fig.cap="Biomass trends and historical MHWs in Northeast Atlantic surveys. The top five taxa by biomass are highlighted in each survey. Shaded grey rectangles represent MHWs that occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). Eastern Bering Sea and West Coast US are annual surveys. Gulf of Alaska is a biennial survey."}
-topspp_nea <- survey_spp_summary %>% 
-  filter(survey %in% c('Nor-BTS','NS-IBTS','SWC-IBTS','EVHOE','FR-CGFS','BITS','IE-IGFS','PT-IBTS','NIGFS')) %>% 
-  group_by(survey, spp) %>% 
-  summarise(tot = sum(wt_mt)) %>% 
-  arrange(-tot) %>% 
-  slice(1:5) %>% 
-  mutate(id = paste0(survey, spp))
-
-cbpal1 <- c("#9F0162","#009F81","#FF5AAF","#00FCCF","#8400CD","#008DF9","gray50","#00C2F9","#FFB2FD","#A40122","#E20134","#FFC33B") # http://mkweb.bcgsc.ca/colorblind/palettes.mhtml#page-container
-
-cbpal2 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
-
-
-survey_spp_summary %>% 
-  mutate(id = paste0(survey, spp)) %>% 
-  filter(id %in% topspp_nea$id) %>% 
-  bind_rows(survey_spp_summary %>% filter(survey %in% topspp_nea$survey, !spp %in% topspp_nea$spp) %>% group_by(ref_yr, year, survey) %>% summarise(wt_mt = sum(wt_mt)) %>% mutate(spp="Others")) %>% # get "others" group 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
-  left_join(survey_names) %>% 
-  ggplot() +
-  geom_area(aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
-  geom_col(aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
-  scale_y_continuous(limits=c(0,30), breaks=seq(0, 30, 5)) +
-  scale_color_manual(values=cbpal2) +
-  scale_fill_manual(values=cbpal2) +
-    facet_wrap(~title, scales = "free", ncol=1) +
-  theme_bw() + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.position="right",
-        legend.title = element_blank()) + 
-  labs(x="Year",y="Biomass (mt)") +
-  NULL
-
-```
 # References
