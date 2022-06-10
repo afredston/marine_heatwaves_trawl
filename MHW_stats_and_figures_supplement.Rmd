@@ -274,7 +274,7 @@ level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 
 # Supplementary tables
 
-```{r tab-models-wt, caption="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect."}
+```{r tab-models-wt}
 options(modelsummary_get="easystats")
 
 # models of biomass and MHWs to compare 
@@ -335,13 +335,13 @@ models <- list(
   "GAM Lag 4" = mlag4(lags)
 )
 
-modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value")) 
+modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect.") 
 ```
 
 
-```{r tab-models-wt2, caption="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey."}
+```{r tab-models-wt2}
 
-modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value")) 
+modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey.") 
 
 # lagged effects of MHW duration on biomass, by survey 
 # wt_gam_lag_surv <- NULL
@@ -416,43 +416,32 @@ sppmodels <- list(
   "LME-4" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + (1|survey), data = topspp),
   "LME-5" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + spp5 + (1|survey), data = topspp))
 
-modelsummary(sppmodels, metrics=c('Num.Obs','R2','AIC','Log.Lik.','F','RMSE'))
+modelsummary(sppmodels, metrics=c('Num.Obs','R2','AIC','Log.Lik.','F','RMSE'), title="Linear mixed-effect models of overall biomass as predicted by single-species biomass, with survey identity included as a random intercept. All models were fitted to scaled and centered biomass values. Model names correspond to the number of species used as predictors. Species were ranked by from highest overall biomass in the survey to lowest.")
 ```
 
-```{r tab-models-cti, caption="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey."}
+```{r tab-models-cti}
 modelsummary(list(
   "LM" = lm(cti_log_scale ~ anom_days_scale, data = modeldat),
   "LME" = lmer(cti_log_scale ~ anom_days_scale + 1|survey, data = modeldat)
-))
+), title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey.")
 ```
 
-```{r tab-models-depth, caption="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered."}
+```{r tab-models-depth}
 # LM of MHW duration on depth (MHW-years only)
-modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat))
+modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat), title="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered.")
 ```
 
-```{r tab-models-lat, caption="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered."}
-modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat)) 
-```
-
-```{r tab-lm-spp, fig.cap="C", eval=FALSE}
-sppscaled <- survey_spp_summary %>% 
-  left_join(mhw_summary_sat_sst_5_day) %>% 
-  filter(wt_mt_log > -Inf, wt_mt_log < Inf) %>% 
-  mutate(log_scaled = scale(wt_mt_log, scale=TRUE, center=TRUE),
-         days_scaled = scale(anom_days, scale=TRUE, center=TRUE)) 
-summary(lm(formula = "wt_mt_log ~ survey + anom_days",data=sppscaled))
-lmer(formula = wt_mt_log ~ anom_days + (1|survey) + (anom_days|survey),data=sppscaled)
-
+```{r tab-models-lat}
+modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat), title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered.") 
 ```
 
 # Supplementary figures
 
-```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and cumulative mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
+```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
 gg_mhw_metric <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
   pivot_longer(cols=c(anom_days, anom_sev, anom_int), values_to = "value", names_to = "metric") %>% 
-  mutate(metric = recode(metric, anom_days='Duration (days)',anom_sev= 'Severity (°C)',anom_int= 'Cumulative mean intensity (°C/day)')) %>% 
+  mutate(metric = recode(metric, anom_days='Duration (days)',anom_sev= 'Severity (°C)',anom_int= 'Mean intensity (°C/day)')) %>% 
   ggplot(aes(x=value, y=wt_mt_log)) +
   geom_point() + 
   geom_smooth(method="lm") +
@@ -674,10 +663,11 @@ plot_spp <- function(x){
     labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$title) +
     NULL
  
- print(reg_plot)
+# print(reg_plot)
 }
 
 spp_plots <- purrr::map(survey_names$survey, ~plot_spp(.x))
+print(spp_plots)
 ```
 
 # References

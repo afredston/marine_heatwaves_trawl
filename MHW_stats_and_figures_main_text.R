@@ -152,6 +152,14 @@ summary(lm_cti)
 # what percentage of biomass changes after MHWs fall within one SD of the mean change after no MHW?
 length(abs(wt_mhw)[abs(wt_mhw)<sd(wt_no_mhw)]) / length(abs(wt_mhw))
 
+# how many taxa had STI values?
+survey_spp_summary %>% 
+  select(spp, STI) %>% 
+  distinct() %>% 
+  mutate(STItest = ifelse(is.na(STI), "no","yes")) %>% 
+  group_by(STItest) %>% 
+  summarise(n=n())
+
 # CTI stats
 
 # Scotland
@@ -197,12 +205,10 @@ survey_summary %>%
   mutate(cti_change = ifelse(cti_log<0, "cold","warm")) %>% 
   group_by(cti_change) %>% 
   summarise(n=n())
-  
+
 ###########
 # power analysis
 ###########
-
-# STEP 1: simulate data for each region with gamma from Cheung et al. 2021
 
 powerdat <- survey_summary %>%
   group_by(survey) %>% 
@@ -213,64 +219,74 @@ powerdat <- survey_summary %>%
 # pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = 0.8, type="one.sample") 
 # pwr.t.test(n = nrow(survey_summary), d = d, sig.level = 0.05, power = NULL, type="one.sample") 
 
+library(doParallel)
+detectCores()
+registerDoParallel(cores=4)
+
 powerout <- NULL
-for(surv in survey_names$survey){
-  Data = powerdat %>% filter(survey==surv)
-  Gompertz = lm( log(wt) ~ 1 + log(lagwt) + mhw_yes_no, data=Data )
-  
-  # Gompertz parameters
-  alpha = Gompertz$coef['(Intercept)']
-  beta = Gompertz$coef['log(lagwt)']
-  conditional_sd = sqrt(mean(Gompertz$residuals^2))
-  
-  # set simulation length 
-  n_years = 110
-  
-  # MHW frequency and intensity
-  prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
-  #gamma = Gompertz$coef['mhw_yes_noyes']
-  gamma = log(0.94) # from Cheung et al. 2021
-  
-  # Stationary properties (for initial condition)
-  marginal_sd = conditional_sd / (1-beta)^2
-  marginal_mean = alpha / (1-beta)
-  
-  #
-  logB_t = rep(NA,n_years)
-  MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
-  
-  # Initialize
-  #  logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
-  logB_t[1] = mean = marginal_mean # variance was too big for initializing 
-  
-  # Project
-  #  Gompertz:  log(N(t+1)) = alpha + beta * log(N(t)) + effects + error
-  for( tI in 2:n_years){
-    logB_t[tI] = alpha + beta*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
-  }
-  
-  tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = gamma, survey = unique(Data$survey))
-  
-  powerout <- rbind(powerout, tmp)
-}
+pwr_results <- NULL
+iter <- 100
+trialyrs <- seq(20, 200, 20)
 
-# STEP 2: analyze that data the same way we did the actual data 
-
-powertest <- powerout %>% 
-  group_by(survey) %>% 
-  arrange(year) %>% 
-  mutate(wt_mt_log = log(wt / lag(wt))) %>% 
-  filter(wt_mt_log > -Inf, wt_mt_log < Inf) 
-
-powertest_mhw <- powertest %>% 
-  filter(mhw_yes_no == 1) %>% 
-  pull(wt_mt_log)
-
-powertest_no_mhw <- powertest %>% 
-  filter(mhw_yes_no == 0) %>% 
-  pull(wt_mt_log)
-
-t.test(powertest_no_mhw, powertest_mhw) 
+# pwrout <- foreach(i = seq(1, iter, 1), surv = survey_names$survey, )
+for(i in 1:iter){
+  for(surv in survey_names$survey){
+    
+    # STEP 1: simulate data for each region with gamma from Cheung et al. 2021
+    
+    Data = powerdat %>% filter(survey==surv)
+    Gompertz = lm( log(wt) ~ 1 + log(lagwt) + mhw_yes_no, data=Data )
+    
+    # Gompertz parameters
+    alpha = Gompertz$coef['(Intercept)']
+    beta = Gompertz$coef['log(lagwt)']
+    conditional_sd = sqrt(mean(Gompertz$residuals^2))
+    
+    # MHW frequency and intensity
+    prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
+    #gamma = Gompertz$coef['mhw_yes_noyes']
+    gamma = log(0.94) # from Cheung et al. 2021
+    
+    # Stationary properties (for initial condition)
+    marginal_sd = conditional_sd / (1-beta)^2
+    marginal_mean = alpha / (1-beta)
+    
+    for(j in trialyrs){
+      
+      n_years = j
+      logB_t = rep(NA,n_years)
+      MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
+      
+      # Initialize
+      logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+      # logB_t[1] = marginal_mean # variance was too big for initializing 
+      
+      # Project every year 
+      #  Gompertz:  log(N(t+1)) = alpha + beta * log(N(t)) + effects + error
+      for( tI in 2:n_years){
+        logB_t[tI] = alpha + beta*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+      }
+      
+      # set up dataframe to write out the results 
+      tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = gamma, survey = unique(Data$survey), iter = i) %>% 
+        arrange(year) %>% 
+        mutate(wt_mt_log = log(wt / lag(wt))) 
+      
+     #  powerout <- rbind(powerout, tmp)
+      # this dataframe just got too big so I'm not writing it out anymore 
+      
+      # STEP 2: analyze that data the same way we did the actual data
+    
+      # do a t-test to see if there is a difference in biomass log ratio in MHW vs non-MHW years, like we do in the main analysis 
+      
+      tmp_mhw <- tmp %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 1) %>% pull(wt_mt_log)
+      tmp_no_mhw <- tmp %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 0) %>% pull(wt_mt_log)
+          tmpt <- t.test(tmp_no_mhw, tmp_mhw)
+          tmpdat <- tibble(t = tmpt$statistic, df = tmpt$parameter, p.value = tmpt$p.value, mean_no_mhw = mean(tmp_no_mhw), mean_mhw = mean(tmp_mhw), iter = i, n_years = n_years, gamma = gamma, survey = unique(Data$survey))
+          pwr_results <- rbind(pwr_results, tmpdat)
+        } # close j loop (nyears)
+      } # close survey loop
+    } # close iteration loop 
 
 # STEP 3: given the data we have, what effect size could we detect? 
 
@@ -469,7 +485,7 @@ gg_nep_wt <- nep %>%
   geom_point(aes(x=year, y=wt_scale, color=title, fill=title), ) +
   scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
   scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
-theme_bw() + 
+  theme_bw() + 
   labs(x=NULL, y=NULL, title="Biomass") +
   theme(
     panel.grid.major = element_blank(), 
@@ -497,17 +513,21 @@ gg_nep_bray <- nep %>%
   geom_rect(aes(xmin=2015, xmax=2017, ymin=0, ymax=0.3), color="grey", fill="grey", alpha=0.5) +
   geom_line(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title)) +
   geom_point(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title), ) +
-  scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
-  scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF"), guide="none") +
+  scale_fill_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF")) +
+  scale_color_manual(values=c("#F74F57","#FDBE43","#B8EFB8","#5DAAFF")) +
   theme_bw() + 
   labs(x=NULL, y=NULL, title="Community Dissimilarity") +
   theme(
     panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank())
+    panel.grid.minor = element_blank(),
+    legend.position="bottom",
+    legend.margin=margin(),
+    legend.title = element_blank()) +
+  guides(fill=guide_legend(nrow=2))
 gg_nep_bray
 ggsave(gg_nep_wt, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_biomass.png"), scale=1.5)
 ggsave(gg_nep_cti, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_cti.png"), scale=1.5)
-ggsave(gg_nep_bray, width=70, height=33, units="mm", dpi=300, filename=here("figures","nepacific_bray.png"), scale=1.5)
+ggsave(gg_nep_bray, width=70, height=42, units="mm", dpi=300, filename=here("figures","nepacific_bray.png"), scale=1.5)
 
 #if positive, subtract 360
 # haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
