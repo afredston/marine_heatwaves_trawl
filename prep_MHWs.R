@@ -211,7 +211,7 @@ mhw_summary_sat_sst_any <- mhw_sat_sst %>%
   summarise(
     anom_days = sum(anom>0, na.rm=TRUE),# count number of non-NA anomaly days 
     anom_sev = sum(anom, na.rm=TRUE), # add up total anomaly values
-    anom_int = anom_sev / anom_days # calculate cumulative mean intensity for every survey*year 
+    anom_int = anom_sev / anom_days # calculate mean intensity for every survey*year 
   ) %>% 
   group_by(ref_yr) %>% 
   mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
@@ -281,7 +281,7 @@ mhw_calendar_sat_sst_any <- sat_sst %>%
   summarise(
     anom_days = sum(anom>0, na.rm=TRUE),# count number of non-NA anomaly days 
     anom_sev = sum(anom, na.rm=TRUE), # add up total anomaly values
-    anom_int = anom_sev / anom_days # calculate cumulative mean intensity for every survey*year 
+    anom_int = anom_sev / anom_days # calculate mean intensity for every survey*year 
   ) %>% 
   group_by(survey, year) %>% 
   mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
