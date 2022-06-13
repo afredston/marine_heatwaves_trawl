@@ -36,6 +36,7 @@ biomass_time_temporal_beta <- biomass_time_temporal_beta[
         ,bray_dissimilarity_nestedness := as.numeric()][
       ,jaccard_dissimilarity_total := as.numeric()][
         ,bray_dissimilarity_total := as.numeric()][
+          , jaccard_dissimilarity_total_compare_first_year := as.numeric()][
           , delta_richness := as.numeric()][
             ,richness_percent_change := as.numeric()
           ]
@@ -62,6 +63,7 @@ for (i in 1:length(survey_names)) {
                                    "jaccard_dissimilarity_nestedness",
                                    "bray_dissimilarity_nestedness",
                                    "jaccard_dissimilarity_total",
+                                   "jaccard_dissimilarity_total_compare_first_year",
                                    "bray_dissimilarity_total",
                                    "delta_richness","richness_percent_change") := NA]
       
@@ -75,9 +77,12 @@ for (i in 1:length(survey_names)) {
       #subset previous year
       biomass_time_survey_year_prev <- biomass_time_survey[year == survey_years[j-1],]
       
+      #subset first year
+      biomass_time_survey_year_ONE <- biomass_time_survey[year == survey_years[1],]
+      
       #reclassify all values > 0 --> 1
       biomass_time_survey_year_prev.occurrence <- biomass_time_survey_year_prev[,pres_abs := ifelse(wtcpue_mean > 0,1,wtcpue_mean)]
-      
+      biomass_time_survey_year_ONE.occurrence <- biomass_time_survey_year_ONE[,pres_abs := ifelse(wtcpue_mean > 0,1,wtcpue_mean)]
       
       #make current year into community matrix for abundance data
       biomass_time_survey_year.w <- dcast(biomass_time_survey_year, year ~ accepted_name, value.var = "wtcpue_mean") 
@@ -88,6 +93,11 @@ for (i in 1:length(survey_names)) {
       biomass_time_survey_year.occurrence.w <- dcast(biomass_time_survey_year.occurrence, year ~ accepted_name, value.var = "pres_abs") 
       rownames(biomass_time_survey_year.occurrence.w) <- biomass_time_survey_year.occurrence.w$year #name rows
       biomass_time_survey_year.occurrence.w[,year := NULL] #delete year column
+      
+      #make first year into community matrix for occurrence data
+      biomass_time_survey_year_ONE.occurrence.w <- dcast(biomass_time_survey_year_ONE.occurrence, year ~ accepted_name, value.var = "pres_abs") 
+      rownames(biomass_time_survey_year_ONE.occurrence.w) <- biomass_time_survey_year_ONE.occurrence.w$year #name rows
+      biomass_time_survey_year_ONE.occurrence.w[,year := NULL] #delete year column
       
       #make previous year into community matrix for abundance data
       biomass_time_survey_year_prev.w <- dcast(biomass_time_survey_year_prev, year ~ accepted_name, value.var = "wtcpue_mean")
@@ -105,7 +115,11 @@ for (i in 1:length(survey_names)) {
       
       #calculate temporal change in community composition using beta.pair using occurrence data (jaccard)
       jaccard_dissimilarity <- beta.pair(rbind(biomass_time_survey_year_prev.occurrence.w, biomass_time_survey_year.occurrence.w),  index.family = "jaccard")
+
+      #calculate temporal change to first year in community composition using beta.pair using occurrence data (jaccard)
+      jaccard_dissimilarity.yearone <- beta.pair(rbind(biomass_time_survey_year_ONE.occurrence.w, biomass_time_survey_year.occurrence.w),  index.family = "jaccard")
       
+
       #raw richness
       richness <- sum(biomass_time_survey_year[,pres_abs]) #current year
       richness_prev <- sum(biomass_time_survey_year_prev[,pres_abs]) #previous year
@@ -117,6 +131,7 @@ for (i in 1:length(survey_names)) {
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "bray_dissimilarity_nestedness"] <- bray_dissimilarity[[2]]
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "jaccard_dissimilarity_total"] <- jaccard_dissimilarity[[3]]
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "bray_dissimilarity_total"] <- bray_dissimilarity[[3]]
+      biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "jaccard_dissimilarity_total_compare_first_year"] <- jaccard_dissimilarity.yearone[[3]]
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "delta_richness"] <- richness-richness_prev
       biomass_time_temporal_beta[(survey == survey_names[i] & year == survey_years[j]), "richness_percent_change"] <- (richness-richness_prev)/richness_prev
       
