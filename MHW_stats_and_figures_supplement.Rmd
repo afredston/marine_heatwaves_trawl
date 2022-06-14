@@ -207,15 +207,16 @@ below and contained in
 ## Power analysis
 
 We simulated data to assess whether our study had sufficient power to
-detect MHW-driven biomass changes. We fitted an autoregressive linear
-model of log biomass over time (Gompertz model) to each region's biomass
-data, including MHW presence/absence as a predictor. We extracted the
-slope $\beta$, intercept $\alpha$, and conditional standard deviation
-$\sigma$ of this model, and used them to simulate data from the same
-Gompertz model
+detect MHW-driven biomass changes (see
+[power_analysis.R](https://github.com/afredston/marine_heatwaves_trawl/blob/main/power_analysis.R)).
+We fitted an autoregressive linear model of log biomass over time
+(Gompertz model) to each region's biomass data, including MHW
+presence/absence as a predictor. We extracted the coefficient $\rho$,
+intercept $\alpha$, and conditional standard deviation $\sigma$ of this
+model, and used them to simulate data from the same Gompertz model
 
 $$
-log(B_t) = \alpha + \beta \times log( B_{t-1} ) + \gamma \times MHW_t + \sigma'
+log(B_t) = \alpha + \rho \times log( B_{t-1} ) + \gamma \times MHW_t + \sigma'
 $$
 
 where $B$ represents biomass, $MHW$ is a binary variable for MHW
@@ -223,19 +224,36 @@ presence/absence, and $\gamma$ represents the "true" MHW effect that we
 vary to explore power. This simulation also includes an error term
 $\sigma'$ calculated as a random draw from a normal distribution with
 mean 0 and standard deviation $\sigma$. We (1) varied the number of
-years the simulation needed to be run to detect a fixed MHW effect
-$\gamma$ and (2) calculated the MHW effect size that could be detected
-given the actual number of years of data we have. For both of these
-calculations, simulations were run for each region individually,
-converted into log ratio units (used in the main text), and pooled
-across regions.
+years the simulation was run (assuming that each region was sampled for
+the same number of years) from 10 to 100 in 10-year intervals with a
+fixed value of $\gamma = ln(0.94)$, corresponding to the 6% loss of
+biomass predicted by @cheung2021, and (2) varied $\gamma$ to represent
+biomass losses of 5% to 50% (in 5% intervals, although we also included
+a $\gamma = ln(0.94)$ trial to correspond to @cheung2021 ) given the
+actual number of years of data we have for each region (*n* =
+`r nrow(survey_summary)`). For both of these tests, simulations were run
+for each region individually, converted into log ratio units (used in
+the main text), and pooled across regions. Each set of simulations was
+run 1000 times for each condition (region and either number of years or
+$\gamma$).
+
+With these two simulated datasets---annual, regional biomass with a true
+MHW effect on biomass of -6% and variable numbers of years, and annual,
+regional biomass with a fixed number of years from the real dataset and
+a variable effect of MHW on biomass from -5% to -50%---we conducted the
+same statistical tests as we did in the main text to look for an effect.
+For every simulation iteration, we split the biomass log ratio data into
+MHW and non-MHW years and compared the two with a t-test. We then
+calculated what proportion of those tests were significant
+($p <= 0.05$).
 
 ## Additional predictors
 
 In addition to the geographical shifts that may lead to changes in
 biomass and community composition in a fixed area, marine fishes may
-shift deeper in response to warming@chaikin2022 @dulvy2008. We tested
-for this by calculating depth log ratios that describe whether
+shift deeper in response to
+[warming\@chaikin2022](mailto:warming@chaikin2022){.email} @dulvy2008.
+We tested for this by calculating depth log ratios that describe whether
 assemblages have gotten deeper or shallower from one survey to the next.
 Depth log ratio was quantified by: 1. Taking an average of depths at
 which a species was found in each survey and year, using the depth
@@ -250,18 +268,20 @@ changes that do and do not follow a MHW (Fig.
 
 Marine communities across latitudes have responded differently to
 climate change, with some declines in species richness recorded in the
-tropics and at equatorward range edges@chaudhary2021 @hastings2020 and
-some increases in species richness recorded in colder oceans and at
-poleward range edges@hastings2020 @english. We also tested for
-latitudinal trends in biomass log ratios, finding that the direction or
-magnitude of biomass change was not related to the latitude of the
-region \@ref(fig:fig-lat-point).
+tropics and at equatorward range
+[edges\@chaudhary2021](mailto:edges@chaudhary2021){.email} @hastings2020
+and some increases in species richness recorded in colder oceans and at
+poleward range [edges\@hastings2020](mailto:edges@hastings2020){.email}
+@english. We also tested for latitudinal trends in biomass log ratios,
+finding that the direction or magnitude of biomass change was not
+related to the latitude of the region \@ref(fig:fig-lat-point).
 
 Species frequently exhibit individualistic responses to global
-change@fredston2021. We explored whether species taxonomy, species
-traits, and regional identity help to predict species-level biomass
-change at all and in the context of marine heatwaves. All fish species
-traits were obtained from the database in@beukhof2019. Of the
+[change\@fredston2021](mailto:change@fredston2021){.email}. We explored
+whether species taxonomy, species traits, and regional identity help to
+predict species-level biomass change at all and in the context of marine
+heatwaves. All fish species traits were obtained from the database
+[in\@beukhof2019](mailto:in@beukhof2019){.email}. Of the
 `r length(unique(survey_spp_summary$spp))` taxa used in the analysis,
 `r length(unique(tl$spp))` had trophic level data (used in Fig.
 \@ref(fig:fig-spp-tl)), `r length(unique(feed$spp))` had feeding mode
@@ -337,7 +357,6 @@ models <- list(
 
 modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect.") 
 ```
-
 
 ```{r tab-models-wt2}
 
@@ -453,7 +472,7 @@ gg_mhw_metric <- survey_summary %>%
 gg_mhw_metric
 ```
 
-```{r fig-mhw-alt, fig.cap="Biomass change (log ratio) and MHW severity from three data products. Severity is calculated as the total anomaly (°C) over the 12-month interval to which each biomass log ratio is paired. Note that the greater magnitude of severity values in OISST (see x-axis) are due to its higher (daily) temporal resolution revealing greater temperature anomalies than those that appear in the monthly SODA datasets."}
+```{r fig-mhw-alt, fig.cap="Biomass change (log ratio) and MHW severity from three data products. Here, we consider all anomaly-days in OISST to be MHWs, regardless of MHW duration (i.e., no 5-day cutoff). Severity is calculated as the total anomaly (°C) over the 12-month interval to which each biomass log ratio is paired. Note that the greater magnitude of severity values in OISST (see x-axis) are due to its higher (daily) temporal resolution revealing greater temperature anomalies than those that appear in the monthly SODA datasets."}
 gg_mhw_alt <- mhw_summary_soda_sbt%>% 
   mutate(source = "SODA SBT") %>% 
   select(-anomMonths) %>% 
@@ -563,23 +582,27 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 gg_mhw_biomass_point_lags
 ```
 
-```{r fig-nhaul-wt, fig.cap="Absolute value of biomass log ratios vs. sampling intensity, defined as the average number of samples (hauls) per year in each region."}
-hauldat <- haul_info %>% 
+```{r fig-nhaul-wt, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Absolute value of biomass log ratios vs. sampling intensity, defined as the average number of samples (hauls) per year in each region. The relationship between biomass log ratio magnitude and sampling is highly significant (p < 0.001)."}
+hauldat_prep <- haul_info %>% 
   group_by(survey) %>% 
   summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
   mutate(hyr = Hauls/Years) 
 
-survey_summary %>% 
+hauldat <- survey_summary %>% 
   mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
   filter(!is.na(abs_wt_mt_log)) %>% 
-  left_join(hauldat, by="survey") %>% 
+  left_join(hauldat_prep, by="survey")
+
+haullm <- glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
+
+hauldat %>% 
   ggplot() + 
   geom_boxplot(aes(x=hyr, y=abs_wt_mt_log, group=survey)) +
   geom_smooth(method="lm", aes(x=hyr, y=abs_wt_mt_log)) +
   stat_regline_equation(aes(x=hyr, y=abs_wt_mt_log, label=..rr.label..)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
-  labs(x="Samples (hauls) per year", y="Absolute value of biomass change (log ratio)")
-  theme_bw()
+  labs(x="Samples (hauls) per year", y="Absolute value of biomass change (log ratio)") +
+  theme_bw() +
   NULL
 
 ```
