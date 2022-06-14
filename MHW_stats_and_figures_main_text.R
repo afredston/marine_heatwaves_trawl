@@ -223,6 +223,17 @@ cor.test(
 # community turnover
 ############
 
+#total dissimilarity in comparison to the first year for EBS and Scottish Sea for comparisons 
+#(Total Jaccard Dissimilarity and Total Bray Dissimilarity)
+
+#EBS
+summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "EBS")))
+summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "EBS")))
+
+#SWC-IBTS
+summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
+summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
+
 
 # community turnover using biomass metrics
 bc_mhw_turnover <- beta_div %>% 
@@ -247,11 +258,29 @@ summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
     summary(lm(bray_dissimilarity_turnover ~ anom_days,
                data=beta_div %>% filter(survey == "EBS")))
     
-    #mean values
+    #turnover just for EBS mean values
     beta_div_ebs <- beta_div %>%
       filter(survey == "EBS")
     
     mean(beta_div_ebs$bray_dissimilarity_turnover, na.rm = T)
+    
+    #turnover just for Scottish Sea
+    bc_mhw_turnover_swc_ibts <- beta_div %>% 
+      filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
+      pull(bray_dissimilarity_turnover)
+    bc_no_mhw_turnover_swc_ibts <- beta_div %>% 
+      filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
+      pull(bray_dissimilarity_turnover)
+    
+    t.test(bc_mhw_turnover_swc_ibts, bc_no_mhw_turnover_swc_ibts)
+    summary(lm(bray_dissimilarity_turnover ~ anom_days,
+               data=beta_div %>% filter(survey == "SWC-IBTS")))
+    
+    #mean values
+    beta_div_swc_ibts <- beta_div %>%
+      filter(survey == "SWC-IBTS")
+    
+    mean(beta_div_swc_ibts$bray_dissimilarity_turnover, na.rm = T)
 
 #community nestedness using biomass metrics
 bc_mhw_nestedness <- beta_div %>% 
@@ -281,6 +310,24 @@ summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
       filter(survey == "EBS")
 
     mean(beta_div_ebs$bray_dissimilarity_nestedness, na.rm = T)
+    
+    #community nestedness just for SWC-IBTS
+    bc_mhw_nestedness_swc_ibts <- beta_div %>% 
+      filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
+      pull(bray_dissimilarity_nestedness)
+    bc_no_mhw_nestedness_swc_ibts <- beta_div %>% 
+      filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
+      pull(bray_dissimilarity_nestedness)
+    
+    t.test(bc_mhw_nestedness_swc_ibts, bc_no_mhw_nestedness_swc_ibts)
+    summary(lm(bray_dissimilarity_nestedness ~ anom_days,
+               data=beta_div %>% filter(survey == "SWC-IBTS")))
+    
+    #mean values
+    beta_div_swc_ibts <- beta_div %>%
+      filter(survey == "SWC-IBTS")
+    
+    mean(beta_div_swc_ibts$bray_dissimilarity_nestedness, na.rm = T)
 
 # community turnover using occurrence metrics
 j_mhw_turnover <- beta_div %>% 

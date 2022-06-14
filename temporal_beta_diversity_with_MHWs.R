@@ -739,3 +739,45 @@ ggsave(diverging_bars_wlegend_scaled, path = here::here("figures","beta_diversit
 #Out of curiousity, what's the highest  scaled value of dissimilarity we find?
 #when does it happen?
 View(survey_temporal_diversity_with_MHWs)
+
+####################
+#######Comparisons
+###################
+#EBS 
+
+#Alabia et al. 2021 (GCB)
+#make figure 1 (Beta versus Time)
+ggplot(survey_temporal_diversity_with_MHWs[survey == "EBS" ,]) +
+  geom_line(aes(x = year, y = jaccard_dissimilarity_total_compare_first_year)) +
+  theme_classic()
+
+#linear model?
+jaccard_total_mod <- lm(jaccard_dissimilarity_total_compare_first_year~year,
+                        data = survey_temporal_diversity_with_MHWs[survey == "EBS" ,])
+summary(jaccard_total_mod)
+
+
+
+
+ggplot(survey_temporal_diversity_with_MHWs[survey == "SWC-IBTS" ,]) +
+  geom_line(aes(x = year, y = jaccard_dissimilarity_total_compare_first_year)) +
+  theme_classic()
+
+#linear model?
+jaccard_total_mod <- lm(jaccard_dissimilarity_total_compare_first_year~year, data = survey_temporal_diversity_with_MHWs[survey == "SWC-IBTS" ,])
+summary(jaccard_total_mod)
+
+#Karnauskas et al. 2015 (GCB)
+#Compare to this claim, "Further analysis of fishery landings composition data 
+        #indicates a major shift in the late 1970s coincident with the advent of 
+        #US national fisheries management policy, as well as significant shifts
+        #in the mid-1960s and the mid-1990s."
+
+ggplot(survey_temporal_diversity_with_MHWs[survey == "GMEX" ,]) +
+  geom_line(aes(x = year, y = jaccard_dissimilarity_total)) +
+  theme_classic()
+
+ggplot(survey_temporal_diversity_with_MHWs[survey == "GMEX" ,]) +
+  geom_line(aes(x = year, y = jaccard_dissimilarity_total_compare_first_year)) +
+  theme_classic()
+

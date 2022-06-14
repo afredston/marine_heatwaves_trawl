@@ -127,7 +127,7 @@ for (i in 1:length(survey_names)) {
       jaccard_dissimilarity.yearone <- beta.pair(rbind(biomass_time_survey_year_ONE.occurrence.w, biomass_time_survey_year.occurrence.w),  index.family = "jaccard")
       
       #calculate temporal change to first year in community composition using beta.pair using occurrence data (bray)
-      bray_dissimilarity.yearone <- beta.pair(rbind(biomass_time_survey_year_ONE.w, biomass_time_survey_year.w),  index.family = "bray")
+      bray_dissimilarity.yearone <- beta.pair.abund(rbind(biomass_time_survey_year_ONE.w, biomass_time_survey_year.w),  index.family = "bray")
       
 
       #raw richness
@@ -157,11 +157,8 @@ fwrite(biomass_time_temporal_beta, file = here::here("processed-data","survey_te
 
 #helpful plots of nestedness versus turnover versus total dissimilarity
 
-#reorder levels
-biomass_time_temporal_beta[,type := ifelse(biomass_time_temporal_beta.l)]
-
 #wide form to long form 
-biomass_time_temporal_beta.l <- melt(biomass_time_temporal_beta, id.vars = 1:3, measure.vars = 4:11,
+biomass_time_temporal_beta.l <- melt(biomass_time_temporal_beta, id.vars = 1:3, measure.vars = 4:13,
                                      variable.name = "beta_diversity_metric")
 
 #reorder levels
@@ -171,14 +168,14 @@ biomass_time_temporal_beta.l[grepl(pattern = "jaccard", x = beta_diversity_metri
     grepl(pattern = "richness", x = beta_diversity_metric) == T,type := "richness"]
 
 biomass_time_temporal_beta.l[,beta_diversity_metric := factor(beta_diversity_metric, levels = 
-                                                                c("jaccard_dissimilarity_turnover","jaccard_dissimilarity_nestedness","jaccard_dissimilarity_total",
-                                                                  "bray_dissimilarity_turnover","bray_dissimilarity_nestedness" , "bray_dissimilarity_total",       
+                                                                c("jaccard_dissimilarity_turnover","jaccard_dissimilarity_nestedness","jaccard_dissimilarity_total","jaccard_dissimilarity_total_compare_first_year",
+                                                                  "bray_dissimilarity_turnover","bray_dissimilarity_nestedness" , "bray_dissimilarity_total",    "bray_dissimilarity_total_compare_first_year" ,   
                                                                   "delta_richness","richness_percent_change"))]
 
 #plot metrics over time
 beta_diversity_metric_year <- ggplot(data = biomass_time_temporal_beta.l[type != "richness",]) +
   geom_line(aes(x = as.numeric(year), y = value, color = beta_diversity_metric), size = 0.5) +
-  scale_color_manual(values = c("#0825DC","#A6AFEA","black","#B50E0E","#EF8E8E","black")) +
+  scale_color_manual(values = c("#0825DC","#A6AFEA","#098EDB","black","#B50E0E","#EF8E8E","#B50E62","black")) +
   facet_wrap(~survey+type, scales = "free") +
   theme_classic()
 
@@ -189,3 +186,4 @@ richness_metric_year <- ggplot(data = biomass_time_temporal_beta.l[type == "rich
 
 ggsave(beta_diversity_metric_year, file = "beta_diversity_metric_year.jpg", path = "figures/beta_diversity", width = 15, height = 9, unit = "in")
 ggsave(richness_metric_year, file = "richness_metric_year.jpg", path = "figures/beta_diversity", width = 10, height = 4, unit = "in")
+
