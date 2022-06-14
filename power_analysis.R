@@ -18,8 +18,8 @@ powerdat <- survey_summary %>%
   arrange(year) %>% 
   mutate(lagwt = lag(wt, 1))
 
-iters <- 100
-trialyrs <- seq(10, 100, 10)
+iters <- 1000
+trialyrs <- c(seq(10, 200, 10), 24, 25) # 435 / 18 = 24.17 which is the average years/survey we have in the actual data 
 
 # PART 1 
 # based on the effect sizes in Cheung et al. (6% overall biomass loss in worst-case scenario), how much data would we have needed, given the actual variance in the data? 
@@ -32,7 +32,7 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
   
   # Gompertz parameters
   alpha = Gompertz$coef['(Intercept)']
-  beta = Gompertz$coef['log(lagwt)']
+  rho = Gompertz$coef['log(lagwt)']
   conditional_sd = sqrt(mean(Gompertz$residuals^2))
   
   # MHW frequency and intensity
@@ -40,9 +40,12 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
   #gamma = Gompertz$coef['mhw_yes_noyes']
   gamma = log(0.94) # from Cheung et al. 2021
   
+  # dial back perfect autocorrelation so that the marginal standard deviation doesn't go to infinity 
+  rho <- ifelse( abs(rho)>0.95, sign(rho)*0.95, rho )
+  
   # Stationary properties (for initial condition)
-  marginal_sd = conditional_sd / (1-beta)^2
-  marginal_mean = alpha / (1-beta)
+  marginal_sd = conditional_sd / (1-rho)^2
+  marginal_mean = alpha / (1-rho)
   
   sim_yrs <- NULL
   
@@ -52,13 +55,13 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
     MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
     
     # Initialize
-    # logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
-    logB_t[1] = marginal_mean # variance was too big for initializing 
+     logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+  #  logB_t[1] = marginal_mean # variance was too big for initializing 
     
     # Project every year 
-    #  Gompertz:  log(N(t+1)) = alpha + beta * log(N(t)) + effects + error
+    #  Gompertz:  log(N(t+1)) = alpha + rho * log(N(t)) + effects + error
     for( tI in 2:n_years){
-      logB_t[tI] = alpha + beta*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+      logB_t[tI] = alpha + rho*logB_t[tI-1] + gamma*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
     }
     
     # set up dataframe to write out the results 
@@ -82,7 +85,8 @@ pwrout_yrs <- foreach(surv=survey_names$survey, .combine='rbind') %:%
 (iters * sum(trialyrs) * nrow(survey_names)) == nrow(pwrout_yrs)
 
 # analyze simulated data 
-sim_test <- NULL
+# note that this is now for all surveys; so while we filter for the length of the trial (n_years), there are 18 "replicates" within the trial pooled together with log ratio biomass + MHW yes/no data 
+sim_test_yrs <- NULL
 for(j in trialyrs){
   for(i in 1:iters){
     tmp10 <- pwrout_yrs %>% 
@@ -94,15 +98,22 @@ for(j in trialyrs){
     if(!class(tmp10_t)=="try-error"){
       tmpdat <- tibble(t = tmp10_t$statistic, df = tmp10_t$parameter, p.value = tmp10_t$p.value, mean_no_mhw = mean(tmp10_no), mean_mhw = mean(tmp10_yes), sd_no_mhw = sd(tmp10_no), sd_mhw = sd(tmp10_yes), n_years = j, iter=i)
     } else{
+      # if rho goes to 1, marginal sd goes to Inf, which breaks the model; the catch to keep abs(rho)<0.95 above should fix this, but just in case: 
       tmpdat <- tibble(t = NA, df = NA, p.value = NA, mean_no_mhw = NA, mean_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, n_years = j, iter=i)
     }
-    sim_test <- rbind(sim_test, tmpdat)
+    sim_test_yrs <- rbind(sim_test_yrs, tmpdat)
   }
 }
 
-sim_test_summ <- sim_test %>% 
+# how many regions/simulations, if any, created an error?
+sim_test_yr_error <- sim_test_yrs %>% 
+  filter(is.na(t))
+nrow(sim_test_yr_error) == 0 # TRUE
+
+sim_test_summ_yrs <- sim_test_yrs %>% 
   group_by(n_years) %>% 
-  summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value))
+  summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value)) %>% 
+  mutate(n_years_tot = n_years * length(unique(powerdat$survey)))
 
 # PART 2: given the data we have, what effect size could we detect? 
 # note that unlike the function above, which applies the same duration to each survey, this holds each survey at its actual number of sample-years and just varies the true effect size to see what we would have detected with our methods 
@@ -115,17 +126,19 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
   
   # Gompertz parameters
   alpha = Gompertz$coef['(Intercept)']
-  beta = Gompertz$coef['log(lagwt)']
+  rho = Gompertz$coef['log(lagwt)']
   conditional_sd = sqrt(mean(Gompertz$residuals^2))
   
   # MHW frequency and intensity
   prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
   gamma = log(0.90) # vary to evaluate how much of a decrease we could detect 
-  
+
+  # dial back perfect autocorrelation so that the marginal standard deviation doesn't go to infinity 
+  rho <- ifelse( abs(rho)>0.95, sign(rho)*0.95, rho )
   
   # Stationary properties (for initial condition)
-  marginal_sd = conditional_sd / (1-beta)^2
-  marginal_mean = alpha / (1-beta)
+  marginal_sd = conditional_sd / (1-rho)^2
+  marginal_mean = alpha / (1-rho)
   
   sim_gamma <- NULL
   
@@ -138,7 +151,7 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
   
   for(g in gammas){
   for( tI in 2:n_years){
-    logB_t[tI] = alpha + beta*logB_t[tI-1] + g*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+    logB_t[tI] = alpha + rho*logB_t[tI-1] + g*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
   }
   
   # set up dataframe to write out the results 
@@ -154,8 +167,8 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
 
 # parallelize implementing this function over iterations, gamma values, and surveys
 
-# theoretical biomass loss from 50% to 5%
-gammas <- c(sapply(seq(0.5, 0.95, 0.05), log), log(0.94))
+# theoretical biomass loss from 70% to 1%
+gammas <- c(sapply(seq(0.7, 0.9, 0.05), log), sapply(seq(0.91, 0.99, 0.01), log))
 
 pwrout_gamma <- foreach(surv=survey_names$survey, .combine='rbind') %:% 
   foreach(a = seq(1, iters, 1), .combine='rbind') %dopar% {
@@ -181,7 +194,19 @@ for(j in gammas){
   }
 }
 
+# how many regions/simulations, if any, created an error?
+sim_test_gamma_error <- sim_test_gamma %>% 
+  filter(is.na(t))
+nrow(sim_test_yr_error) == 0 # TRUE
+
 sim_test_summ_gamma <- sim_test_gamma %>% 
   mutate(exp_gamma = exp(gamma)) %>% 
   group_by(exp_gamma) %>% 
   summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value)) 
+
+saveRDS(sim_test_yrs, file=here("processed-data","sim_test_yrs.rds"))
+saveRDS(sim_test_gamma, file=here("processed-data","sim_test_gamma.rds"))
+saveRDS(pwrout_gamma, file=here("processed-data","pwrout_gamma.rds"))
+saveRDS(pwrout_yrs, file=here("processed-data","pwrout_yrs.rds"))
+saveRDS(sim_test_summ_gamma, file=here("processed-data","sim_test_summ_gamma.rds"))
+saveRDS(sim_test_summ_yrs, file=here("processed-data","sim_test_summ_yrs.rds"))

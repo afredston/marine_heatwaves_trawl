@@ -206,6 +206,19 @@ survey_summary %>%
   group_by(cti_change) %>% 
   summarise(n=n())
 
+# how correlated are SODA SBT and SODA SST?
+cor.test(
+  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
+  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
+  method="spearman"
+)
+
+cor.test(
+  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
+  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
+  method="spearman"
+)
+
 ############
 # community turnover
 ############
