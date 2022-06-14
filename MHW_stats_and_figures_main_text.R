@@ -235,6 +235,24 @@ bc_no_mhw_turnover <- beta_div %>%
 t.test(bc_mhw_turnover, bc_no_mhw_turnover)
 summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
 
+    #turnover just for EBS
+    bc_mhw_turnover_ebs <- beta_div %>% 
+      filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
+      pull(bray_dissimilarity_turnover)
+    bc_no_mhw_turnover_ebs <- beta_div %>% 
+      filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
+      pull(bray_dissimilarity_turnover)
+    
+    t.test(bc_mhw_turnover_ebs, bc_no_mhw_turnover_ebs)
+    summary(lm(bray_dissimilarity_turnover ~ anom_days,
+               data=beta_div %>% filter(survey == "EBS")))
+    
+    #mean values
+    beta_div_ebs <- beta_div %>%
+      filter(survey == "EBS")
+    
+    mean(beta_div_ebs$bray_dissimilarity_turnover, na.rm = T)
+
 #community nestedness using biomass metrics
 bc_mhw_nestedness <- beta_div %>% 
   filter(anom_days>0, !is.na(bray_dissimilarity_nestedness)) %>% 
@@ -245,6 +263,24 @@ bc_no_mhw_nestedness <- beta_div %>%
 
 t.test(bc_mhw_nestedness, bc_no_mhw_nestedness)
 summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
+
+    #community nestedness just for EBS
+    bc_mhw_nestedness_ebs <- beta_div %>% 
+      filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
+      pull(bray_dissimilarity_nestedness)
+    bc_no_mhw_nestedness_ebs <- beta_div %>% 
+      filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
+      pull(bray_dissimilarity_nestedness)
+    
+    t.test(bc_mhw_nestedness_ebs, bc_no_mhw_nestedness_ebs)
+    summary(lm(bray_dissimilarity_nestedness ~ anom_days,
+               data=beta_div %>% filter(survey == "EBS")))
+    
+    #mean values
+    beta_div_ebs <- beta_div %>%
+      filter(survey == "EBS")
+
+    mean(beta_div_ebs$bray_dissimilarity_nestedness, na.rm = T)
 
 # community turnover using occurrence metrics
 j_mhw_turnover <- beta_div %>% 
