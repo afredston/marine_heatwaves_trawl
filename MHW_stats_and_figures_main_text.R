@@ -433,16 +433,26 @@ wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))
 
 survey_regions_polar_polygon_jepa <- ggplot() +
   geom_polygon(data = haul_info.r.split.concave.binded.spdf,
-               aes(x = long, y = lat, group = group, fill = group, color = group),
+               aes(x = long, 
+                   y = lat, 
+                   group = group, 
+                   fill = group, 
+                   color = group),
                alpha = 0.8) +
   scale_color_manual(values = survey_palette, guide = "none") +
   scale_fill_manual(values = survey_palette, guide = "none") +
-  # geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
-  # ) + 
+  geom_polygon(data = wm_polar, 
+               aes(x = long, y = lat, group = group), 
+               fill = "azure4",
+  ) +
+  geom_label(data = labels,
+             aes(x = lon,
+                 y = lat,
+                 label = survey))+
   scale_y_continuous(breaks = seq(-90,180,15)) +
-  scale_x_continuous(breaks = c(-100,-45,0)) +
+  scale_x_continuous(breaks = c(-100,-50,-10)) +
   coord_map("ortho", orientation = c(50, -45, 0),
-            xlim=c(-180,180),
+            xlim=c(-180,-15),
             ylim=c(35,90)) +
   theme_bw() +
   theme(panel.grid = element_line(colour="grey"),
@@ -450,7 +460,7 @@ survey_regions_polar_polygon_jepa <- ggplot() +
         #panel.border = element_blank(),
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank()
-  )
+  );survey_regions_polar_polygon_jepa
 
 #save global map
 ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
@@ -518,8 +528,9 @@ labels <- haul_info_map %>%
     lat = mean(latitude)
   )
 
-ggplot(haul_info_map) +
-  geom_point(
+ggplot() +
+  # geom_point(data = subset(haul_info_map, survey == "SCS")) +
+  geom_point(data = haul_info_map,
     aes(
       x = longitude,
       y = latitude,
@@ -631,28 +642,35 @@ ggplot() +
   # Convert to polar coordinates
   coord_map("ortho", orientation = c(50, -50, -20)) +
   scale_y_continuous(breaks = seq(0, 90, by = 5), labels = NULL)
+
+
+# ---------------------------- #
+#### Sub-Pannels #####
+# ---------------------------- #
+
+
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
   tmp <- mhw_summary_sat_sst_5_day %>% 
     left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
     left_join(survey_names) %>% 
     left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
-    filter(survey=="NIGFS")
+    filter(survey==reg) # Northern Irland NIGFS
   coeff = 5 
   tmpplot <- ggplot(tmp) +
     geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
     geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
     scale_color_gradient(low="#1e03cd", high="#b80d06") +
     scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
-    # scale_x_continuous(breaks = c(2010,2012,2014,2016,2018))+
+    # scale_x_continuous(breaks = c(2010,2012,2014,2016,2018))+ # Fix NIGFS scale
     labs(title=tmp$title) + 
     theme_bw()  +
     theme(legend.position = "none",
           axis.title.x=element_blank(),
           axis.title.y=element_blank(),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          axis.text.x=element_text(angle = 45, vjust=0.5, size = 13),
-          axis.text.y=element_text(size = 12),
+          axis.text.x=element_text(angle = 45, vjust=0.5, size = 14),
+          axis.text.y=element_text(size = 14),
           #    axis.title.x=element_text(vjust=5),
           #    plot.title.position = "plot",
           # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
