@@ -839,27 +839,27 @@ if(file.exists(here("processed-data","global_oceans.shp"))==TRUE){
 }
 
 # make CRS of hulls the same as ocean -- DANGER!
-st_crs(reg_hulls) <- st_crs(ocean)
-
-ggplot() +
-  geom_sf(data=reg_hulls, aes(), fill="steelblue2", color="navy", alpha=0.5) +
-  geom_sf(data=ocean, aes()) +
-  geom_sf_text(data=reg_hulls, aes(label=survey), size=2) +
-  theme_bw()
-
-
-ggplot() +
-  geom_sf(data=ocean, aes()) +
-  geom_sf(data=reg_hulls %>% filter(survey %in% c("Eastern Bering Sea","West Coast","Northeast")), aes(), fill="steelblue2", color="navy", alpha=0.5) +
-  theme_bw()
-
-
-ggplot() +
-  geom_sf(data=ocean, aes()) +
-  geom_sf(data=reg_hulls %>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(), fill="steelblue2", color="navy", alpha=0.5) +
-  geom_sf_text(data=reg_hulls%>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(label=survey), size=3) +
-  scale_x_continuous(limits=c(-15, 60)) + 
-  scale_y_continuous(limits=c(40, 90)) +
-  theme_bw()
+# st_crs(reg_hulls) <- st_crs(ocean)
+# 
+# ggplot() +
+#   geom_sf(data=reg_hulls, aes(), fill="steelblue2", color="navy", alpha=0.5) +
+#   geom_sf(data=ocean, aes()) +
+#   geom_sf_text(data=reg_hulls, aes(label=survey), size=2) +
+#   theme_bw()
+# 
+# 
+# ggplot() +
+#   geom_sf(data=ocean, aes()) +
+#   geom_sf(data=reg_hulls %>% filter(survey %in% c("Eastern Bering Sea","West Coast","Northeast")), aes(), fill="steelblue2", color="navy", alpha=0.5) +
+#   theme_bw()
+# 
+# 
+# ggplot() +
+#   geom_sf(data=ocean, aes()) +
+#   geom_sf(data=reg_hulls %>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(), fill="steelblue2", color="navy", alpha=0.5) +
+#   geom_sf_text(data=reg_hulls%>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(label=survey), size=3) +
+#   scale_x_continuous(limits=c(-15, 60)) + 
+#   scale_y_continuous(limits=c(40, 90)) +
+#   theme_bw()
 
 
