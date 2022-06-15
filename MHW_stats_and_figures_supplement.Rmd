@@ -26,6 +26,8 @@ library(broom)
 library(mcp)
 library(lme4)
 library(mgcv)
+library(cowplot)
+
 select <- dplyr::select
 
 # marine heatwave data for joining with survey data
@@ -59,6 +61,12 @@ traits <- read_csv(here("raw-data","TraitCollectionFishNAtlanticNEPacificContShe
   summarise(tl = mean(tl)) %>% 
   group_by(taxon) %>% 
   mutate(n=n()) 
+
+#dissimilarity data
+beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
+  left_join(survey_start_times) %>% # add in the ref_yr column 
+  select(-month_year, -survey_date) %>% 
+  left_join(mhw_summary_sat_sst_5_day) # add in mhw data
 
 tl <- survey_spp_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day) %>% 
@@ -164,8 +172,8 @@ below and contained in
     swept area, but staff at the survey agency (NOAA) use a fixed value
     for the swept area for all hauls, regardless of haul duration (the
     fixed value is standardized to a 30-minute haul). To make this a
-    more reasonable assumption, we omit hauls that were shorter than 25
-    minutes or longer than 35 minutes, and then calculate CPUE
+    more reasonable assumption, we omit hauls more than 5 minutes
+    shorter or longer than the target haul duration, and then calculate CPUE
 
 -   Manually trim out years for which, based on the summary PDFs, our
     expert opinion is that survey methods were not consistent (e.g., far
@@ -292,6 +300,7 @@ duration and biomass log ratio persists when data are grouped by trophic
 level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 \@ref(fig:fig-spp-feed)), or habitat (Fig. \@ref(fig:fig-spp-hab)).
 
+\newpage
 # Supplementary tables
 
 ```{r tab-models-wt}
@@ -454,6 +463,7 @@ modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat), title="Model
 modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat), title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered.") 
 ```
 
+\newpage
 # Supplementary figures
 
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
@@ -647,6 +657,84 @@ ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt
 
 ```
 
+```{r fig-dissim-length, fig.cap="Temporal Community Dissimilarity and MHW duration for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
+
+anom_days_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=jaccard_dissimilarity_turnover)) +
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Turnover Component\nJaccard Dissimilarity") + 
+  geom_hline(aes(yintercept=mean(jaccard_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+anom_days_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, y=jaccard_dissimilarity_nestedness)) +
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Nestedness Component\nJaccard Dissimilarity") + 
+  geom_hline(aes(yintercept=mean(jaccard_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+anom_days_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=bray_dissimilarity_turnover)) +
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Balanced Variation Component\nBray-Curtis Dissimilarity") + 
+  geom_hline(aes(yintercept=mean(bray_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+anom_days_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, y=bray_dissimilarity_nestedness)) +
+  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
+  geom_smooth(method="lm") + 
+  theme_bw() + 
+  labs(x="Marine heatwave duration (days)", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") + 
+  geom_hline(aes(yintercept=mean(bray_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+plot_grid(anom_days_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()),
+          anom_days_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
+          anom_days_bray_dissimilarity_turnover,
+          anom_days_bray_dissimilarity_nestedness,
+          ncol = 2, nrow = 2,
+          align = "hv")
+```
+```{r fig-dissim-mhw, fig.cap="Temporal Community Dissimilarity and MHW event for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
+
+#convert mhw_yes_no to factor
+beta_div$mhw_yes_no <- factor(beta_div$mhw_yes_no)
+
+MHW_jaccard_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_turnover)) +
+  geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
+  theme_bw() + 
+  labs(x="Marine Heatwave", y="Turnover Component\nJaccard Dissimilarity") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+MHW_jaccard_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_nestedness)) +
+  geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
+  theme_bw() + 
+  labs(x="Marine Heatwave", y="Nestedness Component\nJaccard Dissimilarity") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+MHW_bray_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_turnover)) +
+  geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
+  theme_bw() + 
+  labs(x="Marine Heatwave", y="Balanced Variation Component\nBray-Curtis Dissimilarity") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+MHW_bray_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_nestedness)) +
+  geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
+  theme_bw() + 
+  labs(x="Marine Heatwave", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()),
+          MHW_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
+          MHW_bray_dissimilarity_turnover,
+          MHW_bray_dissimilarity_nestedness,
+          ncol = 2, nrow = 2,
+          align = "hv")
+```
+
 ```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual.")}
 
 plot_spp <- function(x){
@@ -693,4 +781,5 @@ spp_plots <- purrr::map(survey_names$survey, ~plot_spp(.x))
 print(spp_plots)
 ```
 
+\newpage
 # References
