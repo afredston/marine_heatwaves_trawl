@@ -300,8 +300,13 @@ duration and biomass log ratio persists when data are grouped by trophic
 level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 \@ref(fig:fig-spp-feed)), or habitat (Fig. \@ref(fig:fig-spp-hab)).
 
-\newpage
+
+
+
+\clearpage
 # Supplementary tables
+
+
 
 ```{r tab-models-wt}
 options(modelsummary_get="easystats")
@@ -367,6 +372,8 @@ models <- list(
 modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect.") 
 ```
 
+
+
 ```{r tab-models-wt2}
 
 modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey.") 
@@ -412,6 +419,8 @@ modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"),
 # write_csv(wt_gam_lag_surv, here('processed-data','lag_gam_summary.csv'))
 ```
 
+
+
 ```{r tbl-spp}
 spprank <- survey_spp_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
@@ -447,6 +456,8 @@ sppmodels <- list(
 modelsummary(sppmodels, metrics=c('Num.Obs','R2','AIC','Log.Lik.','F','RMSE'), title="Linear mixed-effect models of overall biomass as predicted by single-species biomass, with survey identity included as a random intercept. All models were fitted to scaled and centered biomass values. Model names correspond to the number of species used as predictors. Species were ranked by from highest overall biomass in the survey to lowest.")
 ```
 
+
+
 ```{r tab-models-cti}
 modelsummary(list(
   "LM" = lm(cti_log_scale ~ anom_days_scale, data = modeldat),
@@ -454,18 +465,23 @@ modelsummary(list(
 ), title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey.")
 ```
 
+
+
 ```{r tab-models-depth}
 # LM of MHW duration on depth (MHW-years only)
 modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat), title="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered.")
 ```
 
+
+
 ```{r tab-models-lat}
 modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat), title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered.") 
 ```
 
-\newpage
-# Supplementary figures
 
+
+\clearpage
+# Supplementary figures
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
 gg_mhw_metric <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
@@ -698,6 +714,11 @@ plot_grid(anom_days_jaccard_dissimilarity_turnover + theme(axis.title.x = elemen
           ncol = 2, nrow = 2,
           align = "hv")
 ```
+
+
+
+
+
 ```{r fig-dissim-mhw, fig.cap="Temporal Community Dissimilarity and MHW event for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
 
 #convert mhw_yes_no to factor
@@ -735,7 +756,10 @@ plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blan
           align = "hv")
 ```
 
-```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual.")}
+
+
+
+```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual."), message = F, echo = F, warning = F}
 
 plot_spp <- function(x){
   topspp <- survey_spp_summary %>% 
@@ -774,12 +798,22 @@ plot_spp <- function(x){
     labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$title) +
     NULL
  
-# print(reg_plot)
+ 
+          #print plot
+         cat('\n\n') 
+         print(reg_plot)
+         #space
+         cat('\n\n') 
+
 }
 
-spp_plots <- purrr::map(survey_names$survey, ~plot_spp(.x))
-print(spp_plots)
+walk(survey_names$survey, ~plot_spp(.x))
+
 ```
+
+
+
+
 
 \newpage
 # References
