@@ -87,13 +87,18 @@ modeldat <- survey_summary %>%
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
   filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
   left_join(med_lat) %>% 
-  mutate(
+  mutate(med_lat_scale =  as.numeric(scale(med_lat, center=TRUE, scale=TRUE))) %>% # doesn't need to be centered and scaled within surveys first, since there's only one lat value per survey 
+    group_by(survey) %>% 
+mutate(
+    wt_mt_scale = as.numeric(scale(wt_mt, center=TRUE, scale=TRUE)),
     wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
     cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
     anom_days_scale =  as.numeric(scale(anom_days, center=TRUE, scale=TRUE)),
-    med_lat_scale =  as.numeric(scale(med_lat, center=TRUE, scale=TRUE)),
     depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
-  )
+  ) %>% 
+  arrange(year) %>% 
+  mutate(wt_mt_scale_lag = log(lag(wt_mt_scale))) %>% 
+  ungroup()
 
 # lagged effects of MHW duration on biomass 
 lags <- modeldat %>%
@@ -173,7 +178,8 @@ below and contained in
     for the swept area for all hauls, regardless of haul duration (the
     fixed value is standardized to a 30-minute haul). To make this a
     more reasonable assumption, we omit hauls more than 5 minutes
-    shorter or longer than the target haul duration, and then calculate CPUE
+    shorter or longer than the target haul duration, and then calculate
+    CPUE
 
 -   Manually trim out years for which, based on the summary PDFs, our
     expert opinion is that survey methods were not consistent (e.g., far
@@ -300,13 +306,9 @@ duration and biomass log ratio persists when data are grouped by trophic
 level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 \@ref(fig:fig-spp-feed)), or habitat (Fig. \@ref(fig:fig-spp-hab)).
 
-
-
-
 \clearpage
+
 # Supplementary tables
-
-
 
 ```{r tab-models-wt}
 options(modelsummary_get="easystats")
@@ -363,20 +365,19 @@ models <- list(
   # "Breakpoint Regression" = mcp(list(
   # wt_mt_log_scale ~ 1 + anom_days_scale,
   # ~ 0 +anom_days_scale), data=modeldat),
+  "AR1 LM" = lm(wt_mt_log_scale ~ anom_days_scale + wt_mt_scale_lag, data=modeldat),
   "GAM Lag 1" = mlag1(lags), 
   "GAM Lag 2" = mlag2(lags), 
   "GAM Lag 3" = mlag3(lags), 
   "GAM Lag 4" = mlag4(lags)
 )
 
-modelsummary(models[1:4], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect.") 
+modelsummary(models[1:5], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and linear Gompertz (autoregressive) model.") 
 ```
-
-
 
 ```{r tab-models-wt2}
 
-modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey.") 
+modelsummary(models[6:9], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey.") 
 
 # lagged effects of MHW duration on biomass, by survey 
 # wt_gam_lag_surv <- NULL
@@ -419,7 +420,9 @@ modelsummary(models[5:8], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"),
 # write_csv(wt_gam_lag_surv, here('processed-data','lag_gam_summary.csv'))
 ```
 
+```{r tbl-models-autocorr}
 
+```
 
 ```{r tbl-spp}
 spprank <- survey_spp_summary %>% 
@@ -456,8 +459,6 @@ sppmodels <- list(
 modelsummary(sppmodels, metrics=c('Num.Obs','R2','AIC','Log.Lik.','F','RMSE'), title="Linear mixed-effect models of overall biomass as predicted by single-species biomass, with survey identity included as a random intercept. All models were fitted to scaled and centered biomass values. Model names correspond to the number of species used as predictors. Species were ranked by from highest overall biomass in the survey to lowest.")
 ```
 
-
-
 ```{r tab-models-cti}
 modelsummary(list(
   "LM" = lm(cti_log_scale ~ anom_days_scale, data = modeldat),
@@ -465,23 +466,19 @@ modelsummary(list(
 ), title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey.")
 ```
 
-
-
 ```{r tab-models-depth}
 # LM of MHW duration on depth (MHW-years only)
 modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat), title="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered.")
 ```
 
-
-
 ```{r tab-models-lat}
 modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat), title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered.") 
 ```
 
-
-
 \clearpage
+
 # Supplementary figures
+
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
 gg_mhw_metric <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
@@ -715,10 +712,6 @@ plot_grid(anom_days_jaccard_dissimilarity_turnover + theme(axis.title.x = elemen
           align = "hv")
 ```
 
-
-
-
-
 ```{r fig-dissim-mhw, fig.cap="Temporal Community Dissimilarity and MHW event for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
 
 #convert mhw_yes_no to factor
@@ -755,9 +748,6 @@ plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blan
           ncol = 2, nrow = 2,
           align = "hv")
 ```
-
-
-
 
 ```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual."), message = F, echo = F, warning = F}
 
@@ -811,9 +801,6 @@ walk(survey_names$survey, ~plot_spp(.x))
 
 ```
 
-
-
-
-
 \newpage
+
 # References

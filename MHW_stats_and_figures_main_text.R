@@ -160,6 +160,14 @@ survey_spp_summary %>%
   group_by(STItest) %>% 
   summarise(n=n())
 
+# and what % of the biomass does that represent? 
+survey_spp_summary %>% 
+  group_by(spp, STI) %>% 
+  summarise(tot = sum(wt_mt)) %>% 
+  mutate(STItest = ifelse(is.na(STI), "no","yes")) %>% 
+  group_by(STItest) %>% 
+  summarise(totwt = sum(tot))
+
 # CTI stats
 
 # Scotland
