@@ -414,17 +414,6 @@ modelsummary(models_alt,
 
 ```
 
-```{r tab-models-wt2}
-
-modelsummary(models[5:8], 
-             metrics="all",
-             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
-             statistic=NULL, # suppress the second row of results (already printing SEs)
-             title="Models of biomass change. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
-  kable_styling(font_size = 8)
-
-```
-
 ```{r tbl-models-autocorr}
 modeldat2 <- modeldat %>% 
   filter(!is.na(wt_mt_lag))
@@ -516,6 +505,17 @@ modelsummary(mod_cti,
              statistic=NULL,
              title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
   kable_styling(font_size = 8)
+```
+
+```{r tab-models-wt2}
+
+modelsummary(models[5:8], 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
+             statistic=NULL, # suppress the second row of results (already printing SEs)
+             title="Models of biomass change. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
+  kable_styling(font_size = 8)
+
 ```
 
 ```{r tab-models-depth}
@@ -698,31 +698,6 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
 gg_mhw_biomass_point_lags
 ```
 
-```{r fig-nhaul-wt, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Absolute value of biomass log ratios vs. sampling intensity, defined as the average number of samples (hauls) per year in each region. The relationship between biomass log ratio magnitude and sampling is highly significant (p < 0.001)."}
-hauldat_prep <- haul_info %>% 
-  group_by(survey) %>% 
-  summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
-  mutate(hyr = Hauls/Years) 
-
-hauldat <- survey_summary %>% 
-  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
-  filter(!is.na(abs_wt_mt_log)) %>% 
-  left_join(hauldat_prep, by="survey")
-
-haullm <- glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
-
-hauldat %>% 
-  ggplot() + 
-  geom_boxplot(aes(x=hyr, y=abs_wt_mt_log, group=survey)) +
-  geom_smooth(method="lm", aes(x=hyr, y=abs_wt_mt_log)) +
-  stat_regline_equation(aes(x=hyr, y=abs_wt_mt_log, label=..rr.label..)) +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
-  labs(x="Samples (hauls) per year", y="Absolute value of biomass change (log ratio)") +
-  theme_bw() +
-  NULL
-
-```
-
 ```{r fig-spp-tl, fig.cap="Biomass log ratio and MHW duration grouped by trophic level of each taxon."}
 
 ggplot(tl %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt_mt_log) )+
@@ -891,6 +866,31 @@ plot_spp <- function(x){
 }
 
 walk(survey_names$survey, ~plot_spp(.x))
+
+```
+
+```{r fig-nhaul-wt, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Absolute value of biomass log ratios vs. sampling intensity, defined as the average number of samples (hauls) per year in each region. The relationship between biomass log ratio magnitude and sampling is highly significant (p < 0.001)."}
+hauldat_prep <- haul_info %>% 
+  group_by(survey) %>% 
+  summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
+  mutate(hyr = Hauls/Years) 
+
+hauldat <- survey_summary %>% 
+  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
+  filter(!is.na(abs_wt_mt_log)) %>% 
+  left_join(hauldat_prep, by="survey")
+
+haullm <- glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
+
+hauldat %>% 
+  ggplot() + 
+  geom_boxplot(aes(x=hyr, y=abs_wt_mt_log, group=survey)) +
+  geom_smooth(method="lm", aes(x=hyr, y=abs_wt_mt_log)) +
+  stat_regline_equation(aes(x=hyr, y=abs_wt_mt_log, label=..rr.label..)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x="Samples (hauls) per year", y="Absolute value of biomass change (log ratio)") +
+  theme_bw() +
+  NULL
 
 ```
 
