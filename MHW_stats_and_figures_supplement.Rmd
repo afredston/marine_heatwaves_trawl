@@ -125,6 +125,11 @@ cbpal6 <- c('#2271B2','#3DB7E9','#F748A5','#359B73','#D55E00',"black")
 
 # cbpal16 <- c('#68023F','#008169','#EF0096','#00DCB5','#FFCFE2','#003C86','#9400E6','#009FFA','#FF71FD','grey50','#7CFFFA','#6A0213','#008607','#F60239','#00E307','#FFDC3D')
 
+# for power analysis
+sim_test_summ_gamma <- readRDS(here("processed-data","sim_test_summ_gamma.rds"))
+sim_test_summ_yrs <- readRDS(here("processed-data","sim_test_summ_yrs.rds"))
+colnames(sim_test_summ_gamma) <- c('exp_gamma','propsig')
+colnames(sim_test_summ_yrs) <- c('n_years','propsig','n_years_tot')
 ```
 
 ```{r, setup2, include=FALSE}
@@ -170,53 +175,53 @@ public dataset, and additional data trimming measures are summarized
 below and contained in prep_trawl_data.R:
 
 -   Omit surveys in FISHGLOBv1.1 that show very inconsistent sampling
-patterns in the summary PDFs
+    patterns in the summary PDFs
 
 -   Calculate CPUE for the one region for which it is not calculated in
-FISHGLOB already: the Northeast US. This region does not report
-swept area, but staff at the survey agency (NOAA) use a fixed value
-for the swept area for all hauls, regardless of haul duration (the
-fixed value is standardized to a 30-minute haul). To make this a
-more reasonable assumption, we omit hauls more than 5 minutes
-shorter or longer than the target haul duration, and then calculate
-CPUE
+    FISHGLOB already: the Northeast US. This region does not report
+    swept area, but staff at the survey agency (NOAA) use a fixed value
+    for the swept area for all hauls, regardless of haul duration (the
+    fixed value is standardized to a 30-minute haul). To make this a
+    more reasonable assumption, we omit hauls more than 5 minutes
+    shorter or longer than the target haul duration, and then calculate
+    CPUE
 
 -   Manually trim out years for which, based on the summary PDFs, our
-expert opinion is that survey methods were not consistent (e.g., far
-fewer hauls than usual). This step most frequently omits the early
-years of a survey, when methods and sampling intensity were not yet
-standardized; these years may also be too early to match to
-temperature data, and thus would have been omitted later in the
-analysis anyway
+    expert opinion is that survey methods were not consistent (e.g., far
+    fewer hauls than usual). This step most frequently omits the early
+    years of a survey, when methods and sampling intensity were not yet
+    standardized; these years may also be too early to match to
+    temperature data, and thus would have been omitted later in the
+    analysis anyway
 
 -   Remove surveys that have fewer than 10 years of data, as our focus
-is temporal dynamics. This step removes three small surveys in
-Canada
+    is temporal dynamics. This step removes three small surveys in
+    Canada
 
 -   Trim each survey to one season, i.e., the most consistently or
-frequently sampled three-month interval
+    frequently sampled three-month interval
 
 -   Standardize spatial footprints over time for each survey by creating
-hexagonal cells covering the Earth's surface, pairing each haul with
-a cell, and retaining only hauls in the cells that were sampled
-every year. Cells were created using the dggridR
-package[@barnes2020a]. We used a cell resolution of 8, corresponding
-to a cell area of 7,774 km^2^, for all regions except the Norway
-survey. Norway conducts an extremely large-scale scientific trawl
-survey that has operated in the Norwegian and Barents Seas for
-decades. Because this survey is larger-scale than all of the others,
-we used a cell resolution of 7 ( cell area of 23,323 km^2^) to
-standardize the footprint of this survey
+    hexagonal cells covering the Earth's surface, pairing each haul with
+    a cell, and retaining only hauls in the cells that were sampled
+    every year. Cells were created using the dggridR
+    package[@barnes2020a]. We used a cell resolution of 8, corresponding
+    to a cell area of 7,774 km^2^, for all regions except the Norway
+    survey. Norway conducts an extremely large-scale scientific trawl
+    survey that has operated in the Norwegian and Barents Seas for
+    decades. Because this survey is larger-scale than all of the others,
+    we used a cell resolution of 7 ( cell area of 23,323 km^2^) to
+    standardize the footprint of this survey
 
 -   Impute zeros for true absences in every instance where a species
-ever observed in a survey was *not* encountered in a given haul
+    ever observed in a survey was *not* encountered in a given haul
 
 -   Calculate species-specific mean CPUE as the mean of every CPUE for
-that species in a given survey and year (i.e., average over hauls)
+    that species in a given survey and year (i.e., average over hauls)
 
 -   Calculate species-specific mean depth as the mean of depths where
-hauls occurred in a given survey and year, weighted by the species'
-CPUE in each haul
+    hauls occurred in a given survey and year, weighted by the species'
+    CPUE in each haul
 
 ## Power analysis
 
@@ -238,35 +243,37 @@ vary to explore power. This simulation also includes an error term
 $\sigma'$ calculated as a random draw from a normal distribution with
 mean 0 and standard deviation $\sigma$. We (1) varied the number of
 years the simulation was run (assuming that each region was sampled for
-the same number of years) from 10 to 100 in 10-year intervals with a
-fixed value of $\gamma = ln(0.94)$, corresponding to the 6% loss of
-biomass predicted by @cheung2021, and (2) varied $\gamma$ to represent
-biomass losses of 5% to 50% (in 5% intervals, although we also included
-a $\gamma = ln(0.94)$ trial to correspond to @cheung2021 ) given the
-actual number of years of data we have for each region (*n* =
-`r nrow(survey_summary)`). For both of these tests, simulations were run
-for each region individually, converted into log ratio units (used in
-the main text), and pooled across regions. Each set of simulations was
-run 1000 times for each condition (region and either number of years or
-$\gamma$).
+the same number of years) from 10 to 200 in 10-year intervals (plus 24-
+and 25-year runs, since the mean survey duration in our actual dataset
+is 24.4) with a fixed value of $\gamma = ln(0.94)$, corresponding to the
+6% loss of biomass predicted by @cheung2021, and (2) varied $\gamma$ to
+represent biomass losses ranging from 1% to 30% (in 1% intervals up to
+10%, and then in 5% intervals; this included a $\gamma = ln(0.94)$ trial
+to correspond to @cheung2021 ) given the actual number of years of data
+we have (*n* =
+`r nrow(survey_summary %>% inner_join(mhw_summary_sat_sst_5_day, by="ref_yr"))`).
+For both of these tests, simulations were run for each region
+individually, converted into log ratio units (used in the main text),
+and pooled across regions. Each set of simulations was run 1000 times
+for each condition (region and either number of years or $\gamma$).
 
 With these two simulated datasets---annual, regional biomass with a true
 MHW effect on biomass of -6% and variable numbers of years, and annual,
 regional biomass with a fixed number of years from the real dataset and
-a variable effect of MHW on biomass from -5% to -50%---we conducted the
-same statistical tests as we did in the main text to look for an effect.
-For every simulation iteration, we split the biomass log ratio data into
-MHW and non-MHW years and compared the two with a t-test. We then
-calculated what proportion of those tests were significant
-($p <= 0.05$).
+a variable effect of MHW on biomass---we conducted the same statistical
+tests as we did in the main text to look for an effect. For every
+simulation iteration, we split the biomass log ratio data into MHW and
+non-MHW years and compared the two with a t-test. We then calculated
+what proportion of those tests were significant ($p <= 0.05$). These
+results are shown in Fig. \@ref(fig:fig-power-yrs) and Fig.
+\@ref(fig:fig-power-gamma).
 
 ## Additional predictors
 
 In addition to the geographical shifts that may lead to changes in
 biomass and community composition in a fixed area, marine fishes may
-shift deeper in response to
-[warming\@chaikin2022](mailto:warming@chaikin2022){.email} @dulvy2008.
-We tested for this by calculating depth log ratios that describe whether
+shift deeper in response to warming @chaikin2022 @dulvy2008. We tested
+for this by calculating depth log ratios that describe whether
 assemblages have gotten deeper or shallower from one survey to the next.
 Depth log ratio was quantified by: 1. Taking an average of depths at
 which a species was found in each survey and year, using the depth
@@ -281,20 +288,18 @@ changes that do and do not follow a MHW (Fig.
 
 Marine communities across latitudes have responded differently to
 climate change, with some declines in species richness recorded in the
-tropics and at equatorward range
-[edges\@chaudhary2021](mailto:edges@chaudhary2021){.email} @hastings2020
-and some increases in species richness recorded in colder oceans and at
-poleward range [edges\@hastings2020](mailto:edges@hastings2020){.email}
-@english. We also tested for latitudinal trends in biomass log ratios,
-finding that the direction or magnitude of biomass change was not
-related to the latitude of the region \@ref(fig:fig-lat-point).
+tropics and at equatorward range edges @chaudhary2021 @hastings2020 and
+some increases in species richness recorded in colder oceans and at
+poleward range edges @hastings2020 @english. We also tested for
+latitudinal trends in biomass log ratios, finding that the direction or
+magnitude of biomass change was not related to the latitude of the
+region \@ref(fig:fig-lat-point).
 
-Species frequently exhibit individualistic responses to global
-[change\@fredston2021](mailto:change@fredston2021){.email}. We explored
-whether species taxonomy, species traits, and regional identity help to
-predict species-level biomass change at all and in the context of marine
-heatwaves. All fish species traits were obtained from the database
-[in\@beukhof2019](mailto:in@beukhof2019){.email}. Of the
+Species frequently exhibit individualistic responses to global change
+@fredston2021. We explored whether species taxonomy, species traits, and
+regional identity help to predict species-level biomass change at all
+and in the context of marine heatwaves. All fish species traits were
+obtained from the database in @beukhof2019. Of the
 `r length(unique(survey_spp_summary$spp))` taxa used in the analysis,
 `r length(unique(tl$spp))` had trophic level data (used in Fig.
 \@ref(fig:fig-spp-tl)), `r length(unique(feed$spp))` had feeding mode
@@ -383,7 +388,6 @@ modelsummary(models[1:4],
 
 
 ```
-
 
 ```{r tab-models-wt-alt}
 models_alt_prep <- modelsummary(
@@ -568,11 +572,11 @@ gg_mhw_biomass_point <- survey_summary %>%
 gg_mhw_biomass_point
 ```
 
-```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
+```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C days), duration (number of days), and intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW in °C)." }
 gg_mhw_metric <- survey_summary %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
   pivot_longer(cols=c(anom_days, anom_sev, anom_int), values_to = "value", names_to = "metric") %>% 
-  mutate(metric = recode(metric, anom_days='Duration (days)',anom_sev= 'Severity (°C)',anom_int= 'Mean intensity (°C/day)')) %>% 
+  mutate(metric = recode(metric, anom_days='Duration (days)',anom_sev= 'Severity (°C days)',anom_int= 'Intensity (°C)')) %>% 
   ggplot(aes(x=value, y=wt_mt_log)) +
   geom_point() + 
   geom_smooth(method="lm") +
@@ -718,8 +722,6 @@ hauldat %>%
   NULL
 
 ```
-
-
 
 ```{r fig-spp-tl, fig.cap="Biomass log ratio and MHW duration grouped by trophic level of each taxon."}
 
@@ -890,6 +892,31 @@ plot_spp <- function(x){
 
 walk(survey_names$survey, ~plot_spp(.x))
 
+```
+
+```{r fig-power-yrs, fig.cap="Results from a power analysis applying our methods to a simulated dataset in which MHWs reduce biomass by 6% and study duration is varied (described earlier in this Supplement). The sample sizes plotted are total survey-years across all regions. Dashed vertical line shows the sample size of our actual dataset. Dashed horizontal line denotes one conventionally accepted threshold for power (0.8)."}
+gg_power_yrs <- sim_test_summ_yrs %>% 
+  ggplot(aes(x=n_years_tot, y=propsig)) +
+  geom_area(fill="grey30", alpha=0.7, color="grey30") +
+  geom_hline(aes(yintercept=0.8), color="black", linetype='dashed') + geom_vline(aes(xintercept=nrow(survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr"))), color="black", linetype='dashed') +
+  labs(x="Sample size (survey-years)", y="Power")+
+  theme_bw() +
+  scale_y_continuous(limits=c(0, 1))
+gg_power_yrs
+```
+
+```{r fig-power-gamma, fig.cap="Results from a power analysis applying our methods to a simulated dataset that varied the MHW effect on biomass over the true number of survey-years for each region in our dataset (described earlier in this Supplement). The sample sizes plotted are total survey-years across all regions. Dashed vertical line shows the biomass decline simulated by Cheung *et al.* 2021. Dashed horizontal line denotes one conventionally accepted threshold for power (0.8)."}
+gg_power_gamma <- sim_test_summ_gamma %>% 
+  mutate(pct = (1-exp_gamma)*100) %>% 
+  ggplot(aes(x=pct, y=propsig)) +
+  geom_area(fill="grey30", alpha=0.7, color="grey30") +
+  geom_vline(aes(xintercept=6), color="black", linetype='dashed') +
+  geom_hline(aes(yintercept=0.8), color="black", linetype='dashed') +
+  labs(x="MHW effect on biomass (%)", y="Power")+
+  theme_bw() +
+  scale_y_continuous(limits=c(0, 1))
+gg_power_gamma
 ```
 
 \newpage

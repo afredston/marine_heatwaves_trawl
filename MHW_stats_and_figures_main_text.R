@@ -757,8 +757,10 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   filter(!is.na(STI_diff), mhw_yes_no=="yes") %>% 
   ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_days, fill=anom_days)) +
   geom_point(size=0.5, position="jitter") + 
-  scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
-  scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
+ scale_color_distiller(palette="RdPu", name="MHW duration\n(days)", direction=1) +
+  scale_fill_distiller(palette="RdPu", name="MHW duration\n(days)", direction=1) +
+ # scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
+ # scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
   # geom_smooth(method="lm")+
   theme_bw() + 
   coord_cartesian(clip = "off") +
