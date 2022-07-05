@@ -801,19 +801,6 @@ gg_mhw_biomass_point_marg <- survey_summary %>%
 margplot <- ggMarginal(gg_mhw_biomass_point_marg,type="density", margins="y", groupColour = TRUE, groupFill=TRUE, yparams=list(size=0.9))
 margplot
 
-gg_mhw_biomass_point_final <- survey_summary %>%
-  ggplot(aes(x=anom_days, y=wt_mt_log, group = mhw_yes_no)) +
-  geom_point() +
-  geom_smooth(method="lm", color = "gray35") +
-  # geom_smooth(data = lm_dat, method="lm", formula = wt_mt_log ~ anom_days, inherit.aes = FALSE, aes(x=anom_days, y=wt_mt_log)) +
-  #  geom_line(data=lm.predict1, aes(x=anom_days, y=wt_mt_log), color="darkgrey", size=1, inherit.aes = FALSE) +
-  ggrepel::geom_text_repel(aes(label=ifelse(anom_days>75|abs(wt_mt_log)>1,as.character(ref_yr),'')),max.overlaps = Inf,xlim = c(-Inf, Inf), ylim = c(-Inf, Inf),min.segment.length = 0) +
-  theme_bw() +
-  coord_cartesian(clip = "off") +
-  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
-  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-# gg_mhw_biomass_point_final
 
 # gg_mhw_cti_point_final <- survey_summary %>%
 #   ggplot(aes(x=anom_days, y=cti_log, group = mhw_yes_no)) +

@@ -4,6 +4,8 @@ author: "Fredston et al."
 date: 2022
 output: 
   bookdown::pdf_document2: default
+header-includes: 
+- \usepackage{float}
 editor_options: 
   markdown: 
     wrap: 72
@@ -19,7 +21,7 @@ library(here)
 library(lubridate) # for standardizing date format of MHW data
 library(sf)
 library(rnaturalearth)
-#library(kableExtra)
+library(kableExtra)
 library(modelsummary)
 library(ggpubr)
 library(broom)
@@ -88,8 +90,8 @@ modeldat <- survey_summary %>%
   filter(!is.na(wt_mt_log), !is.na(anom_days)) %>% 
   left_join(med_lat) %>% 
   mutate(med_lat_scale =  as.numeric(scale(med_lat, center=TRUE, scale=TRUE))) %>% # doesn't need to be centered and scaled within surveys first, since there's only one lat value per survey 
-    group_by(survey) %>% 
-mutate(
+  group_by(survey) %>% 
+  mutate(
     wt_mt_scale = as.numeric(scale(wt_mt, center=TRUE, scale=TRUE)),
     wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
     cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
@@ -97,10 +99,14 @@ mutate(
     depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
   ) %>% 
   arrange(year) %>% 
-  mutate(wt_mt_scale_lag = log(lag(wt_mt_scale))) %>% 
-  ungroup()
+  mutate(
+    wt_mt_lag = log(lag(wt_mt))) %>% 
+  ungroup() %>% 
+  mutate( # alternative scaling method--among, not within, regions
+    anom_days_scale_alt =  as.numeric(scale(anom_days, center=TRUE, scale=TRUE))
+  ) 
 
-# lagged effects of MHW duration on biomass 
+# lagged effects of MHW duration on biomass, for GAMs
 lags <- modeldat %>%
   group_by(survey) %>% 
   arrange(year) %>% 
@@ -124,14 +130,11 @@ cbpal6 <- c('#2271B2','#3DB7E9','#F748A5','#359B73','#D55E00',"black")
 ```{r, setup2, include=FALSE}
 knitr::opts_chunk$set(
   message=FALSE, echo=FALSE, warning=FALSE
+  # , fig.pos="H" #was trying to use this to fix the placement of tables but it doesn't work
 )
 ```
 
 # Supplementary methods
-
-All code used to conduct this analysis is publicly available at
-<https://github.com/afredston/marine_heatwaves_trawl>. Raw datasets are
-publicly available at [DOI LINK].
 
 ## Trawl data preparation
 
@@ -160,74 +163,70 @@ were identified to species, 12% to genus, and the remaining 8% to higher
 taxonomic levels. We used all of the taxa for biomass analyses but only
 the species-level records for community analyses.
 
-Data cleaning scripts from the [FISHGLOB
-project](https://www.fondationbiodiversite.fr/en/the-frb-in-action/programs-and-projects/le-cesab/fishglob/)
-are summarized below and contained in [CODE LINK]:
+Data cleaning scripts from the are summarized below:
 
 The marine heatwave analysis began with the harmonized FISHGLOB v1.1
 public dataset, and additional data trimming measures are summarized
-below and contained in
-[prep_trawl_data.R](https://github.com/afredston/marine_heatwaves_trawl/blob/main/prep_trawl_data.R):
+below and contained in prep_trawl_data.R:
 
 -   Omit surveys in FISHGLOBv1.1 that show very inconsistent sampling
-    patterns in the summary PDFs [PDF LINK]
+patterns in the summary PDFs
 
 -   Calculate CPUE for the one region for which it is not calculated in
-    FISHGLOB already: the Northeast US. This region does not report
-    swept area, but staff at the survey agency (NOAA) use a fixed value
-    for the swept area for all hauls, regardless of haul duration (the
-    fixed value is standardized to a 30-minute haul). To make this a
-    more reasonable assumption, we omit hauls more than 5 minutes
-    shorter or longer than the target haul duration, and then calculate
-    CPUE
+FISHGLOB already: the Northeast US. This region does not report
+swept area, but staff at the survey agency (NOAA) use a fixed value
+for the swept area for all hauls, regardless of haul duration (the
+fixed value is standardized to a 30-minute haul). To make this a
+more reasonable assumption, we omit hauls more than 5 minutes
+shorter or longer than the target haul duration, and then calculate
+CPUE
 
 -   Manually trim out years for which, based on the summary PDFs, our
-    expert opinion is that survey methods were not consistent (e.g., far
-    fewer hauls than usual). This step most frequently omits the early
-    years of a survey, when methods and sampling intensity were not yet
-    standardized; these years may also be too early to match to
-    temperature data, and thus would have been omitted later in the
-    analysis anyway
+expert opinion is that survey methods were not consistent (e.g., far
+fewer hauls than usual). This step most frequently omits the early
+years of a survey, when methods and sampling intensity were not yet
+standardized; these years may also be too early to match to
+temperature data, and thus would have been omitted later in the
+analysis anyway
 
 -   Remove surveys that have fewer than 10 years of data, as our focus
-    is temporal dynamics. This step removes three small surveys in
-    Canada
+is temporal dynamics. This step removes three small surveys in
+Canada
 
 -   Trim each survey to one season, i.e., the most consistently or
-    frequently sampled three-month interval
+frequently sampled three-month interval
 
 -   Standardize spatial footprints over time for each survey by creating
-    hexagonal cells covering the Earth's surface, pairing each haul with
-    a cell, and retaining only hauls in the cells that were sampled
-    every year. Cells were created using the dggridR
-    package[@barnes2020a]. We used a cell resolution of 8, corresponding
-    to a cell area of 7,774 km^2^, for all regions except the Norway
-    survey. Norway conducts an extremely large-scale scientific trawl
-    survey that has operated in the Norwegian and Barents Seas for
-    decades. Because this survey is larger-scale than all of the others,
-    we used a cell resolution of 7 ( cell area of 23,323 km^2^) to
-    standardize the footprint of this survey
+hexagonal cells covering the Earth's surface, pairing each haul with
+a cell, and retaining only hauls in the cells that were sampled
+every year. Cells were created using the dggridR
+package[@barnes2020a]. We used a cell resolution of 8, corresponding
+to a cell area of 7,774 km^2^, for all regions except the Norway
+survey. Norway conducts an extremely large-scale scientific trawl
+survey that has operated in the Norwegian and Barents Seas for
+decades. Because this survey is larger-scale than all of the others,
+we used a cell resolution of 7 ( cell area of 23,323 km^2^) to
+standardize the footprint of this survey
 
 -   Impute zeros for true absences in every instance where a species
-    ever observed in a survey was *not* encountered in a given haul
+ever observed in a survey was *not* encountered in a given haul
 
 -   Calculate species-specific mean CPUE as the mean of every CPUE for
-    that species in a given survey and year (i.e., average over hauls)
+that species in a given survey and year (i.e., average over hauls)
 
 -   Calculate species-specific mean depth as the mean of depths where
-    hauls occurred in a given survey and year, weighted by the species'
-    CPUE in each haul
+hauls occurred in a given survey and year, weighted by the species'
+CPUE in each haul
 
 ## Power analysis
 
 We simulated data to assess whether our study had sufficient power to
-detect MHW-driven biomass changes (see
-[power_analysis.R](https://github.com/afredston/marine_heatwaves_trawl/blob/main/power_analysis.R)).
-We fitted an autoregressive linear model of log biomass over time
-(Gompertz model) to each region's biomass data, including MHW
-presence/absence as a predictor. We extracted the coefficient $\rho$,
-intercept $\alpha$, and conditional standard deviation $\sigma$ of this
-model, and used them to simulate data from the same Gompertz model
+detect MHW-driven biomass changes (see power_analysis.R). We fitted an
+autoregressive linear model of log biomass over time (Gompertz model) to
+each region's biomass data, including MHW presence/absence as a
+predictor. We extracted the coefficient $\rho$, intercept $\alpha$, and
+conditional standard deviation $\sigma$ of this model, and used them to
+simulate data from the same Gompertz model
 
 $$
 log(B_t) = \alpha + \rho \times log( B_{t-1} ) + \gamma \times MHW_t + \sigma'
@@ -310,6 +309,54 @@ level (Fig. \@ref(fig:fig-spp-tl)), feeding mode (Fig.
 
 # Supplementary tables
 
+\newpage
+
+```{r tab-surveys}
+knitr::kable(survey_names, col.names=c("Code","Survey"), caption="Survey names used in this analysis, and corresponding codes used in figures and tables in this Supplement.") %>%
+  kable_styling(font_size = 8)
+```
+
+```{r tab-prep}
+
+mlag0 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:2]), data=dat ) # regular GAM
+}
+mlag1 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:3]), data=dat )
+}
+mlag2 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:4]), data=dat )
+}
+mlag3 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:5]), data=dat )
+}
+mlag4 <- function(dat){
+  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:6]), data=dat )
+}
+
+# set up list of models for tables
+mod_ls_prep <- list(
+  "LM" = lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat),
+  "LME" = lmer(wt_mt_log_scale ~ anom_days_scale + 1|survey, data = modeldat), # look at table -- what's near zero and causing the singular error? 
+  "GAM" = gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat ), 
+  "GAM + RE" = gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey))) ,
+  # "Breakpoint Regression" = mcp(list(
+  # wt_mt_log_scale ~ 1 + anom_days_scale,
+  # ~ 0 +anom_days_scale), data=modeldat),
+  "GAM Lag 1" = mlag1(lags), 
+  "GAM Lag 2" = mlag2(lags), 
+  "GAM Lag 3" = mlag3(lags), 
+  "GAM Lag 4" = mlag4(lags)
+)
+
+# force modelsummary to print DF
+mod_ls <- modelsummary(mod_ls_prep, output = "modelsummary_list")
+models <- as.list(mod_ls)
+for(i in 1:length(models)){
+  models[[i]]$glance$df.error <- models[[i]]$tidy$df.error[1]
+}
+```
+
 ```{r tab-models-wt}
 options(modelsummary_get="easystats")
 
@@ -327,100 +374,76 @@ options(modelsummary_get="easystats")
 # GAM of MHW duration on biomass with a random effect
 # wt_gam_re <- gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-mlag0 <- function(dat){
-  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:2]), data=dat ) # regular GAM
-}
-mlag1 <- function(dat){
-  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:3]), data=dat )
-}
-mlag2 <- function(dat){
-  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:4]), data=dat )
-}
-mlag3 <- function(dat){
-  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:5]), data=dat )
-}
-mlag4 <- function(dat){
-  gam( wt_mt_log_scale ~ s(as.matrix(dat)[,2:6]), data=dat )
-}
-#wt_gam_lag1 = mlag1(lags)
-#wt_gam_lag2 = mlag2(lags)
-#wt_gam_lag3 = mlag3(lags)
-#wt_gam_lag4 = mlag4(lags)
+modelsummary(models[1:4],  
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
+             statistic=NULL, # suppress the second row of results (already printing SEs)
+             title="Models of biomass change. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), and GAM with survey as a random effect. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>% 
+  kableExtra::kable_styling(font_size = 8)
 
-# breakpoint regression 
-# model = list(
-#   wt_mt_log_scale ~ 1 + anom_days_scale,
-#   ~ 0 +anom_days_scale
-# )
-# wt_bp = mcp(model, data=modeldat)
 
-# compare all biomass models 
-#AIC(wt_lm, wt_lme, wt_gam, wt_gam_re, wt_gam_lag1, wt_gam_lag2, wt_gam_lag3, wt_gam_lag4)
+```
 
-models <- list(
-  "LM" = lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat),
-  "LME" = lmer(wt_mt_log_scale ~ anom_days_scale + 1|survey, data = modeldat),
-  "GAM" = gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat ), 
-  "GAM + RE" = gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey))) ,
-  # "Breakpoint Regression" = mcp(list(
-  # wt_mt_log_scale ~ 1 + anom_days_scale,
-  # ~ 0 +anom_days_scale), data=modeldat),
-  "AR1 LM" = lm(wt_mt_log_scale ~ anom_days_scale + wt_mt_scale_lag, data=modeldat),
-  "GAM Lag 1" = mlag1(lags), 
-  "GAM Lag 2" = mlag2(lags), 
-  "GAM Lag 3" = mlag3(lags), 
-  "GAM Lag 4" = mlag4(lags)
-)
 
-modelsummary(models[1:5], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and linear Gompertz (autoregressive) model.") 
+```{r tab-models-wt-alt}
+models_alt_prep <- modelsummary(
+  list(
+    "LM" = lm(wt_mt_log_scale ~ anom_days_scale_alt, data = modeldat),
+    "LME" = lmer(wt_mt_log_scale ~ anom_days_scale_alt + 1|survey, data = modeldat), # look at table -- what's near zero and causing the singular error? 
+    "GAM" = gam(wt_mt_log_scale ~ s(anom_days_scale_alt), data = modeldat ), 
+    "GAM + RE" = gam(wt_mt_log_scale ~ s(anom_days_scale_alt) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey))) 
+  ), 
+  output = "modelsummary_list")
+
+models_alt <- as.list(models_alt_prep)
+
+for(i in 1:length(models_alt)){
+  models_alt[[i]]$glance$df.error <- models_alt[[i]]$tidy$df.error[1]
+}
+
+modelsummary(models_alt,  
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
+             statistic=NULL, # suppress the second row of results (already printing SEs)
+             title="This table is identical to the previous one, except rather than centering and scaling MHW duration within regions, it is centered and scaled among regions. The approach used in most of these models (centering and scaling MHW duration within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW duration matters regardless of the oceangraphic history of each region (centering and scaling MHW duration among regions). Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
+  kable_styling(font_size = 8)
+
 ```
 
 ```{r tab-models-wt2}
 
-modelsummary(models[6:9], metrics=c("Num.Obs.","R2","AIC","estimate","p.value"), title="Models of biomass change. All models were fitted to scaled and centered biomass log ratio values using MHW duration in days (scaled and centered). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey.") 
+modelsummary(models[5:8], 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
+             statistic=NULL, # suppress the second row of results (already printing SEs)
+             title="Models of biomass change. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: GAM with a matrix of predictors including MHW data from 2-5 years prior to the survey in addition to the year prior to the survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
+  kable_styling(font_size = 8)
 
-# lagged effects of MHW duration on biomass, by survey 
-# wt_gam_lag_surv <- NULL
-# for(i in unique(modeldat$survey)){
-#   tmp <- modeldat %>% 
-#     filter(survey==i) %>% 
-#     arrange(year) %>% 
-#     mutate(lag1 = lag(anom_days_scale, 1),
-#            lag2 = lag(anom_days_scale, 2),
-#            lag3 = lag(anom_days_scale, 3)) %>% 
-#     ungroup() %>% 
-#     select(wt_mt_log_scale, anom_days_scale, lag1, lag2, lag3)
-#   
-#   # manual stop for regions where GAM throws this error without decreasing df:
-#   #  Error in smooth.construct.tp.smooth.spec(object, dk$data, dk$knots) : 
-#   # A term has fewer unique covariate combinations than specified maximum degrees of freedom 
-#   if(i %in% c('FR-CGFS','GOA','DFO-QCS','WCANN','PT-IBTS','NIGFS')){
-#     tmp0 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:2], k=3), data=tmp )
-#     ), 'survey'=i,'model'='mlag0',kreduce = TRUE)    
-#     tmp1 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:3], k=3), data=tmp )
-#     ), 'survey'=i,'model'='mlag1',kreduce = TRUE)    
-#     tmp2 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:4], k=3), data=tmp )
-#     ), 'survey'=i,'model'='mlag2',kreduce = TRUE)    
-#     tmp3 <- cbind(glance(  gam( wt_mt_log_scale ~ s(as.matrix(tmp)[,2:5], k=3), data=tmp )
-#     ), 'survey'=i,'model'='mlag3',kreduce = TRUE)
-#   } else{
-#     
-#     tmp0 <- cbind(glance(mlag0(tmp)), 'survey'=i,'model'='mlag0',kreduce = FALSE)
-#     tmp1 <- cbind(glance(mlag1(tmp)), 'survey'=i,'model'='mlag1',kreduce = FALSE)
-#     tmp2 <- cbind(glance(mlag2(tmp)), 'survey'=i,'model'='mlag2',kreduce = FALSE)
-#     tmp3 <- cbind(glance(mlag3(tmp)), 'survey'=i,'model'='mlag3',kreduce = FALSE)
-#   }
-#   wt_gam_lag_surv <- rbind(wt_gam_lag_surv, tmp0, tmp1, tmp2, tmp3)
-# }
-# ggplot(wt_gam_lag_surv) +
-#   geom_col(aes(x=survey, y=AIC, color=model, group=model, fill=model), position="dodge") +
-#   scale_color_brewer(palette=8, type="seq") + 
-#   scale_fill_brewer(palette=8, type="seq") +
-#   theme_bw()
-# write_csv(wt_gam_lag_surv, here('processed-data','lag_gam_summary.csv'))
 ```
 
 ```{r tbl-models-autocorr}
+modeldat2 <- modeldat %>% 
+  filter(!is.na(wt_mt_lag))
+# m1 <- glmmTMB(wt_mt_log ~ factor(survey) + anom_days_scale + wt_mt_lag:factor(survey), data = modeldat2, dispformula = ~survey)
+gompertz_models_prep <- modelsummary(
+  list(
+    "Gompertz LM" = lm(wt_mt_log ~ factor(survey) + anom_days_scale + wt_mt_lag:factor(survey), data=modeldat2),
+    "Gompertz LME" = lmer(wt_mt_log ~ (1|survey) + anom_days_scale + (wt_mt_lag|survey), data=modeldat2),
+    "Gompertz GAM" = gam( wt_mt_log ~ s(as.matrix(lags)[,2:6]) + wt_mt_lag + s(survey, bs="re") +  s(survey, anom_days_scale, bs = 're'), data=modeldat %>% mutate(survey = as.factor(survey)))
+  ), output = "modelsummary_list")
+
+gompertz_models <- as.list(gompertz_models_prep)
+
+for(i in 1:length(gompertz_models)){
+  gompertz_models[[i]]$glance$df.error <- gompertz_models[[i]]$tidy$df.error[1]
+}
+
+modelsummary(gompertz_models, 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), # customize what is printed
+             statistic=NULL, # suppress the second row of results (already printing SEs)
+             title="Model of biomass change as a function of MHW duration and lagged biomass (i.e., Gompertz models). All models were fitted to biomass log ratio values using MHW duration in days (scaled and centered within surveys) and used the previous year's log biomass as a predictor. Rather than centering and scaling biomass values, these models allow slopes and intercepts to vary by survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
+  kable_styling(font_size = 8)
 
 ```
 
@@ -449,35 +472,101 @@ topspp <- survey_spp_summary %>%
   pivot_wider(names_from="counter", values_from="wt_mt_scale") %>% 
   left_join(survey_summary %>% select(year, survey, wt_mt) %>% group_by(survey) %>% mutate(wt_mt_scale = scale(wt_mt, scale = TRUE, center = TRUE), .keep="unused")  %>% ungroup(), by=c("year","survey"))
 
-sppmodels <- list(
-  "LME-1" = lmer(wt_mt_scale ~ spp1 + (1|survey), data = topspp),
-  "LME-2" = lmer(wt_mt_scale ~ spp1 + spp2 + (1|survey), data = topspp),
-  "LME-3" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + (1|survey), data = topspp),
-  "LME-4" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + (1|survey), data = topspp),
-  "LME-5" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + spp5 + (1|survey), data = topspp))
+sppmodels_prep <- modelsummary(
+  list(
+    "LME-1" = lmer(wt_mt_scale ~ spp1 + (1|survey), data = topspp),
+    "LME-2" = lmer(wt_mt_scale ~ spp1 + spp2 + (1|survey), data = topspp),
+    "LME-3" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + (1|survey), data = topspp),
+    "LME-4" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + (1|survey), data = topspp),
+    "LME-5" = lmer(wt_mt_scale ~ spp1 + spp2 + spp3 + spp4 + spp5 + (1|survey), data = topspp)),
+  output = "modelsummary_list")
 
-modelsummary(sppmodels, metrics=c('Num.Obs','R2','AIC','Log.Lik.','F','RMSE'), title="Linear mixed-effect models of overall biomass as predicted by single-species biomass, with survey identity included as a random intercept. All models were fitted to scaled and centered biomass values. Model names correspond to the number of species used as predictors. Species were ranked by from highest overall biomass in the survey to lowest.")
+sppmodels <- as.list(sppmodels_prep)
+for(i in 1:length(sppmodels)){
+  sppmodels[[i]]$glance$df.error <- sppmodels[[i]]$tidy$df.error[1]
+}
+
+modelsummary(sppmodels, 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), 
+             statistic=NULL,
+             title="Linear mixed-effect models of overall biomass as predicted by single-species biomass, with survey identity included as a random intercept. All models were fitted to scaled and centered biomass values. Model names correspond to the number of species used as predictors. Species were ranked by from highest overall biomass in the survey to lowest. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  kable_styling(font_size = 8)
+
 ```
 
 ```{r tab-models-cti}
-modelsummary(list(
+mod_cti_prep <- modelsummary(list(
   "LM" = lm(cti_log_scale ~ anom_days_scale, data = modeldat),
   "LME" = lmer(cti_log_scale ~ anom_days_scale + 1|survey, data = modeldat)
-), title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey.")
+), output = "modelsummary_list")
+
+mod_cti <- as.list(mod_cti_prep)
+for(i in 1:length(mod_cti)){
+  mod_cti[[i]]$glance$df.error <- mod_cti[[i]]$tidy$df.error[1]
+}
+
+modelsummary(mod_cti, 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), 
+             statistic=NULL,
+             title="Models of CTI change. All models were fitted to scaled and centered CTI log ratio values using MHW duration in days (scaled and centered). Model names correspond to: linear model, linear mixed-effects model with survey identity as a random effect, generalized additive model (GAM), GAM with survey as a random effect, and GAM with a matrix of predictors including MHW data from 1-4 years prior to the survey in addition to the year prior to the survey. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  kable_styling(font_size = 8)
 ```
 
 ```{r tab-models-depth}
 # LM of MHW duration on depth (MHW-years only)
-modelsummary(lm(depth_wt_scale ~ anom_days_scale, data = modeldat), title="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered.")
+mod_depth_prep <- modelsummary(list(lm(depth_wt_scale ~ anom_days_scale, data = modeldat)), output="modelsummary_list")
+
+mod_depth <- as.list(mod_depth_prep)
+
+mod_depth$glance$df.error <- mod_depth$tidy$df.error[1]
+
+
+modelsummary(mod_depth, 
+             
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), 
+             statistic=NULL,
+             title="Model of depth change. Depth log ratio and MHW duration variables were scaled and centered. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.") %>%
+  kable_styling(font_size = 8)
 ```
 
 ```{r tab-models-lat}
-modelsummary(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat), title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered.") 
+mod_lat_prep <- modelsummary(list(lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat)),output = "modelsummary_list")
+
+mod_lat <- as.list(mod_lat_prep)
+mod_lat$glance$df.error <- mod_lat$tidy$df.error[1]
+
+modelsummary(mod_lat, 
+             metrics="all",
+             estimate  = c("{estimate} ({std.error}){stars}"), 
+             statistic=NULL,
+             title="Models of biomass change as a function of MHW duration and median survey latitude. All variables were scaled and centered. Values in parentheses are standard errors. Stars, if present, correspond to: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001.")  %>%
+  kable_styling(font_size = 8)
+
 ```
 
 \clearpage
 
 # Supplementary figures
+
+```{r fig-mhw-point-by-reg, fig.cap="Alternate version of Fig. 2 from the main text, showing results by region. Longer MHWs are not associated with a decline in temperate fish biomass, and biomass is approximately as likely to increase as it is to decrease from one year to the next, regardless of whether a marine heatwave occurred. Points represent log ratios of mean biomass in a survey from one year to the next."}
+gg_mhw_biomass_point <- survey_summary %>% 
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  ggplot(aes(x=anom_days, y=wt_mt_log)) +
+  geom_point() +
+  geom_smooth(method="lm", color = "gray35") +
+  facet_wrap(~survey) +
+  theme_bw() +
+  coord_cartesian(clip = "off") +
+  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=25) +
+  NULL
+gg_mhw_biomass_point
+```
 
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three metrics of measuring MHW impacts: severity (total anomaly in °C), duration (number of days), and mean intensity (severity divided by duration, i.e., the average anomaly over the course of the MHW)." }
 gg_mhw_metric <- survey_summary %>% 
@@ -630,6 +719,8 @@ hauldat %>%
 
 ```
 
+
+
 ```{r fig-spp-tl, fig.cap="Biomass log ratio and MHW duration grouped by trophic level of each taxon."}
 
 ggplot(tl %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_days, y=wt_mt_log) )+
@@ -776,7 +867,7 @@ plot_spp <- function(x){
     left_join(survey_names) %>% 
     mutate(spp = factor(spp, levels=c(topspp$spp, "Others")))
   
- reg_plot <-  ggplot() +
+  reg_plot <-  ggplot() +
     geom_area(data=plot_prep, aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
     geom_col(data=plot_prep %>% select(year, bar1) %>% distinct(), aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
     scale_color_manual(values=cbpal6) +
@@ -787,14 +878,14 @@ plot_spp <- function(x){
           legend.title = element_blank()) + 
     labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$title) +
     NULL
- 
- 
-          #print plot
-         cat('\n\n') 
-         print(reg_plot)
-         #space
-         cat('\n\n') 
-
+  
+  
+  #print plot
+  cat('\n\n') 
+  print(reg_plot)
+  #space
+  cat('\n\n') 
+  
 }
 
 walk(survey_names$survey, ~plot_spp(.x))
