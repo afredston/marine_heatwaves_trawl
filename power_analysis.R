@@ -1,3 +1,5 @@
+# note: this takes a while to run and is set up in parallel--don't just hit "run"!
+
 library(tidyverse)
 set.seed(42)
 library(here)
