@@ -21,7 +21,7 @@ here <- here::here
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
 
 # what's going on with norway pre-data-trimming?
-nor_cod_pre <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
+# nor_cod_pre <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
 
 ##############
 # trim datasets
@@ -318,7 +318,7 @@ raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name, startmonth)][haul
 
 
 # what's going on with norway post-data-trimming?
-nor_cod_post <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
+# nor_cod_post <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
 
 # get expanded grid for each region
 raw_zeros <- NULL
@@ -374,6 +374,6 @@ stats_dat <- data.frame(
 fwrite(raw_cpue, here("processed-data","biomass_time.csv"))
 fwrite(haul_info, here("processed-data","haul_info.csv"))
 fwrite(trim.dt, here("processed-data","spatial_standardization_summary.csv"))
-fwrite(nor_cod_pre, here("processed-data","norway_cod_pre_trimming.csv"))
-fwrite(nor_cod_post, here("processed-data","norway_cod_post_trimming.csv"))
+# fwrite(nor_cod_pre, here("processed-data","norway_cod_pre_trimming.csv"))
+# fwrite(nor_cod_post, here("processed-data","norway_cod_post_trimming.csv"))
 write.csv(stats_dat, here("processed-data","stats_about_raw_data.csv"))

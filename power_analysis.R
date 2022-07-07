@@ -5,8 +5,8 @@ set.seed(42)
 library(here)
 library(doParallel)
 detectCores()
-registerDoParallel(cores=4)
-mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
+registerDoParallel(cores=24)
+mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","MHW_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
 survey_names <- read_csv(here('processed-data','survey_names.csv'))
@@ -46,7 +46,7 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
   rho <- ifelse( abs(rho)>0.95, sign(rho)*0.95, rho )
   
   # Stationary properties (for initial condition)
-  marginal_sd = conditional_sd / (1-rho)^2
+  marginal_sd = conditional_sd / sqrt(1-rho^2)
   marginal_mean = alpha / (1-rho)
   
   sim_yrs <- NULL
@@ -139,7 +139,7 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
   rho <- ifelse( abs(rho)>0.95, sign(rho)*0.95, rho )
   
   # Stationary properties (for initial condition)
-  marginal_sd = conditional_sd / (1-rho)^2
+  marginal_sd = conditional_sd / sqrt(1-rho^2)
   marginal_mean = alpha / (1-rho)
   
   sim_gamma <- NULL
