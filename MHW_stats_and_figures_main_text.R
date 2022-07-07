@@ -694,6 +694,32 @@ ggplot() +
 # ---------------------------- #
 
 
+# JEPA #
+# Include abreviation on title for plot
+
+survey_names <- survey_names %>% 
+  mutate(abb = c(
+    "(BS)",
+    "(BC)",
+    "(EBS)",
+    "(FR)",
+    "(EC)",
+    "(GoM)",
+    "(GoA)",
+    "(GSL)",
+    "(IR)",
+    "(NeUS)",
+    "(NI)",
+    "(NO)",
+    "(NS)",
+    "(PO)",
+    "(SS)",
+    "(SeUS)",
+    "(SC)",
+    "(WUS)",
+  )) 
+
+
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
   tmp <- mhw_summary_sat_sst_5_day %>% 
