@@ -695,7 +695,7 @@ ggplot() +
 
 
 # JEPA #
-# Include abreviation on title for plot
+# Include abbreviation on title for plot
 
 survey_names <- survey_names %>% 
   mutate(abb = c(
@@ -716,8 +716,10 @@ survey_names <- survey_names %>%
     "(SS)",
     "(SeUS)",
     "(SC)",
-    "(WUS)",
-  )) 
+    "(WUS)"
+  ),
+  title = ifelse(title == "Norway", "Western Barents Sea (WBS)", paste(title, abb))
+  ) 
 
 
 # generate many small panels for Fig 1
