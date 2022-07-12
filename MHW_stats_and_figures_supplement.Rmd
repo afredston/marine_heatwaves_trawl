@@ -765,7 +765,6 @@ plot_grid(jaccard_dissimilarity_baseline_ebs,
           align = "hv")
 ```
 
-
 ```{r fig-dissim-base-swc-ibts, fig.cap="Total Temporal Community Dissimilarity versus baseline year for occurence based beta diversity metric (Jaccard; left) and biomass based beta diversity metric (Bray-Curtis; right) for the Scottish Sea. Blue trendline and gray ribbon illustrate significant linear regression between dissimilarity and year."}
 
 #linear model of dissimilarity vs time
@@ -792,7 +791,6 @@ plot_grid(jaccard_dissimilarity_baseline_SWC_IBTS,
           ncol = 2, nrow = 1,
           align = "hv")
 ```
-
 
 ```{r fig-dissim-mhw, fig.cap="Temporal Community Dissimilarity and MHW event for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
 
@@ -872,8 +870,6 @@ plot_grid(anom_days_jaccard_dissimilarity_turnover + theme(axis.title.x = elemen
           ncol = 2, nrow = 2,
           align = "hv")
 ```
-
-
 
 ```{r fig-spp, fig.keep="all", fig.cap=paste0("Biomass trends and historical MHWs by region. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year (e.g., 2015 in the Eastern Bering Sea time-series corresponds to the survey that began in June 2015, and MHW data from June 2014 - May 2015). British Columbia and the Gulf of Alaska are biennial surveys; all others are annual."), message = F, echo = F, warning = F}
 
