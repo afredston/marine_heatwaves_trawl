@@ -256,44 +256,44 @@ summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div 
 summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
 
 
-# community turnover using biomass metrics
-bc_mhw_turnover <- beta_div %>% 
+# balanced variation in biomass (variable sometimes uses 'turnover', but it refers to balanced variation in biomass in text)
+bc_mhw_balanced <- beta_div %>% 
   filter(anom_days>0, !is.na(bray_dissimilarity_turnover)) %>% 
   pull(bray_dissimilarity_turnover)
-bc_no_mhw_turnover <- beta_div %>% 
+bc_no_mhw_balanced <- beta_div %>% 
   filter(anom_days==0, !is.na(bray_dissimilarity_turnover)) %>% 
   pull(bray_dissimilarity_turnover)
 
-t.test(bc_mhw_turnover, bc_no_mhw_turnover)
+t.test(bc_mhw_balanced, bc_no_mhw_balanced)
 summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
 
-    #turnover just for EBS
-    bc_mhw_turnover_ebs <- beta_div %>% 
+    #balanced variation in biomass just for EBS
+    bc_mhw_balanced_ebs <- beta_div %>% 
       filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
       pull(bray_dissimilarity_turnover)
-    bc_no_mhw_turnover_ebs <- beta_div %>% 
+    bc_no_mhw_balanced_ebs <- beta_div %>% 
       filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
       pull(bray_dissimilarity_turnover)
     
-    t.test(bc_mhw_turnover_ebs, bc_no_mhw_turnover_ebs)
+    t.test(bc_mhw_balanced_ebs, bc_no_mhw_balanced_ebs)
     summary(lm(bray_dissimilarity_turnover ~ anom_days,
                data=beta_div %>% filter(survey == "EBS")))
     
-    #turnover just for EBS mean values
+    #balanced variation in biomass just for EBS mean values
     beta_div_ebs <- beta_div %>%
       filter(survey == "EBS")
     
     mean(beta_div_ebs$bray_dissimilarity_turnover, na.rm = T)
     
-    #turnover just for Scottish Sea
-    bc_mhw_turnover_swc_ibts <- beta_div %>% 
+    #balanced variation in biomass just for Scottish Sea (variable sometimes uses 'turnover', but it refers to balanced variation in biomass in text)
+    bc_mhw_balanced_swc_ibts <- beta_div %>% 
       filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
       pull(bray_dissimilarity_turnover)
-    bc_no_mhw_turnover_swc_ibts <- beta_div %>% 
+    bc_no_mhw_balanced_swc_ibts <- beta_div %>% 
       filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
       pull(bray_dissimilarity_turnover)
     
-    t.test(bc_mhw_turnover_swc_ibts, bc_no_mhw_turnover_swc_ibts)
+    t.test(bc_mhw_balanced_swc_ibts, bc_no_mhw_balanced_swc_ibts)
     summary(lm(bray_dissimilarity_turnover ~ anom_days,
                data=beta_div %>% filter(survey == "SWC-IBTS")))
     
@@ -303,26 +303,26 @@ summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
     
     mean(beta_div_swc_ibts$bray_dissimilarity_turnover, na.rm = T)
 
-#community nestedness using biomass metrics
-bc_mhw_nestedness <- beta_div %>% 
+#biomass gradient (variable sometimes uses 'nestedness', but it refers to biomass gradient in text)
+bc_mhw_b_gradient <- beta_div %>% 
   filter(anom_days>0, !is.na(bray_dissimilarity_nestedness)) %>% 
   pull(bray_dissimilarity_nestedness)
-bc_no_mhw_nestedness <- beta_div %>% 
+bc_no_mhw_b_gradient <- beta_div %>% 
   filter(anom_days==0, !is.na(bray_dissimilarity_nestedness)) %>% 
   pull(bray_dissimilarity_nestedness)
 
-t.test(bc_mhw_nestedness, bc_no_mhw_nestedness)
+t.test(bc_mhw_b_gradient, bc_no_mhw_nestedness)
 summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
 
-    #community nestedness just for EBS
-    bc_mhw_nestedness_ebs <- beta_div %>% 
+    #biomass gradient just for EBS
+    bc_mhw_b_gradient_ebs <- beta_div %>% 
       filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
       pull(bray_dissimilarity_nestedness)
-    bc_no_mhw_nestedness_ebs <- beta_div %>% 
+    bc_no_mhw_b_gradient_ebs <- beta_div %>% 
       filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
       pull(bray_dissimilarity_nestedness)
     
-    t.test(bc_mhw_nestedness_ebs, bc_no_mhw_nestedness_ebs)
+    t.test(bc_mhw_b_gradient_ebs, bc_no_mhw_b_gradient_ebs)
     summary(lm(bray_dissimilarity_nestedness ~ anom_days,
                data=beta_div %>% filter(survey == "EBS")))
     
@@ -332,15 +332,15 @@ summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
 
     mean(beta_div_ebs$bray_dissimilarity_nestedness, na.rm = T)
     
-    #community nestedness just for SWC-IBTS
-    bc_mhw_nestedness_swc_ibts <- beta_div %>% 
+    #biomass gradient just for SWC-IBTS
+    bc_mhw_b_gradient_swc_ibts <- beta_div %>% 
       filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
       pull(bray_dissimilarity_nestedness)
-    bc_no_mhw_nestedness_swc_ibts <- beta_div %>% 
+    bc_no_mhw_b_gradient_swc_ibts <- beta_div %>% 
       filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
       pull(bray_dissimilarity_nestedness)
     
-    t.test(bc_mhw_nestedness_swc_ibts, bc_no_mhw_nestedness_swc_ibts)
+    t.test(bc_mhw_b_gradient_swc_ibts, bc_no_mhw_b_gradient_swc_ibts)
     summary(lm(bray_dissimilarity_nestedness ~ anom_days,
                data=beta_div %>% filter(survey == "SWC-IBTS")))
     
