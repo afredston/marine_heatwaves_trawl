@@ -17,8 +17,40 @@ survey_names <- read_csv(here('processed-data','survey_names.csv'))
 
 powerdat <- survey_summary %>%
   group_by(survey) %>% 
-  arrange(year) %>% 
+  arrange(year) %>%  
   mutate(lagwt = lag(wt, 1))
+
+# sanity check the approach against some real data (and try a few surveys)
+# 
+# tData = powerdat %>% filter(survey=='PT-IBTS')
+# tGompertz = lm( log(wt) ~ 1 + log(lagwt), data=tData )
+# 
+# # Gompertz parameters
+# talpha = tGompertz$coef['(Intercept)']
+# trho = tGompertz$coef['log(lagwt)']
+# tconditional_sd = sqrt(mean(tGompertz$residuals^2))
+# 
+# # dial back perfect autocorrelation so that the marginal standard deviation doesn't go to infinity 
+# trho <- ifelse( abs(trho)>0.95, sign(trho)*0.95, trho )
+# 
+# # Stationary properties (for initial condition)
+# tmarginal_sd = tconditional_sd / sqrt(1-trho^2)
+# tmarginal_mean = talpha / (1-trho)
+# 
+# # what's the actual SD of the data and how does it compare to the simulation?
+# abs(sd(log(tData$wt))-tmarginal_sd)
+# 
+# tlogB_t=rep(NA, 10000)
+# tlogB_t[1] = rnorm( n=1, mean=tmarginal_mean, sd=tmarginal_sd )
+# 
+#   # Project every year 
+#   #  Gompertz:  log(N(t+1)) = alpha + rho * log(N(t)) + effects + error
+#   for( tI in 2:10000){
+#     tlogB_t[tI] = talpha + trho*tlogB_t[tI-1] + rnorm( n=1, mean=0, sd=tconditional_sd )
+#   }
+# 
+# plot(seq(1, 10000, 1), tlogB_t)
+# lines(x=(tData$year-min(tData$year)+1), y=log(tData$wt), col="red")
 
 iters <- 1000
 trialyrs <- c(seq(10, 200, 10), 24, 25) # 435 / 18 = 24.17 which is the average years/survey we have in the actual data 

@@ -14,7 +14,7 @@ csl: https://raw.githubusercontent.com/citation-style-language/styles/master/nat
 ---
 
 ```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
-
+set.seed(42)
 # load packages
 library(tidyverse)
 library(here)
@@ -37,11 +37,6 @@ mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv
 mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
 mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # modeled SST from SODA
 mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
-
-# calendar year MHW data for plotting
-# mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
-# mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
-# mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
 
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv"))

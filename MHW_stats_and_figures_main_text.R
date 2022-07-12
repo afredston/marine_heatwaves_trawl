@@ -74,6 +74,11 @@ beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")
   select(-month_year, -survey_date) %>% 
   left_join(mhw_summary_sat_sst_5_day) # add in mhw data
 
+sim_test_summ_gamma <- readRDS(here("processed-data","sim_test_summ_gamma.rds"))
+sim_test_summ_yrs <- readRDS(here("processed-data","sim_test_summ_yrs.rds"))
+colnames(sim_test_summ_gamma) <- c('exp_gamma','propsig')
+colnames(sim_test_summ_yrs) <- c('n_years','propsig','n_years_tot')
+
 # map data 
 haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
 
@@ -226,6 +231,14 @@ cor.test(
   mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
   method="spearman"
 )
+
+# power analysis
+
+# what % biomass loss could we detect with our sample size, aiming for a power of >80%?
+sim_test_summ_gamma %>% filter(propsig>0.8)
+
+# how many sample-years would we need to detect a 6% loss of biomass with the same power threshold?
+sim_test_summ_yrs %>% filter(propsig>0.8)
 
 ############
 # community turnover
