@@ -244,7 +244,7 @@ sim_test_summ_yrs %>% filter(propsig>0.8)
 # community turnover
 ############
 
-#total dissimilarity in comparison to the first year for EBS and Scottish Sea for comparisons 
+#total dissimilarity in comparison to the first year for EBS and Scottish Sea for comparisons to previous published works (EBS: Alabia et al. 2021, SWC-IBTS: Magurran et al. 2015)
 #(Total Jaccard Dissimilarity and Total Bray Dissimilarity)
 
 #EBS
@@ -255,7 +255,7 @@ summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>%
 summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
 summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
 
-
+#for additional analyses, total dissimilarity is broken down into turnover (balanced variation for biomass) and nestedness (biomass gradient for biomass) components
 # balanced variation in biomass (variable sometimes uses 'turnover', but it refers to balanced variation in biomass in text)
 bc_mhw_balanced <- beta_div %>% 
   filter(anom_days>0, !is.na(bray_dissimilarity_turnover)) %>% 
@@ -267,41 +267,7 @@ bc_no_mhw_balanced <- beta_div %>%
 t.test(bc_mhw_balanced, bc_no_mhw_balanced)
 summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
 
-    #balanced variation in biomass just for EBS
-    bc_mhw_balanced_ebs <- beta_div %>% 
-      filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
-      pull(bray_dissimilarity_turnover)
-    bc_no_mhw_balanced_ebs <- beta_div %>% 
-      filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "EBS") %>% 
-      pull(bray_dissimilarity_turnover)
-    
-    t.test(bc_mhw_balanced_ebs, bc_no_mhw_balanced_ebs)
-    summary(lm(bray_dissimilarity_turnover ~ anom_days,
-               data=beta_div %>% filter(survey == "EBS")))
-    
-    #balanced variation in biomass just for EBS mean values
-    beta_div_ebs <- beta_div %>%
-      filter(survey == "EBS")
-    
-    mean(beta_div_ebs$bray_dissimilarity_turnover, na.rm = T)
-    
-    #balanced variation in biomass just for Scottish Sea (variable sometimes uses 'turnover', but it refers to balanced variation in biomass in text)
-    bc_mhw_balanced_swc_ibts <- beta_div %>% 
-      filter(anom_days>0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
-      pull(bray_dissimilarity_turnover)
-    bc_no_mhw_balanced_swc_ibts <- beta_div %>% 
-      filter(anom_days==0, !is.na(bray_dissimilarity_turnover), survey == "SWC-IBTS") %>% 
-      pull(bray_dissimilarity_turnover)
-    
-    t.test(bc_mhw_balanced_swc_ibts, bc_no_mhw_balanced_swc_ibts)
-    summary(lm(bray_dissimilarity_turnover ~ anom_days,
-               data=beta_div %>% filter(survey == "SWC-IBTS")))
-    
-    #mean values
-    beta_div_swc_ibts <- beta_div %>%
-      filter(survey == "SWC-IBTS")
-    
-    mean(beta_div_swc_ibts$bray_dissimilarity_turnover, na.rm = T)
+    #R^2 0.00, p-value = 0.42
 
 #biomass gradient (variable sometimes uses 'nestedness', but it refers to biomass gradient in text)
 bc_mhw_b_gradient <- beta_div %>% 
@@ -311,68 +277,10 @@ bc_no_mhw_b_gradient <- beta_div %>%
   filter(anom_days==0, !is.na(bray_dissimilarity_nestedness)) %>% 
   pull(bray_dissimilarity_nestedness)
 
-t.test(bc_mhw_b_gradient, bc_no_mhw_nestedness)
+t.test(bc_mhw_b_gradient, bc_no_mhw_b_gradient)
 summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
 
-    #biomass gradient just for EBS
-    bc_mhw_b_gradient_ebs <- beta_div %>% 
-      filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
-      pull(bray_dissimilarity_nestedness)
-    bc_no_mhw_b_gradient_ebs <- beta_div %>% 
-      filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "EBS") %>% 
-      pull(bray_dissimilarity_nestedness)
-    
-    t.test(bc_mhw_b_gradient_ebs, bc_no_mhw_b_gradient_ebs)
-    summary(lm(bray_dissimilarity_nestedness ~ anom_days,
-               data=beta_div %>% filter(survey == "EBS")))
-    
-    #mean values
-    beta_div_ebs <- beta_div %>%
-      filter(survey == "EBS")
-
-    mean(beta_div_ebs$bray_dissimilarity_nestedness, na.rm = T)
-    
-    #biomass gradient just for SWC-IBTS
-    bc_mhw_b_gradient_swc_ibts <- beta_div %>% 
-      filter(anom_days>0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
-      pull(bray_dissimilarity_nestedness)
-    bc_no_mhw_b_gradient_swc_ibts <- beta_div %>% 
-      filter(anom_days==0, !is.na(bray_dissimilarity_nestedness), survey == "SWC-IBTS") %>% 
-      pull(bray_dissimilarity_nestedness)
-    
-    t.test(bc_mhw_b_gradient_swc_ibts, bc_no_mhw_b_gradient_swc_ibts)
-    summary(lm(bray_dissimilarity_nestedness ~ anom_days,
-               data=beta_div %>% filter(survey == "SWC-IBTS")))
-    
-    #mean values
-    beta_div_swc_ibts <- beta_div %>%
-      filter(survey == "SWC-IBTS")
-    
-    mean(beta_div_swc_ibts$bray_dissimilarity_nestedness, na.rm = T)
-
-# community turnover using occurrence metrics
-j_mhw_turnover <- beta_div %>% 
-  filter(anom_days>0, !is.na(jaccard_dissimilarity_turnover)) %>% 
-  pull(jaccard_dissimilarity_turnover)
-j_no_mhw_turnover <- beta_div %>% 
-  filter(anom_days==0, !is.na(jaccard_dissimilarity_turnover)) %>% 
-  pull(jaccard_dissimilarity_turnover)
-
-t.test(j_mhw_turnover, j_no_mhw_turnover)
-summary(lm(jaccard_dissimilarity_turnover ~ anom_days, data=beta_div)) #not significant, p>0.05, but, p = 0.06, so close to significant
-#suggests that there may be higher turnover of species in MHW years
-#but this doesn't translate to a significant turnover in biomass
-
-#community nestedness using occurrence metrics
-j_mhw_nestedness <- beta_div %>% 
-  filter(anom_days>0, !is.na(jaccard_dissimilarity_nestedness)) %>% 
-  pull(jaccard_dissimilarity_nestedness)
-j_no_mhw_nestedness <- beta_div %>% 
-  filter(anom_days==0, !is.na(jaccard_dissimilarity_nestedness)) %>% 
-  pull(jaccard_dissimilarity_nestedness)
-
-t.test(j_mhw_nestedness, j_no_mhw_nestedness)
-summary(lm(jaccard_dissimilarity_nestedness ~ anom_days, data=beta_div))
+  #R^2 = 0.00, p-value = 0.53
 
 ######
 # figures

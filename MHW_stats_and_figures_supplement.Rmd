@@ -792,11 +792,15 @@ plot_grid(jaccard_dissimilarity_baseline_SWC_IBTS,
 #convert mhw_yes_no to factor
 beta_div$mhw_yes_no <- factor(beta_div$mhw_yes_no)
 
+#Turnover Component
+
 MHW_jaccard_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_turnover)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
   labs(x="Marine Heatwave", y="Turnover Component\nJaccard Dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+#Nestedness Component
 
 MHW_jaccard_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_nestedness)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
@@ -804,11 +808,15 @@ MHW_jaccard_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.case
   labs(x="Marine Heatwave", y="Nestedness Component\nJaccard Dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+#Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics)
+
 MHW_bray_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_turnover)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
   labs(x="Marine Heatwave", y="Balanced Variation Component\nBray-Curtis Dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+#Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics)
 
 MHW_bray_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_nestedness)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
@@ -826,6 +834,8 @@ plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blan
 
 ```{r fig-dissim-length, fig.cap="Temporal Community Dissimilarity and MHW duration for partitioned occurence based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom)."}
 
+#Turnover Component
+
 anom_days_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=jaccard_dissimilarity_turnover)) +
   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
   geom_smooth(method="lm") + 
@@ -833,6 +843,8 @@ anom_days_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=
   labs(x="Marine heatwave duration (days)", y="Turnover Component\nJaccard Dissimilarity") + 
   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+#Nestedness Component
 
 anom_days_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, y=jaccard_dissimilarity_nestedness)) +
   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
@@ -842,6 +854,8 @@ anom_days_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, 
   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+#Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics)
+
 anom_days_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=bray_dissimilarity_turnover)) +
   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
   geom_smooth(method="lm") + 
@@ -850,6 +864,10 @@ anom_days_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_days, y=bra
   geom_hline(aes(yintercept=mean(bray_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+summary(lm(bray_dissimilarity_turnover ~ anom_days, beta_div))
+
+#Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics)
+
 anom_days_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, y=bray_dissimilarity_nestedness)) +
   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
   geom_smooth(method="lm") + 
@@ -857,6 +875,8 @@ anom_days_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_days, y=b
   labs(x="Marine heatwave duration (days)", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") + 
   geom_hline(aes(yintercept=mean(bray_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+summary(lm(bray_dissimilarity_nestedness ~ anom_days, beta_div))
 
 plot_grid(anom_days_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()),
           anom_days_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
