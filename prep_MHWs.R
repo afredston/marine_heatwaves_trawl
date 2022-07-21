@@ -232,6 +232,19 @@ for(i in unique(survey_start_times$survey)){
   mhw_sat_sst_5_day_prep <- bind_rows(mhw_sat_sst_5_day_prep, tmp)
   
 }
+
+# how many distinct MHWs per year? (for main text stats)
+sst_5_day_mhws_per_yr <- mhw_sat_sst_5_day_prep %>% 
+  group_by(ref_yr) %>% 
+  mutate(anom = ifelse(counter >= 5, anom, NA),# overwrite anom values that aren't part of a >=5 day event
+         anom_na = !is.na(anom), # create true/false column
+         n_mhw = sum(rle(anom_na)$values) # count lengths of discrete TRUE sequences by ref_yr
+         ) %>% 
+  select(survey, ref_yr, n_mhw) %>% 
+  distinct()
+write.csv(sst_5_day_mhws_per_yr, file = here("processed-data","total_number_mhws.csv"))
+sum(sst_5_day_mhws_per_yr$n_mhw)
+
 mhw_summary_sat_sst_5_day <- mhw_sat_sst_5_day_prep %>% 
   group_by(ref_yr) %>% 
   mutate(anom = ifelse(counter >= 5, anom, NA))%>%  # overwrite anom values that aren't part of a >=5 day event
@@ -302,6 +315,7 @@ for(i in unique(survey_start_times$survey)){
   tmp <- transform(tmp, counter = ave(yn, rleid(year, yn), FUN=sum)) 
   mhw_calendar_sat_sst_5_day_prep <- bind_rows(mhw_calendar_sat_sst_5_day_prep, tmp)
 }
+
 mhw_calendar_sat_sst_5_day <- mhw_calendar_sat_sst_5_day_prep %>% 
   group_by(survey, year) %>% 
   mutate(anom = ifelse(counter >= 5, anom, NA))%>%
@@ -313,7 +327,6 @@ mhw_calendar_sat_sst_5_day <- mhw_calendar_sat_sst_5_day_prep %>%
   ) %>% 
   ungroup() %>% 
   mutate(anom_int = replace_na(anom_int, 0))  
-
 
 mhw_calendar_soda_sst <- soda_sst %>% 
   mutate(date = dmy(dateRaw)) %>% 
