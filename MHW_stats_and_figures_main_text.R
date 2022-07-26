@@ -51,6 +51,7 @@ set.seed(42)
 mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
 mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # modeled SST from SODA
 mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
+total_mhws <- read_csv(here("processed-data","total_number_mhws.csv"))
 
 # calendar year MHW data for plotting
 # mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
@@ -72,7 +73,11 @@ write_csv(survey_names, here('processed-data','survey_names.csv'))
 beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
   left_join(survey_start_times) %>% # add in the ref_yr column 
   select(-month_year, -survey_date) %>% 
-  left_join(mhw_summary_sat_sst_5_day) # add in mhw data
+  left_join(mhw_summary_sat_sst_5_day) %>%  # add in mhw data
+  group_by(survey)  %>% 
+  # scale and center all beta diversity measures within regions 
+  mutate(across(jaccard_dissimilarity_turnover:richness_percent_change, ~scale(., center=TRUE, scale=TRUE), .names="{.col}_scale")) %>% # UPDATE IF COLUMNS CHANGE!
+  ungroup()
 
 sim_test_summ_gamma <- readRDS(here("processed-data","sim_test_summ_gamma.rds"))
 sim_test_summ_yrs <- readRDS(here("processed-data","sim_test_summ_yrs.rds"))
@@ -85,6 +90,25 @@ haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
 ######
 # stats 
 ######
+
+# how many MHWs total?
+sum(total_mhws$n_mhw)
+
+# how many MHW vs non-MHW years?
+survey_summary %>% 
+  group_by(mhw_yes_no) %>% 
+  summarise(n=n())
+
+# is absolute variability predicted by number of hauls in a region?
+hauldat_prep <- haul_info %>% 
+  group_by(survey) %>% 
+  summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
+  mutate(hyr = Hauls/Years) 
+hauldat <- survey_summary %>% 
+  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
+  filter(!is.na(abs_wt_mt_log)) %>% 
+  left_join(hauldat_prep, by="survey")
+glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
 
 # EBS 2017
 survey_summary %>% 
@@ -115,7 +139,7 @@ survey_summary %>%
   select(wt_mt_log, anom_days) %>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
-# T-tests 
+# statistical tests 
 
 wt_no_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "no", !is.na(wt_mt_log)) %>%
@@ -123,16 +147,21 @@ wt_no_mhw <- survey_summary %>%
 wt_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "yes", !is.na(wt_mt_log)) %>%
   pull(wt_mt_log)
-mean(wt_mhw)
+shapiro.test(wt_no_mhw)
+shapiro.test(wt_mhw)
+
+median(wt_mhw)
 sd(wt_mhw)
-mean(wt_no_mhw)
+median(wt_no_mhw)
 sd(wt_no_mhw)
 t.test(wt_mhw, wt_no_mhw)
-pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = 0.1, sig.level = 0.05, power = NULL, alternative="two.sided")
-# d = (abs(log(1)-log(0.94/1)) / sd(c(wt_mhw, wt_no_mhw)))
-# pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = d, sig.level = 0.05, power = NULL, alternative="two.sided")
-# pwr.t.test(n = NULL, d = d, sig.level = 0.05, power = .8, alternative="two.sided")
-# pwr.t2n.test(n1 = length(wt_mhw), n2= length(wt_no_mhw), d = NULL, sig.level = 0.05, power = 0.8, alternative="two.sided")
+
+# absolute variation in log ratios
+median(abs(wt_mhw))
+sd(abs(wt_mhw))
+median(abs(wt_no_mhw))
+sd(abs(wt_no_mhw))
+t.test(abs(wt_mhw), abs(wt_no_mhw))
 
 cti_no_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
@@ -140,11 +169,28 @@ cti_no_mhw <- survey_summary %>%
 cti_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
   pull(cti_log)
-mean(cti_no_mhw)
+shapiro.test(cti_no_mhw)
+shapiro.test(cti_mhw)
+median(cti_no_mhw)
 sd(cti_no_mhw)
-mean(cti_mhw)
+median(cti_mhw)
 sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw)
+
+
+# how correlated are SODA SBT and SODA SST?
+cor.test(
+  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
+  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
+  method="spearman"
+)
+
+cor.test(
+  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
+  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
+  method="spearman"
+)
+
 
 # regressions
 
@@ -154,8 +200,11 @@ summary(lm_wt)
 lm_cti <- lm(cti_log ~ anom_days, data = survey_summary)
 summary(lm_cti)
 
-# what percentage of biomass changes after MHWs fall within one SD of the mean change after no MHW?
-length(abs(wt_mhw)[abs(wt_mhw)<sd(wt_no_mhw)]) / length(abs(wt_mhw))
+# how many taxa total?
+survey_spp_summary %>% 
+  select(spp, STI) %>% 
+  distinct() %>% 
+  nrow(.)
 
 # how many taxa had STI values?
 survey_spp_summary %>% 
@@ -164,6 +213,7 @@ survey_spp_summary %>%
   mutate(STItest = ifelse(is.na(STI), "no","yes")) %>% 
   group_by(STItest) %>% 
   summarise(n=n())
+
 
 # and what % of the biomass does that represent? 
 survey_spp_summary %>% 
@@ -174,14 +224,6 @@ survey_spp_summary %>%
   summarise(totwt = sum(tot))
 
 # CTI stats
-
-# Scotland
-# survey_summary %>% 
-#   filter(survey=='SWC-IBTS') %>% 
-#   select(-wt_mt) %>% 
-#   left_join(survey_spp_summary %>% filter(survey=='SWC-IBTS',spp %in% c('Scomber scombrus','Clupea harengus')) %>% select(spp, year, STI, wt_mt)) %>% ggplot() +
-#   geom_line(aes(x=year, y=wt_mt, color=spp)) +
-#   geom_line(aes(x=year, y=CTI, color="CTI")) 
 
 survey_spp_summary%>% 
   filter(survey=='SWC-IBTS', spp=='Scomber scombrus', year %in% c(2004, 2005)) %>% 
@@ -219,19 +261,6 @@ survey_summary %>%
   group_by(cti_change) %>% 
   summarise(n=n())
 
-# how correlated are SODA SBT and SODA SST?
-cor.test(
-  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
-  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
-  method="spearman"
-)
-
-cor.test(
-  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
-  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
-  method="spearman"
-)
-
 # power analysis
 
 # what % biomass loss could we detect with our sample size, aiming for a power of >80%?
@@ -244,43 +273,54 @@ sim_test_summ_yrs %>% filter(propsig>0.8)
 # community turnover
 ############
 
-#total dissimilarity in comparison to the first year for EBS and Scottish Sea for comparisons to previous published works (EBS: Alabia et al. 2021, SWC-IBTS: Magurran et al. 2015)
-#(Total Jaccard Dissimilarity and Total Bray Dissimilarity)
+# biomass weighted 
+bc_mhw_substitution <- beta_div %>% 
+  filter(anom_days>0, !is.na(bray_dissimilarity_turnover_scale)) %>% 
+  pull(bray_dissimilarity_turnover_scale)
+bc_no_mhw_substitution <- beta_div %>% 
+  filter(anom_days==0, !is.na(bray_dissimilarity_turnover_scale)) %>% 
+  pull(bray_dissimilarity_turnover_scale)
+bc_mhw_subset <- beta_div %>% 
+  filter(anom_days>0, !is.na(bray_dissimilarity_nestedness_scale)) %>% 
+  pull(bray_dissimilarity_nestedness_scale)
+bc_no_mhw_subset <- beta_div %>% 
+  filter(anom_days==0, !is.na(bray_dissimilarity_nestedness_scale)) %>% 
+  pull(bray_dissimilarity_nestedness_scale)
+bc_mhw_total <- beta_div %>% 
+  filter(anom_days>0, !is.na(bray_dissimilarity_total_scale)) %>% 
+  pull(bray_dissimilarity_total_scale)
+bc_no_mhw_total <- beta_div %>% 
+  filter(anom_days==0, !is.na(bray_dissimilarity_total_scale)) %>% 
+  pull(bray_dissimilarity_total_scale)
 
-#EBS
-summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "EBS")))
-summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "EBS")))
+t.test(bc_mhw_substitution, bc_no_mhw_substitution)
+t.test(bc_mhw_subset, bc_no_mhw_subset)
+t.test(bc_mhw_total, bc_no_mhw_total)
 
-#SWC-IBTS
-summary(lm(jaccard_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
-summary(lm(bray_dissimilarity_total_compare_first_year ~ year, data=beta_div %>% filter(survey == "SWC-IBTS")))
+# occurrence based 
+jac_mhw_substitution <- beta_div %>% 
+  filter(anom_days>0, !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
+  pull(jaccard_dissimilarity_turnover_scale)
+jac_no_mhw_substitution <- beta_div %>% 
+  filter(anom_days==0, !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
+  pull(jaccard_dissimilarity_turnover_scale)
+jac_mhw_subset <- beta_div %>% 
+  filter(anom_days>0, !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
+  pull(jaccard_dissimilarity_nestedness_scale)
+jac_no_mhw_subset <- beta_div %>% 
+  filter(anom_days==0, !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
+  pull(jaccard_dissimilarity_nestedness_scale)
+jac_mhw_total <- beta_div %>% 
+  filter(anom_days>0, !is.na(jaccard_dissimilarity_total_scale)) %>% 
+  pull(jaccard_dissimilarity_total_scale)
+jac_no_mhw_total <- beta_div %>% 
+  filter(anom_days==0, !is.na(jaccard_dissimilarity_total_scale)) %>% 
+  pull(jaccard_dissimilarity_total_scale)
 
-#for additional analyses, total dissimilarity is broken down into turnover (balanced variation for biomass) and nestedness (biomass gradient for biomass) components
-# balanced variation in biomass (variable sometimes uses 'turnover', but it refers to balanced variation in biomass in text)
-bc_mhw_balanced <- beta_div %>% 
-  filter(anom_days>0, !is.na(bray_dissimilarity_turnover)) %>% 
-  pull(bray_dissimilarity_turnover)
-bc_no_mhw_balanced <- beta_div %>% 
-  filter(anom_days==0, !is.na(bray_dissimilarity_turnover)) %>% 
-  pull(bray_dissimilarity_turnover)
-
-t.test(bc_mhw_balanced, bc_no_mhw_balanced)
-summary(lm(bray_dissimilarity_turnover ~ anom_days, data=beta_div))
-
-    #R^2 0.00, p-value = 0.42
-
-#biomass gradient (variable sometimes uses 'nestedness', but it refers to biomass gradient in text)
-bc_mhw_b_gradient <- beta_div %>% 
-  filter(anom_days>0, !is.na(bray_dissimilarity_nestedness)) %>% 
-  pull(bray_dissimilarity_nestedness)
-bc_no_mhw_b_gradient <- beta_div %>% 
-  filter(anom_days==0, !is.na(bray_dissimilarity_nestedness)) %>% 
-  pull(bray_dissimilarity_nestedness)
-
-t.test(bc_mhw_b_gradient, bc_no_mhw_b_gradient)
-summary(lm(bray_dissimilarity_nestedness ~ anom_days, data=beta_div))
-
-  #R^2 = 0.00, p-value = 0.53
+t.test(jac_mhw_substitution, jac_no_mhw_substitution)
+t.test(jac_mhw_subset, jac_no_mhw_subset)
+t.test(jac_mhw_total, jac_no_mhw_total)
+  
 
 ######
 # figures
