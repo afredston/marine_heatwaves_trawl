@@ -89,8 +89,8 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
     MHW_t = rbinom(n_years, size=1, prob=prob_mhw)
     
     # Initialize
-     logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
-  #  logB_t[1] = marginal_mean # variance was too big for initializing 
+    logB_t[1] = rnorm( n=1, mean=marginal_mean, sd=marginal_sd )
+    #  logB_t[1] = marginal_mean # variance was too big for initializing 
     
     # Project every year 
     #  Gompertz:  log(N(t+1)) = alpha + rho * log(N(t)) + effects + error
@@ -118,26 +118,34 @@ pwrout_yrs <- foreach(surv=survey_names$survey, .combine='rbind') %:%
 # is it the right size?
 (iters * sum(trialyrs) * nrow(survey_names)) == nrow(pwrout_yrs)
 
+
 # analyze simulated data 
 # note that this is now for all surveys; so while we filter for the length of the trial (n_years), there are 18 "replicates" within the trial pooled together with log ratio biomass + MHW yes/no data 
-sim_test_yrs <- NULL
-for(j in trialyrs){
-  for(i in 1:iters){
-    tmp10 <- pwrout_yrs %>% 
-      filter(n_years==j,
-             iter==i) 
-    tmp10_no <- tmp10 %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 0) %>% pull(wt_mt_log)
-    tmp10_yes <- tmp10 %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 1) %>% pull(wt_mt_log)
-    tmp10_t <- t.test(tmp10_no, tmp10_yes)
-    if(!class(tmp10_t)=="try-error"){
-      tmpdat <- tibble(t = tmp10_t$statistic, df = tmp10_t$parameter, p.value = tmp10_t$p.value, mean_no_mhw = mean(tmp10_no), mean_mhw = mean(tmp10_yes), sd_no_mhw = sd(tmp10_no), sd_mhw = sd(tmp10_yes), n_years = j, iter=i)
-    } else{
-      # if rho goes to 1, marginal sd goes to Inf, which breaks the model; the catch to keep abs(rho)<0.95 above should fix this, but just in case: 
-      tmpdat <- tibble(t = NA, df = NA, p.value = NA, mean_no_mhw = NA, mean_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, n_years = j, iter=i)
-    }
-    sim_test_yrs <- rbind(sim_test_yrs, tmpdat)
+sim_yrs_t_test <- function(pwrout_yrs, j, i){
+  tmp10 <- pwrout_yrs %>% 
+    filter(n_years==j,
+           iter==i,
+           wt_mt_log > -Inf, 
+           wt_mt_log < Inf) %>% 
+    group_by(survey) %>% 
+    mutate(wt_mt_log_scale = scale(wt_mt_log, center=TRUE, scale=TRUE)) %>% 
+    ungroup()
+  tmp10_no <- tmp10 %>% filter(mhw_yes_no == 0) %>% pull(wt_mt_log_scale)
+  tmp10_yes <- tmp10 %>% filter(mhw_yes_no == 1) %>% pull(wt_mt_log_scale)
+  tmp10_t <- t.test(tmp10_no, tmp10_yes)
+  if(!class(tmp10_t)=="try-error"){
+    tmpdat <- tibble(t = unname(tmp10_t$statistic), p.value = tmp10_t$p.value, df = unname(tmp10_t$parameter[1]), median_no_mhw = median(tmp10_no), median_mhw = median(tmp10_yes), sd_no_mhw = sd(tmp10_no), sd_mhw = sd(tmp10_yes), n_years = j, iter=i)
+  } else{
+    # if rho goes to 1, marginal sd goes to Inf, which breaks the model; the catch to keep abs(rho)<0.95 above should fix this, but just in case: 
+    tmpdat <- tibble(t = NA, p.value = NA, df=NA, median_no_mhw = NA, median_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, n_years = j, iter=i)
   }
+  return(tmpdat)
 }
+
+sim_test_yrs <- foreach(j=trialyrs, .combine="rbind") %:%
+  foreach(i=seq(1, iters, 1), .combine='rbind') %do% {
+    sim_yrs_t_test(pwrout_yrs=pwrout_yrs, j=j, i=i)
+  }
 
 # how many regions/simulations, if any, created an error?
 sim_test_yr_error <- sim_test_yrs %>% 
@@ -148,6 +156,10 @@ sim_test_summ_yrs <- sim_test_yrs %>%
   group_by(n_years) %>% 
   summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value)) %>% 
   mutate(n_years_tot = n_years * length(unique(powerdat$survey)))
+
+saveRDS(sim_test_yrs, file=here("processed-data","sim_test_yrs.rds"))
+saveRDS(pwrout_yrs, file=here("processed-data","pwrout_yrs.rds"))
+saveRDS(sim_test_summ_yrs, file=here("processed-data","sim_test_summ_yrs.rds"))
 
 # PART 2: given the data we have, what effect size could we detect? 
 # note that unlike the function above, which applies the same duration to each survey, this holds each survey at its actual number of sample-years and just varies the true effect size to see what we would have detected with our methods 
@@ -166,7 +178,7 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
   # MHW frequency and intensity
   prob_mhw = mean( ifelse(Data[,'mhw_yes_no']=="yes",1,0), na.rm=TRUE )
   gamma = log(0.90) # vary to evaluate how much of a decrease we could detect 
-
+  
   # dial back perfect autocorrelation so that the marginal standard deviation doesn't go to infinity 
   rho <- ifelse( abs(rho)>0.95, sign(rho)*0.95, rho )
   
@@ -184,16 +196,16 @@ fn_sim_gamma <- function(powerdat, surv, gammas, a){
   logB_t[1] = marginal_mean # variance was too big for initializing 
   
   for(g in gammas){
-  for( tI in 2:n_years){
-    logB_t[tI] = alpha + rho*logB_t[tI-1] + g*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
-  }
-  
-  # set up dataframe to write out the results 
-  tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = g, survey = unique(Data$survey), iter = a) %>% 
-    arrange(year) %>% 
-    mutate(wt_mt_log = log(wt / lag(wt))) 
-  
-  sim_gamma <- rbind(sim_gamma, tmp)
+    for( tI in 2:n_years){
+      logB_t[tI] = alpha + rho*logB_t[tI-1] + g*MHW_t[tI] + rnorm( n=1, mean=0, sd=conditional_sd )
+    }
+    
+    # set up dataframe to write out the results 
+    tmp <- tibble(wt = exp(logB_t), year = seq(1, n_years, 1), mhw_yes_no = MHW_t, n_years = n_years, gamma = g, survey = unique(Data$survey), iter = a) %>% 
+      arrange(year) %>% 
+      mutate(wt_mt_log = log(wt / lag(wt))) 
+    
+    sim_gamma <- rbind(sim_gamma, tmp)
   }
   return(sim_gamma)
 }
@@ -215,14 +227,19 @@ for(j in gammas){
   for(i in 1:iters){
     tmp11 <- pwrout_gamma %>% 
       filter(gamma==j,
-             iter==i) 
-    tmp11_no <- tmp11 %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 0) %>% pull(wt_mt_log)
-    tmp11_yes <- tmp11 %>% filter(wt_mt_log > -Inf, wt_mt_log < Inf, mhw_yes_no == 1) %>% pull(wt_mt_log)
-    tmp11_t <- t.test(tmp11_no, tmp11_yes)
+             iter==i,
+             wt_mt_log > -Inf, 
+             wt_mt_log < Inf) %>% 
+      group_by(survey) %>% 
+      mutate(wt_mt_log_scale = scale(wt_mt_log, center=TRUE, scale=TRUE)) %>% 
+      ungroup()
+    tmp11_no <- tmp11 %>% filter(mhw_yes_no == 0) %>% pull(wt_mt_log_scale)
+    tmp11_yes <- tmp11 %>% filter(mhw_yes_no == 1) %>% pull(wt_mt_log_scale)
+    tmp11_t <- wilcox.test(tmp11_no, tmp11_yes)
     if(!class(tmp11_t)=="try-error"){
-      tmpdat2 <- tibble(t = tmp11_t$statistic, df = tmp11_t$parameter, p.value = tmp11_t$p.value, mean_no_mhw = mean(tmp11_no), mean_mhw = mean(tmp11_yes), sd_no_mhw = sd(tmp11_no), sd_mhw = sd(tmp11_yes), gamma=j, iter=i)
+      tmpdat2 <- tibble(W = unname(tmp11_t$statistic), p.value = tmp11_t$p.value, median_no_mhw = median(tmp11_no), median_mhw = median(tmp11_yes), sd_no_mhw = sd(tmp11_no), sd_mhw = sd(tmp11_yes), gamma=j, iter=i)
     } else{
-      tmpdat2 <- tibble(t = NA, df = NA, p.value = NA, mean_no_mhw = NA, mean_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, gamma = j, iter=i)
+      tmpdat2 <- tibble(W = NA, p.value = NA, median_no_mhw = NA, median_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, gamma = j, iter=i)
     }
     sim_test_gamma <- rbind(sim_test_gamma, tmpdat2)
   }
@@ -238,9 +255,6 @@ sim_test_summ_gamma <- sim_test_gamma %>%
   group_by(exp_gamma) %>% 
   summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value)) 
 
-saveRDS(sim_test_yrs, file=here("processed-data","sim_test_yrs.rds"))
 saveRDS(sim_test_gamma, file=here("processed-data","sim_test_gamma.rds"))
 saveRDS(pwrout_gamma, file=here("processed-data","pwrout_gamma.rds"))
-saveRDS(pwrout_yrs, file=here("processed-data","pwrout_yrs.rds"))
 saveRDS(sim_test_summ_gamma, file=here("processed-data","sim_test_summ_gamma.rds"))
-saveRDS(sim_test_summ_yrs, file=here("processed-data","sim_test_summ_yrs.rds"))
