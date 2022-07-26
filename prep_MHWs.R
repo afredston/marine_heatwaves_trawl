@@ -284,75 +284,75 @@ mhw_summary_soda_sbt <- mhw_soda_sbt %>%
   ungroup() %>% 
   mutate(anom_int = replace_na(anom_int, 0)) 
 
-
-# datasets based on calendar year -- use only for characterizing regional MHWs, not for comparing to trawl data -- BE CAREFUL ABOUT MERGING THE DATASETS GENERATED BELOW THIS LINE WITH THE SURVEYS!
-mhw_calendar_sat_sst_any <- sat_sst %>% 
-  mutate(date = dmy(dateRaw)) %>% # standardize date formats
-  select(-dateRaw) %>% 
-  mutate(year = year(date)) %>% 
-  group_by(survey, year) %>% 
-  summarise(
-    anom_days = sum(anom>0, na.rm=TRUE),# count number of non-NA anomaly days 
-    anom_sev = sum(anom, na.rm=TRUE), # add up total anomaly values
-    anom_int = anom_sev / anom_days # calculate mean intensity for every survey*year 
-  ) %>% 
-  group_by(survey, year) %>% 
-  mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
-  ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0)) # replacing NAs in anom_int that came from dividing by 0 with 0s
-
-# almost same code as above -- replacing ref_yr with calendar year
-mhw_calendar_sat_sst_5_day_prep <- NULL
-for(i in unique(survey_start_times$survey)){
-  tmp <- sat_sst %>% 
-    mutate(date = dmy(dateRaw)) %>%
-    select(-dateRaw) %>% 
-    mutate(year = year(date)) %>% 
-    filter(survey==i) %>% 
-    mutate(yn = ifelse(is.na(anom),0,1)) %>% 
-    group_by(year, yn) %>% 
-    arrange(date) 
-  tmp <- transform(tmp, counter = ave(yn, rleid(year, yn), FUN=sum)) 
-  mhw_calendar_sat_sst_5_day_prep <- bind_rows(mhw_calendar_sat_sst_5_day_prep, tmp)
-}
-
-mhw_calendar_sat_sst_5_day <- mhw_calendar_sat_sst_5_day_prep %>% 
-  group_by(survey, year) %>% 
-  mutate(anom = ifelse(counter >= 5, anom, NA))%>%
-  summarise(
-    anom_days = sum(anom>0, na.rm=TRUE),
-    anom_sev = sum(anom, na.rm=TRUE), 
-    anom_int = anom_sev / anom_days, 
-    mhw_yes_no = ifelse(anom_days>0, "yes", "no")
-  ) %>% 
-  ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0))  
-
-mhw_calendar_soda_sst <- soda_sst %>% 
-  mutate(date = dmy(dateRaw)) %>% 
-  select(-dateRaw) %>% 
-  mutate(year = year(date)) %>% 
-  group_by(survey, year) %>% 
-  summarise(anom_months = sum(anom>0, na.rm=TRUE),
-            anom_sev = sum(anom, na.rm=TRUE), 
-            anom_int = anom_sev / anom_months,
-            mhw_yes_no = ifelse(anom_months>0, "yes", "no")
-  )  %>% 
-  ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0))
-
-mhw_calendar_soda_sbt <- soda_sbt %>% 
-  mutate(date = dmy(dateRaw)) %>% 
-  select(-dateRaw) %>% 
-  mutate(year = year(date)) %>% 
-  group_by(survey, year) %>% 
-  summarise(anom_months = sum(anom>0, na.rm=TRUE),
-            anom_sev = sum(anom, na.rm=TRUE), 
-            anom_int = anom_sev / anom_months,
-            mhw_yes_no = ifelse(anom_months>0, "yes", "no")
-  )  %>% 
-  ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0))
+# 
+# # datasets based on calendar year -- use only for characterizing regional MHWs, not for comparing to trawl data -- BE CAREFUL ABOUT MERGING THE DATASETS GENERATED BELOW THIS LINE WITH THE SURVEYS!
+# mhw_calendar_sat_sst_any <- sat_sst %>% 
+#   mutate(date = dmy(dateRaw)) %>% # standardize date formats
+#   select(-dateRaw) %>% 
+#   mutate(year = year(date)) %>% 
+#   group_by(survey, year) %>% 
+#   summarise(
+#     anom_days = sum(anom>0, na.rm=TRUE),# count number of non-NA anomaly days 
+#     anom_sev = sum(anom, na.rm=TRUE), # add up total anomaly values
+#     anom_int = anom_sev / anom_days # calculate mean intensity for every survey*year 
+#   ) %>% 
+#   group_by(survey, year) %>% 
+#   mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0)) # replacing NAs in anom_int that came from dividing by 0 with 0s
+# 
+# # almost same code as above -- replacing ref_yr with calendar year
+# mhw_calendar_sat_sst_5_day_prep <- NULL
+# for(i in unique(survey_start_times$survey)){
+#   tmp <- sat_sst %>% 
+#     mutate(date = dmy(dateRaw)) %>%
+#     select(-dateRaw) %>% 
+#     mutate(year = year(date)) %>% 
+#     filter(survey==i) %>% 
+#     mutate(yn = ifelse(is.na(anom),0,1)) %>% 
+#     group_by(year, yn) %>% 
+#     arrange(date) 
+#   tmp <- transform(tmp, counter = ave(yn, rleid(year, yn), FUN=sum)) 
+#   mhw_calendar_sat_sst_5_day_prep <- bind_rows(mhw_calendar_sat_sst_5_day_prep, tmp)
+# }
+# 
+# mhw_calendar_sat_sst_5_day <- mhw_calendar_sat_sst_5_day_prep %>% 
+#   group_by(survey, year) %>% 
+#   mutate(anom = ifelse(counter >= 5, anom, NA))%>%
+#   summarise(
+#     anom_days = sum(anom>0, na.rm=TRUE),
+#     anom_sev = sum(anom, na.rm=TRUE), 
+#     anom_int = anom_sev / anom_days, 
+#     mhw_yes_no = ifelse(anom_days>0, "yes", "no")
+#   ) %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0))  
+# 
+# mhw_calendar_soda_sst <- soda_sst %>% 
+#   mutate(date = dmy(dateRaw)) %>% 
+#   select(-dateRaw) %>% 
+#   mutate(year = year(date)) %>% 
+#   group_by(survey, year) %>% 
+#   summarise(anom_months = sum(anom>0, na.rm=TRUE),
+#             anom_sev = sum(anom, na.rm=TRUE), 
+#             anom_int = anom_sev / anom_months,
+#             mhw_yes_no = ifelse(anom_months>0, "yes", "no")
+#   )  %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0))
+# 
+# mhw_calendar_soda_sbt <- soda_sbt %>% 
+#   mutate(date = dmy(dateRaw)) %>% 
+#   select(-dateRaw) %>% 
+#   mutate(year = year(date)) %>% 
+#   group_by(survey, year) %>% 
+#   summarise(anom_months = sum(anom>0, na.rm=TRUE),
+#             anom_sev = sum(anom, na.rm=TRUE), 
+#             anom_int = anom_sev / anom_months,
+#             mhw_yes_no = ifelse(anom_months>0, "yes", "no")
+#   )  %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0))
 
 ########
 # CTI and CPUE data
@@ -447,6 +447,6 @@ write_csv(mhw_summary_soda_sst, here("processed-data","MHW_soda_sst.csv"))
 write_csv(mhw_summary_soda_sbt, here("processed-data","MHW_soda_sbt.csv"))
 
 # calendar year datasets -- for summary statistics and plots only, no trawl data analysis
-write_csv(mhw_calendar_sat_sst_5_day, here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
-write_csv(mhw_calendar_soda_sst, here("processed-data","MHW_calendar_year_soda_sst.csv"))
-write_csv(mhw_calendar_soda_sbt, here("processed-data","MHW_calendar_year_soda_sbt.csv"))
+# write_csv(mhw_calendar_sat_sst_5_day, here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
+# write_csv(mhw_calendar_soda_sst, here("processed-data","MHW_calendar_year_soda_sst.csv"))
+# write_csv(mhw_calendar_soda_sbt, here("processed-data","MHW_calendar_year_soda_sbt.csv"))

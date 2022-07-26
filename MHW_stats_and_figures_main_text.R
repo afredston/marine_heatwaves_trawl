@@ -53,11 +53,6 @@ mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # m
 mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
 total_mhws <- read_csv(here("processed-data","total_number_mhws.csv"))
 
-# calendar year MHW data for plotting
-# mhw_cal_yr_sat_sst_5_day <- read_csv(here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
-# mhw_cal_yr_soda_sst <- read_csv(here("processed-data","MHW_calendar_year_soda_sst.csv"))
-# mhw_cal_yr_soda_sbt <- read_csv(here("processed-data","MHW_calendar_year_soda_sbt.csv"))
-
 # survey data 
 survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
@@ -781,49 +776,3 @@ gg_mhw_cti_hist <- survey_summary %>%
         legend.position = "none")
 gg_mhw_cti_hist
 ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.png"), width=50, height=50, units="mm")
-
-
-#########
-# maps
-#########
-
-reg_hulls <- coords_dat %>% 
-  mutate(lon = ifelse(lon>-180, lon, lon+360)) %>% # fix values in AK that are -189 etc
-  filter(!survey=="Aleutian Islands") %>%  # COME BACK TO THIS AND FIX THE MAP
-  st_as_sf(., coords=c('lon','lat')) %>% 
-  group_by(survey) %>% 
-  summarise(geometry=st_union(geometry)) %>% 
-  st_convex_hull()
-
-if(file.exists(here("processed-data","global_oceans.shp"))==TRUE){
-  ocean <- st_read(here("processed-data","global_oceans.shp"))
-}else{
-  ocean <- ne_download(scale=110, type = 'ocean', category = 'physical', returnclass ="sf")
-  st_write(ocean, here("processed-data","global_oceans.shp"))
-}
-
-# make CRS of hulls the same as ocean -- DANGER!
-# st_crs(reg_hulls) <- st_crs(ocean)
-# 
-# ggplot() +
-#   geom_sf(data=reg_hulls, aes(), fill="steelblue2", color="navy", alpha=0.5) +
-#   geom_sf(data=ocean, aes()) +
-#   geom_sf_text(data=reg_hulls, aes(label=survey), size=2) +
-#   theme_bw()
-# 
-# 
-# ggplot() +
-#   geom_sf(data=ocean, aes()) +
-#   geom_sf(data=reg_hulls %>% filter(survey %in% c("Eastern Bering Sea","West Coast","Northeast")), aes(), fill="steelblue2", color="navy", alpha=0.5) +
-#   theme_bw()
-# 
-# 
-# ggplot() +
-#   geom_sf(data=ocean, aes()) +
-#   geom_sf(data=reg_hulls %>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(), fill="steelblue2", color="navy", alpha=0.5) +
-#   geom_sf_text(data=reg_hulls%>% filter(survey %in% c("NorBTS","BITS",'SWC-IBTS','NS-IBTS')), aes(label=survey), size=3) +
-#   scale_x_continuous(limits=c(-15, 60)) + 
-#   scale_y_continuous(limits=c(40, 90)) +
-#   theme_bw()
-
-
