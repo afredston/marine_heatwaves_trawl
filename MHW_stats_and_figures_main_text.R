@@ -99,6 +99,17 @@ survey_summary %>%
   group_by(mhw_yes_no) %>% 
   summarise(n=n())
 
+# is absolute variability predicted by number of hauls in a region?
+hauldat_prep <- haul_info %>% 
+  group_by(survey) %>% 
+  summarise(Years = length(unique(year)), Hauls = length(unique(haul_id))) %>% 
+  mutate(hyr = Hauls/Years) 
+hauldat <- survey_summary %>% 
+  mutate(abs_wt_mt_log = abs(wt_mt_log)) %>% 
+  filter(!is.na(abs_wt_mt_log)) %>% 
+  left_join(hauldat_prep, by="survey")
+glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
+
 # EBS 2017
 survey_summary %>% 
   filter(survey=='EBS',year==2017) %>% 

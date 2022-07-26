@@ -5,7 +5,6 @@ date: 2022
 output: 
   bookdown::pdf_document2: default
 header-includes: 
-- \usepackage{float}
 editor_options: 
   markdown: 
     wrap: 72
@@ -377,6 +376,39 @@ kbl(lat.tbl, booktabs = TRUE, caption = "Model of biomass response to MHWs and l
 
 \clearpage
 
+```{r tbl-models-depth}
+lm.depth <- lm(depth_wt_scale ~ anom_days_scale, data = modeldat)
+
+int.depth <- c(
+  paste0(format(round(coef(summary(lm.depth))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.depth))[1,2], digits=3), nsmall=2))
+)
+coef.depth <- c(
+  paste0(format(round(coef(summary(lm.depth))[2,1], digits=3), nsmall=2)," ± ",
+         format(round(coef(summary(lm.depth))[2,2], digits=3), nsmall=2))
+)
+p.depth <- format(round(c(
+  coef(summary(lm.depth))[2,4]), digits=3), nsmall=2)
+r2.depth <- format(round(c(
+  summary(lm.depth)$r.squared), digits=3), nsmall=2)
+aic.depth <- round(AIC(lm.depth))
+df.depth <- format(round(c(
+  summary(lm.depth)$df[2]), digits=3), nsmall=0)
+
+
+colnames.depth <- c('Linear model')
+rownames.depth <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
+
+depth.tbl <- data.frame(rbind(int.depth, coef.depth, p.depth, r2.depth, aic.depth, df.depth), row.names=rownames.depth) 
+colnames(depth.tbl) <- colnames.depth
+
+kbl(depth.tbl, booktabs = TRUE, caption = "Model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+    escape = FALSE) %>%
+  kable_styling(font_size = 8, latex_options = c("striped"))
+
+```
+
+\clearpage
+
 ```{r tbl-models-cti}
 lm.cti <- lm(cti_log_scale ~ anom_days_scale, data = modeldat)
 lm.fixed.cti <- lm(cti_log_scale ~ anom_days_scale + factor(survey), data = modeldat)
@@ -430,39 +462,6 @@ colnames(cti.tbl) <- colnames.cti
 
 # ±
 kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (CTI) response to MHWs. All models were fitted to CTI log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
-    escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
-
-```
-
-\clearpage
-
-```{r tbl-models-depth}
-lm.depth <- lm(depth_wt_scale ~ anom_days_scale, data = modeldat)
-
-int.depth <- c(
-  paste0(format(round(coef(summary(lm.depth))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.depth))[1,2], digits=3), nsmall=2))
-)
-coef.depth <- c(
-  paste0(format(round(coef(summary(lm.depth))[2,1], digits=3), nsmall=2)," ± ",
-         format(round(coef(summary(lm.depth))[2,2], digits=3), nsmall=2))
-)
-p.depth <- format(round(c(
-  coef(summary(lm.depth))[2,4]), digits=3), nsmall=2)
-r2.depth <- format(round(c(
-  summary(lm.depth)$r.squared), digits=3), nsmall=2)
-aic.depth <- round(AIC(lm.depth))
-df.depth <- format(round(c(
-  summary(lm.depth)$df[2]), digits=3), nsmall=0)
-
-
-colnames.depth <- c('Linear model')
-rownames.depth <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
-
-depth.tbl <- data.frame(rbind(int.depth, coef.depth, p.depth, r2.depth, aic.depth, df.depth), row.names=rownames.depth) 
-colnames(depth.tbl) <- colnames.depth
-
-kbl(depth.tbl, booktabs = TRUE, caption = "Model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
