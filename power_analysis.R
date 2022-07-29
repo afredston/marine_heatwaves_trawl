@@ -1,15 +1,15 @@
 # note: this takes a while to run and is set up in parallel--don't just hit "run"!
 
-library(tidyverse)
+library(dplyr)
 set.seed(42)
 library(here)
 library(doParallel)
 detectCores()
-registerDoParallel(cores=24)
-mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","MHW_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
+registerDoParallel(cores=12)
+mhw_summary_sat_sst_5_day <- read.csv(here("processed-data","MHW_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
 
-survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
-survey_names <- read_csv(here('processed-data','survey_names.csv'))
+survey_summary <-read.csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
+survey_names <- read.csv(here('processed-data','survey_names.csv'))
 
 ###########
 # power analysis
@@ -113,10 +113,12 @@ fn_sim_yr <- function(powerdat, surv, trialyrs, a){
 
 pwrout_yrs <- foreach(surv=survey_names$survey, .combine='rbind') %:% 
   foreach(a = seq(1, iters, 1), .combine='rbind') %dopar% {
+    library(dplyr)
     fn_sim_yr(powerdat=powerdat, surv=surv, trialyrs=trialyrs, a=a)
   }
 # is it the right size?
 (iters * sum(trialyrs) * nrow(survey_names)) == nrow(pwrout_yrs)
+saveRDS(pwrout_yrs, file=here("processed-data","pwrout_yrs.rds"))
 
 
 # analyze simulated data 
@@ -158,7 +160,6 @@ sim_test_summ_yrs <- sim_test_yrs %>%
   mutate(n_years_tot = n_years * length(unique(powerdat$survey)))
 
 saveRDS(sim_test_yrs, file=here("processed-data","sim_test_yrs.rds"))
-saveRDS(pwrout_yrs, file=here("processed-data","pwrout_yrs.rds"))
 saveRDS(sim_test_summ_yrs, file=here("processed-data","sim_test_summ_yrs.rds"))
 
 # PART 2: given the data we have, what effect size could we detect? 
@@ -220,30 +221,40 @@ pwrout_gamma <- foreach(surv=survey_names$survey, .combine='rbind') %:%
   foreach(a = seq(1, iters, 1), .combine='rbind') %dopar% {
     fn_sim_gamma(powerdat=powerdat, surv=surv, gammas=gammas, a=a)
   }
+saveRDS(pwrout_gamma, file=here("processed-data","pwrout_gamma.rds"))
+
+# analyze simulated data
+sim_gamma_t_test <- function(pwrout_gamma, k, i){
+  tmp11 <- pwrout_gamma %>% 
+    filter(gamma==k,
+           iter==i,
+           wt_mt_log > -Inf, 
+           wt_mt_log < Inf) %>% 
+    group_by(survey) %>% 
+    mutate(wt_mt_log_scale = scale(wt_mt_log, center=TRUE, scale=TRUE)) %>% 
+    ungroup()
+  tmp11_no <- tmp11 %>% filter(mhw_yes_no == 0) %>% pull(wt_mt_log_scale)
+  tmp11_yes <- tmp11 %>% filter(mhw_yes_no == 1) %>% pull(wt_mt_log_scale)
+  tmp11_t <- t.test(tmp11_no, tmp11_yes)
+  if(!class(tmp11_t)=="try-error"){
+    tmpdat2 <- tibble(t = unname(tmp11_t$statistic), p.value = tmp11_t$p.value, df = unname(tmp11_t$parameter[1]), median_no_mhw = median(tmp11_no), median_mhw = median(tmp11_yes), sd_no_mhw = sd(tmp11_no), sd_mhw = sd(tmp11_yes), gamma = k, iter=i)
+  } else{
+    # if rho goes to 1, marginal sd goes to Inf, which breaks the model; the catch to keep abs(rho)<0.95 above should fix this, but just in case: 
+    tmpdat2 <- tibble(t = NA, p.value = NA, df=NA, median_no_mhw = NA, median_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, gamma = k, iter=i)
+  }
+  return(tmpdat2)
+}
+
+
 
 # analyze simulated data 
-sim_test_gamma <- NULL
-for(j in gammas){
-  for(i in 1:iters){
-    tmp11 <- pwrout_gamma %>% 
-      filter(gamma==j,
-             iter==i,
-             wt_mt_log > -Inf, 
-             wt_mt_log < Inf) %>% 
-      group_by(survey) %>% 
-      mutate(wt_mt_log_scale = scale(wt_mt_log, center=TRUE, scale=TRUE)) %>% 
-      ungroup()
-    tmp11_no <- tmp11 %>% filter(mhw_yes_no == 0) %>% pull(wt_mt_log_scale)
-    tmp11_yes <- tmp11 %>% filter(mhw_yes_no == 1) %>% pull(wt_mt_log_scale)
-    tmp11_t <- wilcox.test(tmp11_no, tmp11_yes)
-    if(!class(tmp11_t)=="try-error"){
-      tmpdat2 <- tibble(W = unname(tmp11_t$statistic), p.value = tmp11_t$p.value, median_no_mhw = median(tmp11_no), median_mhw = median(tmp11_yes), sd_no_mhw = sd(tmp11_no), sd_mhw = sd(tmp11_yes), gamma=j, iter=i)
-    } else{
-      tmpdat2 <- tibble(W = NA, p.value = NA, median_no_mhw = NA, median_mhw = NA, sd_no_mhw = NA, sd_mhw = NA, gamma = j, iter=i)
-    }
-    sim_test_gamma <- rbind(sim_test_gamma, tmpdat2)
+
+sim_test_gamma <- foreach(k=gammas, .combine="rbind") %:%
+  foreach(i=seq(1, iters, 1), .combine='rbind') %do% {
+    sim_gamma_t_test(pwrout_gamma = pwrout_gamma, k=k, i=i)
   }
-}
+saveRDS(sim_test_gamma, file=here("processed-data","sim_test_gamma.rds"))
+
 
 # how many regions/simulations, if any, created an error?
 sim_test_gamma_error <- sim_test_gamma %>% 
@@ -255,6 +266,4 @@ sim_test_summ_gamma <- sim_test_gamma %>%
   group_by(exp_gamma) %>% 
   summarise(propsig <- length(p.value[p.value<=0.05])/length(p.value)) 
 
-saveRDS(sim_test_gamma, file=here("processed-data","sim_test_gamma.rds"))
-saveRDS(pwrout_gamma, file=here("processed-data","pwrout_gamma.rds"))
 saveRDS(sim_test_summ_gamma, file=here("processed-data","sim_test_summ_gamma.rds"))
