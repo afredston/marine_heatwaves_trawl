@@ -127,7 +127,7 @@ colnames(sim_test_summ_gamma) <- c('exp_gamma','propsig')
 colnames(sim_test_summ_yrs) <- c('n_years','propsig','n_years_tot')
 ```
 
-```{r, setup2, include=FALSE}
+```{r opts, setup2, include=FALSE}
 knitr::opts_chunk$set(
   message=FALSE, echo=FALSE, warning=FALSE
   # , fig.pos="H" #was trying to use this to fix the placement of tables but it doesn't work
@@ -144,6 +144,7 @@ kbl(survey_names, booktabs=TRUE, col.names=c("Code","Survey"), caption="Survey n
 \clearpage
 
 ```{r tbl-models-mhws}
+null.wt <- lm(wt_mt_log_scale ~ 1, data=modeldat)
 lm.wt <- lm(wt_mt_log_scale ~ anom_days_scale, data = modeldat)
 lm.fixed.wt <- lm(wt_mt_log_scale ~ anom_days_scale + factor(survey), data = modeldat)
 gam.wt <- gam(wt_mt_log_scale ~ s(anom_days_scale), data = modeldat )
@@ -151,12 +152,14 @@ gam.re.wt <- gam(wt_mt_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data
 
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.wt <- c(
+  paste0(format(round(coef(summary(null.wt))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.wt))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.wt))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.wt))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.wt))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.wt))[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.wt)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.wt)$p.table[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.re.wt)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.re.wt)$p.table[1,2], digits=3), nsmall=2))
 )
 coef.wt <- c(
+  "NA",
   paste0(format(round(coef(summary(lm.wt))[2,1], digits=3), nsmall=2)," ± ",
          format(round(coef(summary(lm.wt))[2,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.wt))[2,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.wt))[2,2]), digits=3), nsmall=2),
@@ -164,38 +167,44 @@ coef.wt <- c(
   "NA"
 )
 p.wt <- c(
+  "NA",
   format(round(coef(summary(lm.wt))[2,4], digits=3), nsmall=2),
   format(round(coef(summary(lm.fixed.wt))[2,4], digits=3), nsmall=2),
-  "NA",
-  "NA")
-r2.wt <- format(round(c(
-  summary(lm.wt)$r.squared, 
-  summary(lm.fixed.wt)$r.squared,
-  summary(gam.wt)$r.sq, 
-  summary(gam.re.wt)$r.sq
-), digits=3), nsmall=2)
-aic.wt <- format(round(c(
+  format(round(summary(gam.wt)$s.pv, digits=3), nsmall=2),
+  format(round(summary(gam.re.wt)$s.pv[1], digits=3), nsmall=2)
+)
+
+r2.wt <- c("NA",
+           format(round(c(
+             summary(lm.wt)$r.squared, 
+             summary(lm.fixed.wt)$r.squared,
+             summary(gam.wt)$r.sq, 
+             summary(gam.re.wt)$r.sq
+           ), digits=3), nsmall=2))
+aic.wt <- round(c(
+  AIC(null.wt),
   AIC(lm.wt),
   AIC(lm.fixed.wt),
   AIC(gam.wt),
   AIC(gam.re.wt)
-), digits=3), nsmall=0)
-df.wt <- format(round(c(
+))
+df.wt <- round(c(
+  summary(null.wt)$df[2], 
   summary(lm.wt)$df[2], 
   summary(lm.fixed.wt)$df[2],
   gam.wt$df.residual, 
   gam.re.wt$df.residual
-), digits=3), nsmall=0)
+))
 
 
-colnames.wt <- c('LM','LM Survey','GAM','GAM Survey')
+colnames.wt <- c('Null','LM','LM Survey','GAM','GAM Survey')
 rownames.wt <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 wt.tbl <- data.frame(rbind(int.wt, coef.wt, p.wt, r2.wt, aic.wt, df.wt), row.names=rownames.wt) 
 colnames(wt.tbl) <- colnames.wt
 
 # ±
-kbl(wt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(wt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
@@ -203,6 +212,7 @@ kbl(wt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. All 
 \clearpage
 
 ```{r tbl-models-alt}
+null.altmhw <- lm(wt_mt_log_scale ~ 1, data = modeldat)
 lm.altmhw <- lm(wt_mt_log_scale ~ anom_days_scale_alt, data = modeldat)
 lm.fixed.altmhw <- lm(wt_mt_log_scale ~ anom_days_scale_alt + factor(survey), data = modeldat)
 gam.altmhw <- gam(wt_mt_log_scale ~ s(anom_days_scale_alt), data = modeldat )
@@ -210,12 +220,14 @@ gam.re.altmhw <- gam(wt_mt_log_scale ~ s(anom_days_scale_alt) + s(survey, bs="re
 
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.altmhw <- c(
+  paste0(format(round(coef(summary(null.altmhw))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.altmhw))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.altmhw))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.altmhw))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.altmhw))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.altmhw))[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.altmhw)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.altmhw)$p.table[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.re.altmhw)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.re.altmhw)$p.table[1,2], digits=3), nsmall=2))
 )
 coef.altmhw <- c(
+  "NA",
   paste0(format(round(coef(summary(lm.altmhw))[2,1], digits=3), nsmall=2)," ± ",
          format(round(coef(summary(lm.altmhw))[2,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.altmhw))[2,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.altmhw))[2,2]), digits=3), nsmall=2),
@@ -223,38 +235,42 @@ coef.altmhw <- c(
   "NA"
 )
 p.altmhw <- c(
+  "NA",
   format(round(coef(summary(lm.altmhw))[2,4], digits=3), nsmall=2),
   format(round(coef(summary(lm.fixed.altmhw))[2,4], digits=3), nsmall=2),
-  "NA",
-  "NA")
-r2.altmhw <- format(round(c(
+  format(round(summary(gam.altmhw)$s.pv, digits=3), nsmall=2),
+  format(round(summary(gam.re.altmhw)$s.pv[1], digits=3), nsmall=2)
+)
+r2.altmhw <- c('NA',format(round(c(
   summary(lm.altmhw)$r.squared, 
   summary(lm.fixed.altmhw)$r.squared,
   summary(gam.altmhw)$r.sq, 
   summary(gam.re.altmhw)$r.sq
-), digits=3), nsmall=2)
-aic.altmhw <- format(round(c(
+), digits=3), nsmall=2))
+aic.altmhw <- round(c(
+  AIC(null.altmhw),
   AIC(lm.altmhw),
   AIC(lm.fixed.altmhw),
   AIC(gam.altmhw),
   AIC(gam.re.altmhw)
-), digits=3), nsmall=0)
-df.altmhw <- format(round(c(
+))
+df.altmhw <- round(c(
+  summary(null.altmhw)$df[2], 
   summary(lm.altmhw)$df[2], 
   summary(lm.fixed.altmhw)$df[2],
   gam.altmhw$df.residual, 
   gam.re.altmhw$df.residual
-), digits=3), nsmall=0)
+))
 
 
-colnames.altmhw <- c('LM','LM Survey','GAM','GAM Survey')
+colnames.altmhw <- c('Null','LM','LM Survey','GAM','GAM Survey')
 rownames.altmhw <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 alt.tbl <- data.frame(rbind(int.altmhw, coef.altmhw, p.altmhw, r2.altmhw, aic.altmhw, df.altmhw), row.names=rownames.altmhw) 
 colnames(alt.tbl) <- colnames.altmhw
 
 # ±
-kbl(alt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. This table is identical to Supp. Tab. 2, except rather than centering and scaling MHW duration within regions, it is centered and scaled among regions. The approach used in most of these models (centering and scaling MHW duration within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW duration matters regardless of the oceangraphic history of each region (centering and scaling MHW duration among regions). All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(alt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. This table is identical to Supp. Tab. 2, except rather than centering and scaling MHW duration within regions, it is centered and scaled among regions. The approach used in most of these models (centering and scaling MHW duration within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW duration matters regardless of the oceangraphic history of each region (centering and scaling MHW duration among regions). All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
@@ -280,24 +296,30 @@ r2.lags <- format(round(c(
   summary(gam3)$r.sq,
   summary(gam4)$r.sq
 ), digits=3), nsmall=2)
-aic.lags <- format(round(c(
+aic.lags <- round(c(
   AIC(gam1),
   AIC(gam2),
   AIC(gam3),
   AIC(gam4)
-), digits=3), nsmall=0)
-df.lags <- format(round(c(
+))
+df.lags <- round(c(
   gam1$df.residual, 
   gam2$df.residual,
   gam3$df.residual,
   gam4$df.residual
-), digits=3), nsmall=0)
-
+))
+p.lags <- format(round(c(
+  summary(gam1)$s.pv,
+  summary(gam2)$s.pv,
+  summary(gam3)$s.pv,
+  summary(gam4)$s.pv),                     
+  digits=3), 
+  nsmall=2)
 
 colnames.lags <- c('1-2 Years','1-3 Years','1-4 Years','1-5 Years')
-rownames.lags <- c('R$^2$',"AIC","Degrees of freedom")
+rownames.lags <- c('p-value','R$^2$',"AIC","Degrees of freedom")
 
-lags.tbl <- data.frame(rbind(r2.lags, aic.lags, df.lags), row.names=rownames.lags) 
+lags.tbl <- data.frame(rbind(p.lags, r2.lags, aic.lags, df.lags), row.names=rownames.lags) 
 colnames(lags.tbl) <- colnames.lags
 
 # ±
@@ -310,29 +332,34 @@ kbl(lags.tbl, booktabs = TRUE, caption = "Models of biomass response to lagged M
 
 ```{r tbl-models-autocorr}
 gompertz.glmm = glmmTMB(wt_mt_log ~ factor(survey) + anom_days_scale + wt_mt_lag:factor(survey), data=modeldat, dispformula = ~survey, family=gaussian())
+gompertz.null = glmmTMB(wt_mt_log ~ 1, data=modeldat, dispformula = ~survey, family=gaussian())
+
 gompertz.summary <- summary(gompertz.glmm)$coefficients$cond
 
-int.gompertz <- paste0(format(round(gompertz.summary["(Intercept)","Estimate"] , digits=3), nsmall=2)," ± ", format(round(gompertz.summary["(Intercept)","Std. Error"] , digits=3), nsmall=2)) 
+int.gompertz <- c(
+  paste0(format(round(summary(gompertz.null)$coefficients$cond["(Intercept)","Estimate"] , digits=3), nsmall=2)," ± ", format(round(summary(gompertz.null)$coefficients$cond["(Intercept)","Std. Error"] , digits=3), nsmall=2)),
+  paste0(format(round(gompertz.summary["(Intercept)","Estimate"] , digits=3), nsmall=2)," ± ", format(round(gompertz.summary["(Intercept)","Std. Error"] , digits=3), nsmall=2))) 
 
-coef.gompertz <- paste0(format(round(gompertz.summary["anom_days_scale","Estimate"] , digits=3), nsmall=2)," ± ", format(round(gompertz.summary["anom_days_scale","Std. Error"] , digits=3), nsmall=2)) 
+coef.gompertz <- c('NA',paste0(format(round(gompertz.summary["anom_days_scale","Estimate"] , digits=3), nsmall=2)," ± ", format(round(gompertz.summary["anom_days_scale","Std. Error"] , digits=3), nsmall=2)) )
 
-p.gompertz <- paste0(format(round(gompertz.summary["anom_days_scale","Pr(>|z|)"] , digits=3), nsmall=2))
+p.gompertz <- c('NA',paste0(format(round(gompertz.summary["anom_days_scale","Pr(>|z|)"] , digits=3), nsmall=2)))
 
-r2.gompertz <- format(round(unname(performance::r2_xu(gompertz.glmm)), digits=3), nsmall=2) # see performance() documentation -- xu is one of the simpler and more flexible R2 metrics
+r2.gompertz <- c('NA',format(round(unname(performance::r2_xu(gompertz.glmm)), digits=3), nsmall=2)) # see performance() documentation -- xu is one of the simpler and more flexible R2 metrics
 
-aic.gompertz <- round(AIC(gompertz.glmm))
+aic.gompertz <- round(c(AIC(gompertz.null), AIC(gompertz.glmm)))
 
-df.gompertz <- unname(summary(gompertz.glmm)$AICtab["df.resid"])
+df.gompertz <- c(unname(summary(gompertz.null)$AICtab["df.resid"]),
+                 unname(summary(gompertz.glmm)$AICtab["df.resid"]))
 
 
-colnames.gompertz <- c('Gompertz GLM')
+colnames.gompertz <- c('Null model','Gompertz GLM')
 rownames.gompertz <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 gompertz.tbl <- data.frame(rbind(int.gompertz, coef.gompertz, p.gompertz, r2.gompertz, aic.gompertz, df.gompertz), row.names=rownames.gompertz) 
 colnames(gompertz.tbl) <- colnames.gompertz
 
 # ±
-kbl(gompertz.tbl, booktabs = TRUE, caption = "Generalized linear model (GLM) of biomass as a function of MHWs and biomass from the previous time step. This Gompertz model accounts for autoregressive properties of the biomass time-series. It predicts biomass log ratios with MHW duration in days (scaled and centered within surveys) and lagged biomass (*not* scaled and centered). To account for variability and heteroskedasticity among surveys, we included survey identity as a fixed effect and allowed dispersion to vary among surveys.",
+kbl(gompertz.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and generalized linear model (GLM) of biomass as a function of MHWs and biomass from the previous time step. This Gompertz model accounts for autoregressive properties of the biomass time-series. It predicts biomass log ratios with MHW duration in days (scaled and centered within surveys) and lagged biomass (not scaled and centered). To account for variability and heteroskedasticity among surveys, we included survey identity as a fixed effect and allowed dispersion to vary among surveys.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
@@ -341,35 +368,38 @@ kbl(gompertz.tbl, booktabs = TRUE, caption = "Generalized linear model (GLM) of 
 \clearpage
 
 ```{r tbl-models-lat}
+null.lat <- lm(wt_mt_log_scale ~ med_lat_scale, data = modeldat)
 lm.lat <- lm(wt_mt_log_scale ~ anom_days_scale + med_lat_scale, data = modeldat)
 
 int.lat <- c(
+  paste0(format(round(coef(summary(null.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.lat))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.lat))[1,2], digits=3), nsmall=2))
 )
-mhw.coef.lat <- c(
-  paste0(format(round(coef(summary(lm.lat))[2,1], digits=3), nsmall=2)," ± ",
-         format(round(coef(summary(lm.lat))[2,2], digits=3), nsmall=2))
+mhw.coef.lat <- c('NA',
+                  paste0(format(round(coef(summary(lm.lat))[2,1], digits=3), nsmall=2)," ± ",
+                         format(round(coef(summary(lm.lat))[2,2], digits=3), nsmall=2))
 )
-lat.coef.lat <- c(
-  paste0(format(round(coef(summary(lm.lat))[3,1], digits=3), nsmall=2)," ± ",
-         format(round(coef(summary(lm.lat))[3,2], digits=3), nsmall=2))
+lat.coef.lat <- c('NA',
+                  paste0(format(round(coef(summary(lm.lat))[3,1], digits=3), nsmall=2)," ± ",
+                         format(round(coef(summary(lm.lat))[3,2], digits=3), nsmall=2))
 )
-p.lat <- format(round(c(
-  coef(summary(lm.lat))[2,4]), digits=3), nsmall=2)
+p.lat <- c('NA',format(round(c(
+  coef(summary(lm.lat))[2,4]), digits=3), nsmall=2))
 
-r2.lat <- format(round(c(
-  summary(lm.lat)$r.squared), digits=3), nsmall=2)
-aic.lat <- round(AIC(lm.lat))
-df.lat <- format(round(c(
-  summary(lm.lat)$df[2]), digits=3), nsmall=0)
+r2.lat <- c('NA',format(round(c(
+  summary(lm.lat)$r.squared), digits=3), nsmall=2))
+aic.lat <- round(c(AIC(null.lat), AIC(lm.lat)))
+df.lat <- round(c(
+    summary(null.lat)$df[2],
+    summary(lm.lat)$df[2]))
 
-colnames.lat <- c('Linear model')
+colnames.lat <- c('Null model','Linear model')
 rownames.lat <- c('Intercept', 'MHW coefficient','Latitude coefficient', "MHW coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 lat.tbl <- data.frame(rbind(int.lat, mhw.coef.lat, lat.coef.lat, p.lat, r2.lat, aic.lat, df.lat), row.names=rownames.lat) 
 colnames(lat.tbl) <- colnames.lat
 
-kbl(lat.tbl, booktabs = TRUE, caption = "Model of biomass response to MHWs and latitude. Linear model was fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys) and median latitude of each survey (scaled and centered within surveys) as predictors.",
+kbl(lat.tbl, booktabs = TRUE, caption = "Null model (latitude-only) and model of biomass response to MHWs and latitude. Linear model was fitted to biomass log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys) and median latitude of each survey (scaled and centered within surveys) as predictors.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
@@ -377,31 +407,33 @@ kbl(lat.tbl, booktabs = TRUE, caption = "Model of biomass response to MHWs and l
 \clearpage
 
 ```{r tbl-models-depth}
+null.depth <- lm(depth_wt_scale ~ 1, data = modeldat)
 lm.depth <- lm(depth_wt_scale ~ anom_days_scale, data = modeldat)
 
 int.depth <- c(
+  paste0(format(round(coef(summary(null.depth))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.depth))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.depth))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.depth))[1,2], digits=3), nsmall=2))
 )
-coef.depth <- c(
-  paste0(format(round(coef(summary(lm.depth))[2,1], digits=3), nsmall=2)," ± ",
-         format(round(coef(summary(lm.depth))[2,2], digits=3), nsmall=2))
+coef.depth <- c('NA',
+                paste0(format(round(coef(summary(lm.depth))[2,1], digits=3), nsmall=2)," ± ",
+                       format(round(coef(summary(lm.depth))[2,2], digits=3), nsmall=2))
 )
-p.depth <- format(round(c(
-  coef(summary(lm.depth))[2,4]), digits=3), nsmall=2)
-r2.depth <- format(round(c(
-  summary(lm.depth)$r.squared), digits=3), nsmall=2)
-aic.depth <- round(AIC(lm.depth))
-df.depth <- format(round(c(
-  summary(lm.depth)$df[2]), digits=3), nsmall=0)
+p.depth <- c('NA',format(round(c(
+  coef(summary(lm.depth))[2,4]), digits=3), nsmall=2))
+r2.depth <- c('NA',format(round(c(
+  summary(lm.depth)$r.squared), digits=3), nsmall=2))
+aic.depth <- round(c(AIC(null.depth), AIC(lm.depth)))
+df.depth <- round(c(
+    summary(null.depth)$df[2],
+    summary(lm.depth)$df[2]))
 
-
-colnames.depth <- c('Linear model')
+colnames.depth <- c('Null model','Linear model')
 rownames.depth <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 depth.tbl <- data.frame(rbind(int.depth, coef.depth, p.depth, r2.depth, aic.depth, df.depth), row.names=rownames.depth) 
 colnames(depth.tbl) <- colnames.depth
 
-kbl(depth.tbl, booktabs = TRUE, caption = "Model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
@@ -410,6 +442,7 @@ kbl(depth.tbl, booktabs = TRUE, caption = "Model of depth response to MHWs. Line
 \clearpage
 
 ```{r tbl-models-cti}
+null.cti <- lm(cti_log_scale ~ 1, data = modeldat)
 lm.cti <- lm(cti_log_scale ~ anom_days_scale, data = modeldat)
 lm.fixed.cti <- lm(cti_log_scale ~ anom_days_scale + factor(survey), data = modeldat)
 gam.cti <- gam(cti_log_scale ~ s(anom_days_scale), data = modeldat )
@@ -417,51 +450,56 @@ gam.re.cti <- gam(cti_log_scale ~ s(anom_days_scale) + s(survey, bs="re"), data 
 
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.cti <- c(
+  paste0(format(round(coef(summary(null.cti))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.cti))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.cti))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.cti))[1,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.cti))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.cti))[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.cti)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.cti)$p.table[1,2], digits=3), nsmall=2)),
   paste0(format(round(summary(gam.re.cti)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.re.cti)$p.table[1,2], digits=3), nsmall=2))
 )
 coef.cti <- c(
+  'NA',
   paste0(format(round(coef(summary(lm.cti))[2,1], digits=3), nsmall=2)," ± ",
          format(round(coef(summary(lm.cti))[2,2], digits=3), nsmall=2)),
   paste0(format(round(coef(summary(lm.fixed.cti))[2,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.cti))[2,2]), digits=3), nsmall=2),
   "NA",
   "NA"
 )
-p.cti <- c(
+p.cti <- c('NA',
   format(round(coef(summary(lm.cti))[2,4], digits=3), nsmall=2),
   format(round(coef(summary(lm.fixed.cti))[2,4], digits=3), nsmall=2),
-  "NA",
-  "NA")
-r2.cti <- format(round(c(
+  format(round(summary(gam.cti)$s.pv, digits=3), nsmall=2),
+  format(round(summary(gam.re.cti)$s.pv[1], digits=3), nsmall=2)
+)
+r2.cti <- c('NA',format(round(c(
   summary(lm.cti)$r.squared, 
   summary(lm.fixed.cti)$r.squared,
   summary(gam.cti)$r.sq, 
   summary(gam.re.cti)$r.sq
-), digits=3), nsmall=2)
+), digits=3), nsmall=2))
 aic.cti <- format(round(c(
+  AIC(null.cti),
   AIC(lm.cti),
   AIC(lm.fixed.cti),
   AIC(gam.cti),
   AIC(gam.re.cti)
 ), digits=3), nsmall=0)
 df.cti <- format(round(c(
-  summary(lm.cti)$df[2], 
+    summary(null.cti)$df[2], 
+summary(lm.cti)$df[2], 
   summary(lm.fixed.cti)$df[2],
   gam.cti$df.residual, 
   gam.re.cti$df.residual
 ), digits=3), nsmall=0)
 
 
-colnames.cti <- c('LM','LM Survey','GAM','GAM Survey')
+colnames.cti <- c('Null','LM','LM Survey','GAM','GAM Survey')
 rownames.cti <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
 
 cti.tbl <- data.frame(rbind(int.cti, coef.cti, p.cti, r2.cti, aic.cti, df.cti), row.names=rownames.cti) 
 colnames(cti.tbl) <- colnames.cti
 
 # ±
-kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (CTI) response to MHWs. All models were fitted to CTI log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (CTI) response to MHWs. All models were fitted to CTI log ratio values (scaled and centered within surveys) using MHW duration in days (scaled and centered within surveys). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
