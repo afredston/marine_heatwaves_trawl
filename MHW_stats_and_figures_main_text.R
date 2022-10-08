@@ -108,31 +108,32 @@ glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
 # EBS 2017
 survey_summary %>% 
   filter(survey=='EBS',year==2017) %>% 
-  select(wt_mt_log, anom_days)%>% 
+  select(wt_mt_log, anom_sev)%>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # GOA 2017
 survey_summary %>% 
   filter(survey=='GOA',year==2017) %>% 
-  select(wt_mt_log, anom_days)%>% 
+  select(wt_mt_log, anom_sev)%>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # NEUS 2012
 survey_summary %>% 
   filter(survey=='NEUS', year==2012) %>% 
-  select(wt_mt_log, anom_days) %>% 
+  select(wt_mt_log, anom_sev) %>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # GSL 2012-2013
 survey_summary %>% 
   filter(survey=='GSL-S', year %in% c(2011, 2012, 2013)) %>% 
-  select(year, wt_mt_log, anom_days) 
+  select(year, wt_mt_log, anom_sev)  %>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # Norway 2015
-survey_summary %>% 
-  filter(survey=='Nor-BTS', year==1995) %>% 
-  select(wt_mt_log, anom_days) %>% 
-  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+# survey_summary %>% 
+#   filter(survey=='Nor-BTS', year==1995) %>% 
+#   select(wt_mt_log, anom_sev) %>% 
+#   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # statistical tests 
 
@@ -189,10 +190,10 @@ cor.test(
 
 # regressions
 
-lm_wt <- lm(wt_mt_log ~ anom_days, data = survey_summary)
+lm_wt <- lm(wt_mt_log ~ anom_sev, data = survey_summary)
 summary(lm_wt)
 # lm.predict1 <- data.frame(wt_mt_log = predict(lm_wt, survey_summary), anom_days=survey_summary$anom_days)
-lm_cti <- lm(cti_log ~ anom_days, data = survey_summary)
+lm_cti <- lm(cti_log ~ anom_sev, data = survey_summary)
 summary(lm_cti)
 
 # how many taxa total?
@@ -231,12 +232,12 @@ survey_summary %>%
 
 survey_summary %>%
   filter(survey=='WCANN', year==2015) %>% 
-  select(year, survey, cti_log, anom_days)
+  select(year, survey, cti_log, anom_sev)
 
 # Scotian Shelf tropicalization 2013
-survey_summary %>%
-  filter(survey=='SCS', year==2013) %>% 
-  select(year, survey, cti_log, anom_days, CTI)
+# survey_summary %>%
+#   filter(survey=='SCS', year==2013) %>% 
+#   select(year, survey, cti_log, anom_days, CTI)
 
 survey_spp_summary %>% 
   filter(survey=='SCS', spp=='Squalus acanthias', year %in% c(2012, 2013)) %>% 
@@ -322,14 +323,14 @@ t.test(jac_mhw_total, jac_no_mhw_total)
 ######
 
 gg_mhw_biomass_point_marg <- survey_summary %>% 
-  ggplot(aes(x=anom_days, y=wt_mt_log)) +
+  ggplot(aes(x=anom_sev, y=wt_mt_log)) +
   geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   geom_point(color="black") +
   geom_smooth(method="lm", color = "gray35") +
   theme_bw() + 
   coord_cartesian(clip = "off") +
-  labs(x="Marine heatwave duration (days)", y="Biomass log ratio") +
+  labs(x="Marine heatwave severity (°C-days)", y="Biomass log ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
   theme(
     legend.position = "none", 
@@ -738,11 +739,11 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   mutate(STI_diff = STI - CTI,
          wt_mt_log = as.numeric(wt_mt_log)) %>% 
   inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
-  filter(!is.na(STI_diff), mhw_yes_no=="yes") %>% 
-  ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_days, fill=anom_days)) +
+  filter(!is.na(STI_diff), mhw_yes_no=="yes", wt_mt_log < Inf, wt_mt_log > -Inf) %>% 
+  ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_sev, fill=anom_sev)) +
   geom_point(size=0.5, position="jitter") + 
- scale_color_distiller(palette="RdPu", name="MHW duration\n(days)", direction=1) +
-  scale_fill_distiller(palette="RdPu", name="MHW duration\n(days)", direction=1) +
+ scale_color_distiller(palette="RdPu", name="MHW severity\n(°C-days)", direction=1) +
+  scale_fill_distiller(palette="RdPu", name="MHW severity\n(°C-days)", direction=1) +
  # scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
  # scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
   # geom_smooth(method="lm")+

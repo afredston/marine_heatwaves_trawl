@@ -17,7 +17,6 @@ To reproduce the analysis, run these scripts in order:
 1. `prep_survey_extent_nc.R` generates a netcdf file with the spatial footprints of trawl surveys used in the analysis, for merging with marine heatwave data. It also generates a .csv file with a "key" to translate the integer survey ID codes in the netcdf to their real names. This does not need to be re-run, but all the scripts below this should be re-run in order if anything is updated.
 
 1. `prep_trawl_data.R` takes the public trawl data records from [FISHGLOB](https://github.com/AquaAuma/fishglob), processes them into a standardized format with columns for survey, year, species, and CPUE in kg, and writes them out as .csv files in the `processed-data` folder. This was run on a computing server (see Notes below).
-
 1. `prep_MHWs.R` merges those trawl records with the appropriate MHW and CTI data.
 1. `temporal_beta_diversity.R` calculates interannual changes in richness and beta diversity (both total dissimilarity and individual components of nestedness and turnover for occurrence metrics and biomass gradient and balanced variation for biomass metrics).
 1. `MHW_stats_and_figures_main_text.R` analyzes the data and makes figures and statistics for the main text. 
