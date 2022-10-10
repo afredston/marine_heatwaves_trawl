@@ -19,17 +19,14 @@ here <- here::here
 #########
 
 raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
-
-# what's going on with norway pre-data-trimming?
-# nor_cod_pre <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
-
 ##############
 # trim datasets
 ##############
 
 # in what years was each sampled, and with how many samples? 
 # year_freq <- raw[, by=.(survey, year), .(nhaul = length(unique(haul_id)))][order(survey, year)][, interval := year - lag(year), by=survey]
-# for paper:
+
+# calculate some stats for the paper--this is the final list of surveys, which we arrive at through the data trimming pipeline below
 survs <- c("NEUS", "SCS", "NS-IBTS", "Nor-BTS", "EBS", "GSL-S", "GMEX", 
   "SEUS", "SWC-IBTS", "EVHOE", "FR-CGFS", "GOA", "BITS", "DFO-QCS", 
   "IE-IGFS", "WCANN", "PT-IBTS", "NIGFS")
@@ -38,6 +35,12 @@ length(unique(stats$haul_id))
 length(unique(stats$accepted_name))
 length(unique(stats[rank=='Species']$accepted_name)) / length(unique(stats$accepted_name))
 length(unique(stats[rank=='Genus']$accepted_name)) / length(unique(stats$accepted_name))
+
+#########
+# BEGIN DATA TRIMMING
+#########
+
+# the script below iteratively trimms down `raw` based on a series of filters
 
 # trim out surveys that are sampled inconsistently, rarely (more than 2 year intervals) and/or CPUE has been immensely variable based on the summary plots in FISHGLOB. 
 bad_surveys <- c('GSL-N','ROCKALL','AI','WCTRI','DFO-SOG') # gsl-n has very odd cpue patterns as seen in the fishglob summary pdf and the rest are sampled inconsistently/rarely
@@ -55,7 +58,7 @@ neus_bad_hauls <- unique(raw[(survey == "NEUS" & year < 2009 & (haul_dur < 0.42 
 #calculate wgt_cpue (km^2 avg from sean Lucey) and wgt_h (all biomass values calibrated to standard pre 2009 30 minute tow)
 raw[survey == "NEUS", wgt_h := wgt/0.5][survey == "NEUS", wgt_cpue := wgt/0.0384][survey == "NEUS", num_h := num/0.5][survey == "NEUS", num_cpue := num/0.0384]
 
-# find duplicated hauls
+# find duplicated hauls--there are only a handful
 bad_hauls <- (copy(haul_info)[, .N, by=.(haul_id)][ N > 1 ])$haul_id
 
 # manually trim out years without enough data (usually the first start year(s)) if needed; see pdf summaries in FISHGLOB repository for details. note that this may cause discontinuities in time-series, which are resolved in the temperature analysis -- each survey is only compared to the preceding one and to the preceding 12 months of temperature data.
@@ -68,7 +71,7 @@ gmex_hauls_del <- unique(raw[survey=='GMEX' & year %in% c(1987,2020), haul_id]) 
 gsl_s_hauls_del <-  unique(raw[survey=='GSL-S' & year < 1985, haul_id]) # GSL-S is also missing 2003 data which shouldn't be an issue, just introduces one 2-year gap 
 neus_hauls_del <- unique(raw[survey=='NEUS' & (year < 1968 | year > 2019), haul_id])
 nigfs_hauls_del <- unique(raw[survey=='NIGFS' & year < 2009, haul_id])
-nor_bts_hauls_del <- c(unique(raw[survey=='Nor-BTS' & year < 1981, haul_id]), unique(raw[survey=='Nor-BTS' & year > 2005, haul_id]), unique(raw[survey=='Nor-BTS' & latitude<68, haul_id])) # rest of the time-series has a lot of fluctuation and very few hauls. latitude cutoff to exclude the norwegian sea, which is rarely sampled, and focus on the barents sea 
+nor_bts_hauls_del <- c(unique(raw[survey=='Nor-BTS' & year < 1981, haul_id]), unique(raw[survey=='Nor-BTS' & year > 2000, haul_id]), unique(raw[survey=='Nor-BTS' & latitude<68, haul_id])) # rest of the time-series has a lot of fluctuation and very few hauls. latitude cutoff to exclude the norwegian sea, which is rarely sampled, and focus on the barents sea 
 ns_ibts_hauls_del <- unique(raw[survey=='NS-IBTS' & year < 1980, haul_id]) # this is a somewhat arbitrary cutoff -- hauls/yr just increases linearly with time here -- but at least we're discarding the years with very few hauls
 pt_ibts_hauls_del <- unique(raw[survey=='PT-IBTS' & year %in% c(2002, 2018), haul_id]) # also missing 2012 data, shouldn't be an issue, just introduces one 2-year gap 
 scs_hauls_del <- unique(raw[survey=='SCS' & (year < 1979 | year > 2017), haul_id])
@@ -314,7 +317,7 @@ haul_info %<>% merge(unique(raw[,.(haul_id, cell)]), by="haul_id", all.x=TRUE) #
 haul_info %<>% merge(year_cell_count.dt, by=c("cell","year","survey"), all.x=TRUE) # get keep_90 column
 haul_info <- haul_info[keep_90==TRUE] # get hauls that pass spatial standardization filter 
 
-raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, accepted_name, startmonth)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
+raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, num_cpue, accepted_name, startmonth)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
 
 # what's going on with norway post-data-trimming?
@@ -336,6 +339,8 @@ raw_zeros %<>%
   # left-join actual obs data to all spp*haul rows
   merge(raw[, !"startmonth"], all.x=TRUE, by=c("survey", "haul_id", "accepted_name")) 
 raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf] # replace NAs with 0s
+raw_zeros <- copy(raw_zeros)[is.na(num_cpue), num_cpue := 0][num_cpue<Inf]
+raw_zeros <- copy(raw_zeros)[survey=='NEUS', num_cpue := NA] #rewrite NEUS only to be NA; doesn't have abundance values
 
 #########
 # Tidy data
@@ -352,9 +357,17 @@ raw_zeros <- copy(raw_zeros)[is.na(wgt_cpue), wgt_cpue := 0][wgt_cpue<Inf] # rep
 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
+raw_cpue_med <- raw_zeros[,.(wtcpue_median = median(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
+raw_num <- raw_zeros[,.(numcpue_mean = mean(num_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
+raw_num_med <- raw_zeros[,.(numcpue_median = median(num_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
 raw_depth <- raw_zeros[,.(depth_mean = weighted.mean(depth, w=wgt_cpue, na.rm=TRUE)), by=c("survey", "accepted_name", "year","startmonth")] # note that this will be NA for species never observed in that year 
 
-raw_cpue %<>% merge(raw_depth, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth"))
+raw_cpue <- raw_cpue %>% 
+  merge(raw_cpue_med, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth")) %>%
+  merge(raw_num, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth")) %>%
+  merge(raw_num_med, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth")) %>%
+  merge(raw_depth, all.x=TRUE, by=c("survey", "accepted_name", "year","startmonth")) 
+
 # get year interval -- how often is survey conducted?
 # intervals <- copy(raw_cpue)
 # intervals <- unique(intervals[,.(survey, year)])
