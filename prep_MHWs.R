@@ -365,6 +365,7 @@ survey_summary <- cpue %>%
   filter(!is.na(ref_yr)) %>% # keep only the rows assigned to a ref_yr (will also filter out the early trawl data)
   group_by(ref_yr, survey, year) %>% 
   summarise(wt = sum(wtcpue_mean),
+            wt_med = sum(wtcpue_median),
             depth_wt = weighted.mean(depth_mean, w=wtcpue_mean, na.rm=TRUE)) %>% # get total weight across all species for the survey*year
   mutate(wt_mt = wt/1000) %>% # convert to metric tons from kg
   group_by(survey) %>% 
@@ -381,8 +382,9 @@ survey_summary <- cpue %>%
 
 # species-level stats
 survey_spp_summary <- cpue %>% 
-  mutate(wt_mt = wtcpue_mean/1000) %>% 
-  select(-wtcpue_mean) %>% 
+  mutate(wt_mt = wtcpue_mean/1000,
+         wt_mt_med = wtcpue_median/1000) %>% 
+  select(-wtcpue_mean, wtcpue_median) %>% 
   left_join(survey_start_times, by=c('survey','year')) %>% 
   filter(!is.na(ref_yr)) %>%
   group_by(survey, accepted_name) %>% 
@@ -395,6 +397,9 @@ survey_spp_summary <- cpue %>%
         # wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), 
         # wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt),
          wt_mt_log = log(wt_mt / lag(wt_mt)),
+         wt_mt_log_med = log(wt_mt_med / lag(wt_mt_med)),
+         num_mt_log = log(numcpue_mean / lag(numcpue_mean)),
+         num_mt_log_med = log(numcpue_median / lag(numcpue_median)),
          depth_wt_log = log(depth_mean / lag(depth_mean))
   )  %>% 
   ungroup()
@@ -409,8 +414,8 @@ cti_spp_prep <- cti %>%
          'accepted_name' =speciesName)  %>% 
   filter(accepted_name %in% unique(survey_spp_summary$accepted_name))
 
-length(unique(survey_spp_summary$accepted_name)) # 2129
-length(unique(cti_spp_prep$accepted_name)) #917
+length(unique(survey_spp_summary$accepted_name)) 
+length(unique(cti_spp_prep$accepted_name))
   
 survey_spp_summary_cti <- survey_spp_summary %>% 
   left_join(cti_spp_prep) 
