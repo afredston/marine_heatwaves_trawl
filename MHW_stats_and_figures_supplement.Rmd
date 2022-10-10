@@ -433,7 +433,7 @@ rownames.depth <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$'
 depth.tbl <- data.frame(rbind(int.depth, coef.depth, p.depth, r2.depth, aic.depth, df.depth), row.names=rownames.depth) 
 colnames(depth.tbl) <- colnames.depth
 
-kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys). Model names correspond to: linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model of depth response to MHWs. Linear model was fitted to the weighted mean depth of the fish assemblage (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys).",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
@@ -524,6 +524,31 @@ gg_mhw_biomass_point <- survey_summary %>%
   stat_regline_equation(aes(label=..rr.label..), label.x=80) +
   NULL
 gg_mhw_biomass_point
+```
+
+```{r fig-mhw-point-by-cpue-method, fig.cap="Alternate version of Fig. 2 from the main text using different metrics of biomass change: mean biomass (used in the main text), median biomass, mean abundance, and median abundance. Points represent log ratios of each metric in a survey from one year to the next. The fitted lines are linear regressions. The shaded areas are 95% confidence intervals. Survey names are listed in Supp. Tab. 1. The Northeast US survey is omitted because it does not have abundance data recorded.", fig.width=9, fig.height=7}
+gg_mhw_cpue_metric_point <- survey_summary %>% 
+  filter(!survey=='NEUS') %>% 
+  mutate_at(c("num_log_med","wt_mt_log_med"), as.numeric) %>% # no idea why this is a character
+  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% 
+  pivot_longer(cols=c(num_log, num_log_med, wt_mt_log, wt_mt_log_med), names_to = "method", values_to="lr") %>% 
+  mutate(method  = recode(method, 
+         num_log = "Mean Abundance", 
+         num_log_med = "Median Abundance", 
+         wt_mt_log = "Mean Biomass", 
+         wt_mt_log_med="Median Biomass")) %>% 
+  ggplot(aes(x=anom_sev, y=lr)) +
+  geom_point() +
+  geom_smooth(method="lm", color = "gray35") +
+  theme_bw() +
+  coord_cartesian(clip = "off") +
+  facet_wrap(~method, ncol=2) +
+  labs(x="MHW severity (°C days)", y="Log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=80) +
+  NULL
+gg_mhw_cpue_metric_point
 ```
 
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and two alternative metrics of MHW impacts: severity (total anomaly in °C days), and intensity (severity divided by number of days, i.e., the average anomaly over the course of the MHW in °C). The fitted lines are linear regressions. The shaded areas are 95% confidence intervals." }

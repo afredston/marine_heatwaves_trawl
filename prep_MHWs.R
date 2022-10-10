@@ -362,12 +362,13 @@ mhw_summary_soda_sbt <- mhw_soda_sbt %>%
 # no MHWs yet, just biomass stats
 survey_summary <- cpue %>% 
   left_join(survey_start_times, by=c('survey','year')) %>% 
-  filter(!is.na(ref_yr)) %>% # keep only the rows assigned to a ref_yr (will also filter out the early trawl data)
+  filter(!is.na(ref_yr)) %>% # keep only the rows assigned to a ref_yr (will also filter out the ea'rly trawl data)
   group_by(ref_yr, survey, year) %>% 
-  summarise(wt = sum(wtcpue_mean),
-            wt_med = sum(wtcpue_median),
+  summarise(wt_mt = sum(wtcpue_mean) / 1000,
+            wt_mt_med = sum(wtcpue_median),
+            num = sum(numcpue_mean), 
+            num_med = sum(numcpue_median), 
             depth_wt = weighted.mean(depth_mean, w=wtcpue_mean, na.rm=TRUE)) %>% # get total weight across all species for the survey*year
-  mutate(wt_mt = wt/1000) %>% # convert to metric tons from kg
   group_by(survey) %>% 
   arrange(year) %>% 
   mutate(#wt_mt_diff = wt_mt - lag(wt_mt), # calculate first difference (delta from last year surveyed--not always a one-year lag though!)
@@ -376,6 +377,9 @@ survey_summary <- cpue %>%
     #     wt_mt_anom_prop = (wt_mt_anom / mean(wt_mt)), # get proportional difference of anomaly relative to mean
      #    wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt), # calculate Z-score
          wt_mt_log = log(wt_mt / lag(wt_mt)), # calculate log ratio
+         wt_mt_log_med = log(wt_mt_med / lag(wt_mt_med)),
+         num_log = log(num / lag(num)),
+         num_log_med = log(num_med / lag(num_med)),
          depth_wt_log = log(depth_wt / lag(depth_wt))
   )  %>% 
   ungroup()
@@ -398,8 +402,8 @@ survey_spp_summary <- cpue %>%
         # wt_mt_z = (wt_mt - mean(wt_mt)) / sd(wt_mt),
          wt_mt_log = log(wt_mt / lag(wt_mt)),
          wt_mt_log_med = log(wt_mt_med / lag(wt_mt_med)),
-         num_mt_log = log(numcpue_mean / lag(numcpue_mean)),
-         num_mt_log_med = log(numcpue_median / lag(numcpue_median)),
+         num_log = log(numcpue_mean / lag(numcpue_mean)),
+         num_log_med = log(numcpue_median / lag(numcpue_median)),
          depth_wt_log = log(depth_mean / lag(depth_mean))
   )  %>% 
   ungroup()
