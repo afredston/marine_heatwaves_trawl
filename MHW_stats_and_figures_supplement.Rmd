@@ -19,13 +19,13 @@ library(tidyverse)
 library(here)
 library(lubridate) # for standardizing date format of MHW data
 library(sf)
-library(rnaturalearth)
+#library(rnaturalearth)
 library(kableExtra)
-library(modelsummary)
+#library(modelsummary)
 library(ggpubr)
 library(broom)
-library(mcp)
-library(lme4)
+#library(mcp)
+#library(lme4)
 library(mgcv)
 library(cowplot)
 library(glmmTMB)
@@ -89,7 +89,7 @@ modeldat <- survey_summary %>%
   mutate(
     wt_mt_scale = as.numeric(scale(wt_mt, center=TRUE, scale=TRUE)),
     wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
-    cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
+    cti_diff_scale =  as.numeric(scale(cti_diff, center=TRUE, scale=TRUE)),
     anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
     depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
   ) %>% 
@@ -133,6 +133,15 @@ knitr::opts_chunk$set(
   # , fig.pos="H" #was trying to use this to fix the placement of tables but it doesn't work
 )
 ```
+
+# Software
+
+Code and data for this analysis can be found on GitHub at
+<https://github.com/afredston/marine_heatwaves_trawl>. The statistical
+analysis used the following packages: glmmTMB[@brooks2017] to fit
+generalized linear models, mgcv[@wood2006] to fit generalized additive
+models, dggridR[@barnes2020] for spatial standardization of data, and
+ncdf4[@pierce2019] for processing marine heatwave data.
 
 # Supplementary tables
 
@@ -442,11 +451,11 @@ kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model
 \clearpage
 
 ```{r tbl-models-cti}
-null.cti <- lm(cti_log_scale ~ 1, data = modeldat)
-lm.cti <- lm(cti_log_scale ~ anom_sev_scale, data = modeldat)
-lm.fixed.cti <- lm(cti_log_scale ~ anom_sev_scale + factor(survey), data = modeldat)
-gam.cti <- gam(cti_log_scale ~ s(anom_sev_scale), data = modeldat )
-gam.re.cti <- gam(cti_log_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
+null.cti <- lm(cti_diff_scale ~ 1, data = modeldat)
+lm.cti <- lm(cti_diff_scale ~ anom_sev_scale, data = modeldat)
+lm.fixed.cti <- lm(cti_diff_scale ~ anom_sev_scale + factor(survey), data = modeldat)
+gam.cti <- gam(cti_diff_scale ~ s(anom_sev_scale), data = modeldat )
+gam.re.cti <- gam(cti_diff_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.cti <- c(
@@ -499,7 +508,7 @@ cti.tbl <- data.frame(rbind(int.cti, coef.cti, p.cti, r2.cti, aic.cti, df.cti), 
 colnames(cti.tbl) <- colnames.cti
 
 # ±
-kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (CTI) response to MHWs. All models were fitted to CTI log ratio values (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (CTI) response to MHWs. All models were fitted to CTI year-over-year difference values (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
@@ -892,3 +901,5 @@ walk(survey_names$survey, ~plot_spp(.x))
 ```
 
 \clearpage
+
+# References

@@ -20,29 +20,26 @@ library(ggExtra)
 
 # modeling 
 library(broom)
-library(pwr)
+#library(pwr)
 library(mgcv)
-library(lme4)
-library(mcp)
+#library(lme4)
+#library(mcp)
 
 # making maps 
+# JULIANO, do we still need these?
 library(sf)
-library(rnaturalearth)
-library(ggrepel)
+#library(rnaturalearth)
+#library(ggrepel)
 library(rgdal)
 library(raster)
 library(sp)
-library(rnaturalearthdata)
+#library(rnaturalearthdata)
 library(rgeos)
 library(geosphere)  #to calculate distance between lat lon of grid cells
 library(concaveman)
 library("robinmap")
+library(maptools)
 
-#library(mcp)
-#library(rjags)
-#library(segmented)
-# load data
-#library(knitr)
 select <- dplyr::select
 set.seed(42)
 
@@ -54,7 +51,17 @@ mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # m
 total_mhws <- read_csv(here("processed-data","total_number_mhws.csv"))
 
 # survey data 
-survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day)
+survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day) %>%
+  group_by(survey) %>% 
+  mutate(
+    wt_mt_scale = as.numeric(scale(wt_mt, center=TRUE, scale=TRUE)),
+    wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+    cti_log_scale =  as.numeric(scale(cti_log, center=TRUE, scale=TRUE)),
+    cti_diff_scale =  as.numeric(scale(cti_diff, center=TRUE, scale=TRUE)),
+    anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
+    depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
+  ) 
+
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
   rename('spp'=accepted_name) %>% 
   mutate(wt_mt_log = as.numeric(wt_mt_log))
@@ -160,11 +167,11 @@ sd(abs(wt_no_mhw))
 t.test(abs(wt_mhw), abs(wt_no_mhw))
 
 cti_no_mhw <- survey_summary %>% 
-  filter(mhw_yes_no == "no", !is.na(cti_log)) %>%
-  pull(cti_log)
+  filter(mhw_yes_no == "no", !is.na(cti_diff)) %>%
+  pull(cti_diff)
 cti_mhw <- survey_summary %>% 
-  filter(mhw_yes_no == "yes", !is.na(cti_log)) %>%
-  pull(cti_log)
+  filter(mhw_yes_no == "yes", !is.na(cti_diff)) %>%
+  pull(cti_diff)
 shapiro.test(cti_no_mhw)
 shapiro.test(cti_mhw)
 median(cti_no_mhw)
@@ -172,7 +179,6 @@ sd(cti_no_mhw)
 median(cti_mhw)
 sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw)
-
 
 # how correlated are SODA SBT and SODA SST?
 cor.test(
@@ -190,10 +196,9 @@ cor.test(
 
 # regressions
 
-lm_wt <- lm(wt_mt_log ~ anom_sev, data = survey_summary)
+lm_wt <- lm(wt_mt_log_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_wt)
-# lm.predict1 <- data.frame(wt_mt_log = predict(lm_wt, survey_summary), anom_days=survey_summary$anom_days)
-lm_cti <- lm(cti_log ~ anom_sev, data = survey_summary)
+lm_cti <- lm(cti_diff_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_cti)
 
 # how many taxa total?
@@ -228,11 +233,11 @@ survey_spp_summary%>%
 
 survey_summary %>% 
   filter(survey=='SWC-IBTS', year %in% c(2004, 2005)) %>% 
-  select(survey, year, cti_log, CTI)
+  select(survey, year, cti_diff, CTI)
 
 survey_summary %>%
   filter(survey=='WCANN', year==2015) %>% 
-  select(year, survey, cti_log, anom_sev)
+  select(year, survey, cti_diff, anom_sev)
 
 # Scotian Shelf tropicalization 2013
 # survey_summary %>%
@@ -246,14 +251,14 @@ survey_spp_summary %>%
 # what happened after the 2014-2016 NE Pacific MHW?
 survey_summary %>% 
   filter(survey %in% c('WCANN','EBS','GOA','DFO-QCS'), year %in% seq(2015, 2017, 1)) %>% 
-  select(survey, year, wt_mt_log, wt_mt, CTI, cti_log) %>% 
-  mutate(cti_change = ifelse(cti_log<0, "cold","warm")) %>% 
+  select(survey, year, wt_mt_log, wt_mt, CTI, cti_diff) %>% 
+  mutate(cti_change = ifelse(cti_diff<0, "cold","warm")) %>% 
   group_by(cti_change) 
 
 survey_summary %>% 
   filter(survey %in% c('WCANN','EBS','GOA','DFO-QCS'), year %in% seq(2015, 2017, 1)) %>% 
-  select(survey, year, wt_mt_log, wt_mt, CTI, cti_log) %>% 
-  mutate(cti_change = ifelse(cti_log<0, "cold","warm")) %>% 
+  select(survey, year, wt_mt_log, wt_mt, CTI, cti_diff) %>% 
+  mutate(cti_change = ifelse(cti_diff<0, "cold","warm")) %>% 
   group_by(cti_change) %>% 
   summarise(n=n())
 
@@ -766,12 +771,12 @@ ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_c
 
 gg_mhw_cti_hist <- survey_summary %>%
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
-  ggplot(aes(x=cti_log, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
+  ggplot(aes(x=cti_diff, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
   geom_freqpoly(binwidth=0.05, alpha=0.8, size=2) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
   theme_bw() + 
-  labs(x="CTI log ratio", y="Frequency") +
+  labs(x="CTI difference", y="Frequency") +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         legend.position = "none")
