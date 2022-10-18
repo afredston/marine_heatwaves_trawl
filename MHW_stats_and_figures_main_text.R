@@ -767,15 +767,17 @@ for(reg in survey_names$survey) {
   
   
   # Expand dataset for line gradient
-  # rm(long_tmp,df)
-  
+  rm(long_tmp,df)
+  # i = 1
   for(i in 1:nrow(tmp)-1){
-    # Set 0s if no difference 
     
+    # Fix last row issue
     if(i == 0){i = 1}
+    
+    
     if(tmp$anom_days[i] == tmp$anom_days[i+1]){
       df <- data.frame(anom_daysb = rep(tmp$anom_days[i],12),
-                       yearb = seq(tmp$year[i],tmp$year[i+1],0.08)[1:12],
+                       yearb = seq(tmp$year[i],tmp$year[i+1],0.083)[1:12],
                        ref_yr = tmp$ref_yr[i])
     }
     
@@ -784,9 +786,10 @@ for(reg in survey_names$survey) {
       
       # Estimate the break between different values
       sbreak = (tmp$anom_days[i+1]-tmp$anom_days[i])/12
+      tbreak = (tmp$year[i+1]-tmp$year[i])/12
       
-      df <- data.frame(anom_daysb = c(seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak),tmp$anom_days[i+1])[2:13],
-                       yearb = seq(tmp$year[i],tmp$year[i+1],0.08)[1:12],
+      df <- data.frame(anom_daysb = c(tmp$anom_days[i],seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak)[2:12]),
+                       yearb = seq(tmp$year[i],tmp$year[i+1],tbreak)[1:12],
                        ref_yr = tmp$ref_yr[i])
     }
     
