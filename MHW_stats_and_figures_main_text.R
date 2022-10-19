@@ -683,6 +683,8 @@ survey_names <- survey_names %>%
   title = ifelse(title == "Norway", "Western Barents Sea (WBS)", paste(title, abb))
   ) 
 
+# Generate figure palette
+pal <-  wesanderson::wes_palette("Zissou1",100,type = "continuous")
 
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
@@ -724,17 +726,17 @@ for(reg in survey_names$survey) {
   # Plot me
   tmpplot <-
     ggplot(tmp) +
-    geom_col(aes(x=year, y=n / coeff), color=“gray85”, fill=“gray85") +
+    geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
     # geom_line(aes(x=year, y=anom_days, color=anom_days), size=2)  +
     geom_line(data = long_tmp, aes(x=yearb, y=anom_daysb, color=anom_daysb), size=1)  +
     # scale_color_gradient(low=“#1E03CD”, high=“#B80D06") + # original option
     # scale_color_viridis_b() + # viridis option
     scale_color_gradientn(colours = pal) + # wesanderson option
-    scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = “Sampling events”))+
+    scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
     scale_x_continuous(breaks = seq(tmp$lowyr[1], tmp$hiyr[1], 5)) +
     labs(title=tmp$title) +
     theme_bw()  +
-    theme(legend.position = “none”,
+    theme(legend.position = "none",
           axis.title.x=element_blank(),
           axis.title.y=element_blank(),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -745,7 +747,7 @@ for(reg in survey_names$survey) {
           # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
     ) +
     NULL
-  ggsave(tmpplot, filename=here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)), height=2.5, width=5, scale=0.7, dpi=160)
+  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=5, scale=0.7, dpi=160)
   # plot_crop(here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)))
 }
 
