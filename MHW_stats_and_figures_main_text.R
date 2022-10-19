@@ -729,6 +729,7 @@ survey_names <- survey_names %>%
   title = ifelse(title == "Norway", "Western Barents Sea (WBS)", paste(title, abb))
   ) 
 
+
 # Generate figure palette
 pal <-  wesanderson::wes_palette("Zissou1",100,type = "continuous")
 
@@ -767,7 +768,7 @@ for(reg in survey_names$survey) {
   
   
   # Expand dataset for line gradient
-  rm(long_tmp,df)
+  
   # i = 1
   for(i in 1:nrow(tmp)-1){
     
