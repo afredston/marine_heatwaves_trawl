@@ -686,35 +686,67 @@ survey_names <- survey_names %>%
 
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
-  tmp <- mhw_summary_sat_sst_5_day %>% 
-    left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>% 
-    left_join(survey_names) %>% 
-    left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>% 
-    filter(survey==reg) %>% 
+  tmp <- mhw_summary_sat_sst_5_day %>%
+    left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>%
+    left_join(survey_names) %>%
+    left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>%
+    filter(survey==reg) %>%
     mutate(lowyr = plyr::round_any(min(year), 5, f=ceiling),
            hiyr = plyr::round_any(max(year), 5, f=floor))
   coeff = ceiling(max(tmp$n)/max(tmp$anom_days))
-  tmpplot <- ggplot(tmp) +
-    geom_col(aes(x=year, y=n / coeff), color="gray85", fill="gray85") +
-    geom_line(aes(x=year, y=anom_days, color=anom_days), size=1) + 
-    scale_color_gradient(low="#1e03cd", high="#b80d06") +
-    scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
+  # Expand dataset for line gradient
+  # i = 1
+  for(i in 1:nrow(tmp)-1){
+    # Fix last row issue
+    if(i == 0){i = 1}
+    if(tmp$anom_days[i] == tmp$anom_days[i+1]){
+      df <- data.frame(anom_daysb = rep(tmp$anom_days[i],12),
+                       yearb = seq(tmp$year[i],tmp$year[i+1],0.083)[1:12],
+                       ref_yr = tmp$ref_yr[i])
+    }
+    # set the inter-years values if difference between years
+    if(tmp$anom_days[i] != tmp$anom_days[i+1]){
+      # Estimate the break between different values
+      sbreak = (tmp$anom_days[i+1]-tmp$anom_days[i])/12
+      tbreak = (tmp$year[i+1]-tmp$year[i])/12
+      df <- data.frame(anom_daysb = c(tmp$anom_days[i],seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak)[2:12]),
+                       yearb = seq(tmp$year[i],tmp$year[i+1],tbreak)[1:12],
+                       ref_yr = tmp$ref_yr[i])
+    }
+    # Create df
+    if(i == 1){
+      long_tmp <- df
+    }else{
+      # print(df)
+      long_tmp <- bind_rows(long_tmp,df)
+    }
+  }
+  # Plot me
+  tmpplot <-
+    ggplot(tmp) +
+    geom_col(aes(x=year, y=n / coeff), color=“gray85”, fill=“gray85") +
+    # geom_line(aes(x=year, y=anom_days, color=anom_days), size=2)  +
+    geom_line(data = long_tmp, aes(x=yearb, y=anom_daysb, color=anom_daysb), size=1)  +
+    # scale_color_gradient(low=“#1E03CD”, high=“#B80D06") + # original option
+    # scale_color_viridis_b() + # viridis option
+    scale_color_gradientn(colours = pal) + # wesanderson option
+    scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = “Sampling events”))+
     scale_x_continuous(breaks = seq(tmp$lowyr[1], tmp$hiyr[1], 5)) +
-    labs(title=tmp$title) + 
+    labs(title=tmp$title) +
     theme_bw()  +
-    theme(legend.position = "none",
+    theme(legend.position = “none”,
           axis.title.x=element_blank(),
           axis.title.y=element_blank(),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           axis.text.x=element_text(angle = 45, vjust=0.5, size = 14),
           axis.text.y=element_text(size = 14),
           #    axis.title.x=element_text(vjust=5),
-          #    plot.title.position = "plot",
+          #    plot.title.position = “plot”,
           # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
     ) +
     NULL
-  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=5, scale=0.7, dpi=160)
-  # plot_crop(here("figures",paste0("inset_timeseries_",reg,".png")))
+  ggsave(tmpplot, filename=here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)), height=2.5, width=5, scale=0.7, dpi=160)
+  # plot_crop(here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)))
 }
 
 reg_cti <- survey_summary %>% 
