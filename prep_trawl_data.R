@@ -18,7 +18,7 @@ here <- here::here
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v1.1_clean.csv"))
+raw <- fread(here("raw-data","FISHGLOB_public_v1.5_clean(1).csv"))
 ##############
 # trim datasets
 ##############
@@ -71,7 +71,7 @@ gmex_hauls_del <- unique(raw[survey=='GMEX' & year %in% c(1987,2020), haul_id]) 
 gsl_s_hauls_del <-  unique(raw[survey=='GSL-S' & year < 1985, haul_id]) # GSL-S is also missing 2003 data which shouldn't be an issue, just introduces one 2-year gap 
 neus_hauls_del <- unique(raw[survey=='NEUS' & (year < 1968 | year > 2019), haul_id])
 nigfs_hauls_del <- unique(raw[survey=='NIGFS' & year < 2009, haul_id])
-nor_bts_hauls_del <- c(unique(raw[survey=='Nor-BTS' & year < 1981, haul_id]), unique(raw[survey=='Nor-BTS' & year > 2000, haul_id]), unique(raw[survey=='Nor-BTS' & latitude<68, haul_id])) # rest of the time-series has a lot of fluctuation and very few hauls. latitude cutoff to exclude the norwegian sea, which is rarely sampled, and focus on the barents sea 
+nor_bts_hauls_del <- c(unique(raw[survey=='Nor-BTS' & year < 1989, haul_id]), unique(raw[survey=='Nor-BTS' & latitude<68, haul_id])) # first few years have very few hauls. latitude cutoff to exclude the norwegian sea, which is rarely sampled, and focus on the barents sea 
 ns_ibts_hauls_del <- unique(raw[survey=='NS-IBTS' & year < 1980, haul_id]) # this is a somewhat arbitrary cutoff -- hauls/yr just increases linearly with time here -- but at least we're discarding the years with very few hauls
 pt_ibts_hauls_del <- unique(raw[survey=='PT-IBTS' & year %in% c(2002, 2018), haul_id]) # also missing 2012 data, shouldn't be an issue, just introduces one 2-year gap 
 scs_hauls_del <- unique(raw[survey=='SCS' & (year < 1979 | year > 2017), haul_id])
@@ -83,8 +83,8 @@ goa_hauls_del <- unique(raw[survey=='GOA' & year < 1999, haul_id]) #drop trienni
 # collate list and add in other problematic hauls
 bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s_hauls_del, neus_hauls_del, nigfs_hauls_del, nor_bts_hauls_del, ns_ibts_hauls_del, pt_ibts_hauls_del, scs_hauls_del, seus_hauls_del, swc_ibts_hauls_del,goa_hauls_del, "EVHOE 2019 4 FR 35HT GOV X0510 64", neus_bad_hauls) #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
 
-# trim out all data in or before 1980, the earliest year for which we are using temperature data 
-haul_info <- haul_info[year>1981]
+# trim out all data in or before 1982, the earliest year for which we are using temperature data 
+haul_info <- haul_info[year>1983]
 
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
@@ -201,9 +201,9 @@ year_cell_count.dt[is.na(nhaul), nhaul := 0] # fill in for year x cell x survey 
 year_cell_count.dt[, max_years := length(unique(year)), by=survey]
 year_cell_count_summ <- year_cell_count.dt[nhaul>0, .(sampled_years = length(unique(year))), by=c("cell","survey","max_years")]
 year_cell_count_summ[, prop_sampled := sampled_years / max_years]
-ggplot(year_cell_count.dt[, .(nhauls = sum(nhaul)), by=c("year","survey")]) +
-  geom_line(aes(x=year, y=nhauls)) +
-  facet_wrap(~survey)
+# ggplot(year_cell_count.dt[, .(nhauls = sum(nhaul)), by=c("year","survey")]) +
+#   geom_line(aes(x=year, y=nhauls)) +
+#   facet_wrap(~survey)
 
 # figure out how many cells would be dropped by trimming to those sampled in every year 
 trim.dt <- NULL
