@@ -433,11 +433,7 @@ survey_summary_cti <- survey_summary %>%
   inner_join(cti_prep, by="ref_yr") %>% 
   group_by(survey) %>% 
   arrange(year) %>% 
-  mutate(#cti_diff = CTI - lag(CTI),
-       #  cti_diff_prop = cti_diff / lag(CTI),
-       #  cti_anom = CTI - mean(CTI),
-      #   cti_anom_prop = cti_anom / mean(CTI),
-      #   cti_z = (CTI - mean(CTI)) / sd(CTI),
+  mutate(cti_diff = CTI - lag(CTI),
          cti_log = log(CTI / lag(CTI))) %>% 
   filter(!is.na(CTI))
 ########
