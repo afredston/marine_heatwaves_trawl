@@ -1,5 +1,9 @@
 # PLEASE CHECK EACH DF MANUALLY WHEN NEW REGIONS ARE INCORPORATED to be sure the lag calculations are working correctly and the region names were harmonized!
 
+# this script does two things:
+# reshapes the marine heatwave anomaly data and matches it with survey month*years
+# calculates aggregated biomass and community composition metrics for the survey data 
+
 ########
 # load packages
 ########
@@ -14,36 +18,62 @@ library(data.table)
 ########
 # load FISHGLOB trawl data
 cpue <- read_csv(here("processed-data","biomass_time.csv"))%>%
-  filter(!(survey=="WCTRI" & year==2004),
-         year < 2020)  # get rid of the year overlapping with the annual WCANN survey, and regions that were included by accident
+  filter(year < 2020)
 
 sat_sst_raw <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf.csv"), sep=";") 
+
+sat_sst_raw_nod <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf_no_detrend.csv"), sep=";") 
+
 # reshape MHW data, and fix some inconsistencies in region names (match MHWs to FISHGLOB)
 sat_sst <- sat_sst_raw %>% 
   rename("dateRaw"=X) %>% 
   pivot_longer(cols=2:ncol(sat_sst_raw), names_to="survey", values_to="anom") %>% 
-  filter(!survey=="s_georg") %>% # mistakenly included in MHW data file (not a public FISHGLOB survey)
-  mutate(survey = toupper(survey),
-         survey = gsub('_','-',survey),
-         survey = recode(survey, "AL" = "AI","NOR-BTS" = "Nor-BTS", "ROCALL" = "ROCKALL"))
+  mutate(survey = gsub('_','-',survey),
+         survey = toupper(survey),
+         survey = recode(survey, 
+                         "BALTIC-SEA" = "BITS",
+                         "BRITISH-COLUMBIA" = "DFO-QCS", 
+                         "EASTERN-BERING-SEA" = "EBS",
+                         "GULF-OF-MEXICO" = "GMEX",
+                         "GULF-OF-ALASKA" = "GOA",
+                         "NOR-BTS" = "Nor-BTS",
+                         "SCOTIAN-SHELF" = "SCS",
+                         "SOUTHEAST" = "SEUS",
+                         "WEST-COAST" = "WCANN"))
 
-soda_sst_raw <- read.delim(here("raw-data","MHW_95P_surveys_soda_surf.csv"), sep=";")
-soda_sst <- soda_sst_raw %>% 
+sat_sst_nod <- sat_sst_raw_nod %>% 
   rename("dateRaw"=X) %>% 
-  pivot_longer(cols=2:ncol(soda_sst_raw), names_to="survey", values_to="anom")%>% 
-  filter(!survey=="s_georg") %>% 
-  mutate(survey = toupper(survey),
-         survey = gsub('_','-',survey),
-         survey = recode(survey, "AL" = "AI","NOR-BTS" = "Nor-BTS", "ROCALL" = "ROCKALL"))
+  pivot_longer(cols=2:ncol(sat_sst_raw_nod), names_to="survey", values_to="anom") %>% 
+  mutate(survey = gsub('_','-',survey),
+         survey = toupper(survey),
+         survey = recode(survey, 
+                         "BALTIC-SEA" = "BITS",
+                         "BRITISH-COLUMBIA" = "DFO-QCS", 
+                         "EASTERN-BERING-SEA" = "EBS",
+                         "GULF-OF-MEXICO" = "GMEX",
+                         "GULF-OF-ALASKA" = "GOA",
+                         "NOR-BTS" = "Nor-BTS",
+                         "SCOTIAN-SHELF" = "SCS",
+                         "SOUTHEAST" = "SEUS",
+                         "WEST-COAST" = "WCANN"))
 
-soda_sbt_raw <- read.delim(here("raw-data","MHW_95P_surveys_soda_btm.csv"), sep=";")
-soda_sbt <- soda_sbt_raw %>% 
-  rename("dateRaw"=X) %>% 
-  pivot_longer(cols=2:ncol(soda_sbt_raw), names_to="survey", values_to="anom")%>% 
-  filter(!survey=="s_georg") %>% 
-  mutate(survey = toupper(survey),
-         survey = gsub('_','-',survey),
-         survey = recode(survey, "AL" = "AI","NOR-BTS" = "Nor-BTS", "ROCALL" = "ROCKALL"))
+# soda_sst_raw <- read.delim(here("raw-data","MHW_95P_surveys_soda_surf.csv"), sep=";")
+# soda_sst <- soda_sst_raw %>% 
+#   rename("dateRaw"=X) %>% 
+#   pivot_longer(cols=2:ncol(soda_sst_raw), names_to="survey", values_to="anom")%>% 
+#   filter(!survey=="s_georg") %>% 
+#   mutate(survey = toupper(survey),
+#          survey = gsub('_','-',survey),
+#          survey = recode(survey, "AL" = "AI","NOR-BTS" = "Nor-BTS", "ROCALL" = "ROCKALL"))
+# 
+# soda_sbt_raw <- read.delim(here("raw-data","MHW_95P_surveys_soda_btm.csv"), sep=";")
+# soda_sbt <- soda_sbt_raw %>% 
+#   rename("dateRaw"=X) %>% 
+#   pivot_longer(cols=2:ncol(soda_sbt_raw), names_to="survey", values_to="anom")%>% 
+#   filter(!survey=="s_georg") %>% 
+#   mutate(survey = toupper(survey),
+#          survey = gsub('_','-',survey),
+#          survey = recode(survey, "AL" = "AI","NOR-BTS" = "Nor-BTS", "ROCALL" = "ROCKALL"))
 
 maxyr <- max(cpue$year)
 
@@ -51,43 +81,6 @@ cti <- read_csv(here("raw-data/6855203","mxesr.csv")) %>%  # https://figshare.co
   select(-`...1`) %>% # get rid of an unneeded column and some duplicated rows
   distinct()
 
-check_temp <- FALSE
-if(check_temp==TRUE){
-  sat_sst_raw_old <- read.delim(here("raw-data","MHW_95P_surveys_for_malin_old.csv"), sep=";") # file from Thomas - download and move to raw-data folder
-  sat_sst_old <- sat_sst_raw_old %>% 
-    rename("dateRaw"=X) %>% 
-    pivot_longer(cols=2:ncol(sat_sst_raw_old), names_to="survey", values_to="anom") %>% 
-    filter(!survey=="west_coast") %>% # we aren't pooling the two WC surveys anymore, so hard to compare
-    mutate(survey = recode(survey, 'aleutian_islands'='ai',
-                           'eastern_bering_sea'='ebs',
-                           'gulf_of_alaska'='goa',
-                           'gulf_of_mexico'='gmex',
-                           'northeast'='neus',
-                           'scotian_shelf'='scs',
-                           'southeast'='seus'),
-           survey = gsub('_','-',survey),
-           survey = toupper(survey),
-           survey = recode(survey, 'NORBTS' = 'Nor-BTS'))
-  test_surv <- intersect(unique(sat_sst_old$survey), unique(sat_sst$survey))
-  
-  rank1 <- sat_sst_old %>% 
-    filter(survey %in% test_surv) %>% 
-    pull(anom)
-  
-  rank2 <- sat_sst %>% 
-    filter(survey %in% test_surv) %>% 
-    pull(anom)
-  
-  plot(rank1, rank2)
-  
-  sat_sst %>% ggplot(aes(x=anom)) +
-    geom_histogram() +
-    facet_wrap(~survey)
-  
-  sat_sst_old %>% ggplot(aes(x=anom)) +
-    geom_histogram() +
-    facet_wrap(~survey)
-}
 ########
 # match surveys to dates
 ########
@@ -118,21 +111,22 @@ sat_sst_ref_yrs <- expand.grid(month=seq(1, 12, 1), year=seq(1982, maxyr, 1), su
   select(ref_yr, survey, month_year) %>% 
   ungroup() %>% 
   left_join(survey_start_times %>% select(ref_yr, survey_date) %>% distinct(), by="ref_yr") # add back in the survey start dates 
+# note that this works for both OISST data files 
 
 # note start in 1980 for SODA (works for both SST and SBT SODA)
-soda_ref_yrs <- expand.grid(month=seq(1, 12, 1), year=seq(1980, maxyr, 1), survey=unique(survey_start_times$survey))  %>%
-  mutate(survey = as.character(survey),
-         survey_month_year = paste0(survey,"-",month,"-",year)) %>% 
-  mutate(ref_yr_prep = ifelse(survey_month_year %in% survey_start_times[survey_start_times$year>1980,]$ref_yr, survey_month_year, NA), 
-         month_year = paste0(month,"-",year)) %>% 
-  group_by(survey) %>% 
-  fill(ref_yr_prep, .direction="up") %>%  
-  group_by(survey) %>% 
-  arrange(year) %>% 
-  mutate(ref_yr = ifelse(survey_month_year==ref_yr_prep, lead(ref_yr_prep), ref_yr_prep)) %>% 
-  select(ref_yr, survey, month_year) %>% 
-  ungroup() %>% 
-  left_join(survey_start_times %>% select(ref_yr, survey_date) %>% distinct(), by="ref_yr") 
+# soda_ref_yrs <- expand.grid(month=seq(1, 12, 1), year=seq(1980, maxyr, 1), survey=unique(survey_start_times$survey))  %>%
+#   mutate(survey = as.character(survey),
+#          survey_month_year = paste0(survey,"-",month,"-",year)) %>% 
+#   mutate(ref_yr_prep = ifelse(survey_month_year %in% survey_start_times[survey_start_times$year>1980,]$ref_yr, survey_month_year, NA), 
+#          month_year = paste0(month,"-",year)) %>% 
+#   group_by(survey) %>% 
+#   fill(ref_yr_prep, .direction="up") %>%  
+#   group_by(survey) %>% 
+#   arrange(year) %>% 
+#   mutate(ref_yr = ifelse(survey_month_year==ref_yr_prep, lead(ref_yr_prep), ref_yr_prep)) %>% 
+#   select(ref_yr, survey, month_year) %>% 
+#   ungroup() %>% 
+#   left_join(survey_start_times %>% select(ref_yr, survey_date) %>% distinct(), by="ref_yr") 
 
 # step 3: join this list of all months to the MHW data and then calculate statistics based on survey-years 
 mhw_sat_sst <- sat_sst %>% 
@@ -140,7 +134,6 @@ mhw_sat_sst <- sat_sst %>%
          year = year(date),
          month = month(date),
          month_year = paste0(month,"-",year)
-         #    anom=replace_na(anom, 0), # DANGER -- overwriting the data Thomas sent to convert NAs ("no MHW") to zeros to properly account for them
   ) %>% 
   select(-dateRaw) %>% 
   filter(str_detect(date, '-02-29', negate=TRUE), # get rid of leap days 
@@ -158,43 +151,66 @@ mhw_sat_sst %<>%
   filter(date_lag < 365,
          date_lag >= 0) # only keep SST data within 365 days of a survey for each region
 
-# repeat for SODA 
-mhw_soda_sbt <- soda_sbt %>% 
-  mutate(date = dmy(dateRaw),
+mhw_sat_sst_nod <- sat_sst_nod %>% 
+  mutate(date = dmy(dateRaw), # standardize date formats
          year = year(date),
          month = month(date),
-         month_year = paste0(month,"-",year)) %>% 
-  #    anom=replace_na(anom, 0)) 
+         month_year = paste0(month,"-",year)
+  ) %>% 
   select(-dateRaw) %>% 
-  filter(survey %in% unique(survey_start_times$survey)) %>% 
-  left_join(soda_ref_yrs, by=c('survey','month_year'))%>% 
+  filter(str_detect(date, '-02-29', negate=TRUE), # get rid of leap days 
+         survey %in% unique(survey_start_times$survey)) %>% 
+  left_join(sat_sst_ref_yrs, by=c('survey','month_year')) %>% # note that because this is a left_join, and the mhw data starts at 1982, sometimes a ref_yr is matched with many years of data preceding the survey -- this is corrected below when we keep only dates a certain lag value before the survey
   filter(!is.na(ref_yr)) 
-tmp <- mhw_soda_sbt %>% group_by(ref_yr) %>% summarise(n=length(anom)) # currently all the bad ref_yrs are too recent (post-2017)
-if(min(tmp$n) < 12){
-  bad_ref_yrs <- tmp %>% filter(n<12) %>% pull(ref_yr)
-  mhw_soda_sbt %<>% filter(!ref_yr %in% bad_ref_yrs)
+# confirm that there are no ref_yrs matched with <365 days of data 
+tmp <- mhw_sat_sst_nod %>% group_by(ref_yr) %>% summarise(n=length(anom))
+if(min(tmp$n) < 365){ 
+  bad_ref_yrs <- tmp %>% filter(n<=365) %>% pull(ref_yr)
+  mhw_sat_sst_nod %<>% filter(!ref_yr %in% bad_ref_yrs)
 }
-mhw_soda_sbt %<>% mutate(date_lag = survey_date - date) %>% 
+mhw_sat_sst_nod %<>%
+  mutate(date_lag = survey_date - date) %>% # how many days before the survey was the SST observation?
   filter(date_lag < 365,
-         date_lag >= 0) 
+         date_lag >= 0) # only keep SST data within 365 days of a survey for each region
 
-mhw_soda_sst <- soda_sst %>% 
-  mutate(date = dmy(dateRaw),
-         year = year(date),
-         month = month(date),
-         month_year = paste0(month,"-",year)) %>% 
-  select(-dateRaw) %>% 
-  filter(survey %in% unique(survey_start_times$survey)) %>% 
-  left_join(soda_ref_yrs, by=c('survey','month_year'))%>% 
-  filter(!is.na(ref_yr)) 
-tmp <- mhw_soda_sst %>% group_by(ref_yr) %>% summarise(n=length(anom)) 
-if(min(tmp$n) < 12){
-  bad_ref_yrs <- tmp %>% filter(n<12) %>% pull(ref_yr)
-  mhw_soda_sst %<>% filter(!ref_yr %in% bad_ref_yrs)
-}
-mhw_soda_sst %<>% mutate(date_lag = survey_date - date) %>% 
-  filter(date_lag < 365,
-         date_lag >= 0) 
+
+# repeat for SODA 
+# mhw_soda_sbt <- soda_sbt %>% 
+#   mutate(date = dmy(dateRaw),
+#          year = year(date),
+#          month = month(date),
+#          month_year = paste0(month,"-",year)) %>% 
+#   #    anom=replace_na(anom, 0)) 
+#   select(-dateRaw) %>% 
+#   filter(survey %in% unique(survey_start_times$survey)) %>% 
+#   left_join(soda_ref_yrs, by=c('survey','month_year'))%>% 
+#   filter(!is.na(ref_yr)) 
+# tmp <- mhw_soda_sbt %>% group_by(ref_yr) %>% summarise(n=length(anom)) # currently all the bad ref_yrs are too recent (post-2017)
+# if(min(tmp$n) < 12){
+#   bad_ref_yrs <- tmp %>% filter(n<12) %>% pull(ref_yr)
+#   mhw_soda_sbt %<>% filter(!ref_yr %in% bad_ref_yrs)
+# }
+# mhw_soda_sbt %<>% mutate(date_lag = survey_date - date) %>% 
+#   filter(date_lag < 365,
+#          date_lag >= 0) 
+# 
+# mhw_soda_sst <- soda_sst %>% 
+#   mutate(date = dmy(dateRaw),
+#          year = year(date),
+#          month = month(date),
+#          month_year = paste0(month,"-",year)) %>% 
+#   select(-dateRaw) %>% 
+#   filter(survey %in% unique(survey_start_times$survey)) %>% 
+#   left_join(soda_ref_yrs, by=c('survey','month_year'))%>% 
+#   filter(!is.na(ref_yr)) 
+# tmp <- mhw_soda_sst %>% group_by(ref_yr) %>% summarise(n=length(anom)) 
+# if(min(tmp$n) < 12){
+#   bad_ref_yrs <- tmp %>% filter(n<12) %>% pull(ref_yr)
+#   mhw_soda_sst %<>% filter(!ref_yr %in% bad_ref_yrs)
+# }
+# mhw_soda_sst %<>% mutate(date_lag = survey_date - date) %>% 
+#   filter(date_lag < 365,
+#          date_lag >= 0) 
 ########
 # make summary datasets 
 ########
@@ -230,7 +246,32 @@ for(i in unique(survey_start_times$survey)){
   # count up the number of sequential mhw-days and put the sum in a column 
   # https://coderedirect.com/questions/412211/r-count-consecutive-occurrences-of-values-in-a-single-column-and-by-group -- couldn't get this to work with dplyr functions
   mhw_sat_sst_5_day_prep <- bind_rows(mhw_sat_sst_5_day_prep, tmp)
-  
+  }
+
+mhw_summary_sat_sst_nod_any <- mhw_sat_sst_nod %>% 
+  group_by(ref_yr) %>% 
+  arrange(date) %>% 
+  summarise(
+    anom_days = sum(anom>0, na.rm=TRUE),# count number of non-NA anomaly days 
+    anom_sev = sum(anom, na.rm=TRUE), # add up total anomaly values
+    anom_int = anom_sev / anom_days # calculate mean intensity for every survey*year 
+  ) %>% 
+  group_by(ref_yr) %>% 
+  mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
+  ungroup() %>% 
+  mutate(anom_int = replace_na(anom_int, 0)) # replacing NAs in anom_int that came from dividing by 0 with 0s
+
+mhw_sat_sst_5_day_nod_prep <- NULL
+for(i in unique(survey_start_times$survey)){
+  tmp <- mhw_sat_sst_nod%>% 
+    filter(survey==i) %>% 
+    mutate(yn = ifelse(is.na(anom),0,1)) %>% 
+    group_by(ref_yr, yn) %>% 
+    arrange(date) 
+  tmp <- transform(tmp, counter = ave(yn, rleid(ref_yr, yn), FUN=sum)) 
+  # count up the number of sequential mhw-days and put the sum in a column 
+  # https://coderedirect.com/questions/412211/r-count-consecutive-occurrences-of-values-in-a-single-column-and-by-group -- couldn't get this to work with dplyr functions
+  mhw_sat_sst_5_day_nod_prep <- bind_rows(mhw_sat_sst_5_day_nod_prep, tmp)
 }
 
 # how many distinct MHWs per year? (for main text stats)
@@ -252,37 +293,50 @@ mhw_summary_sat_sst_5_day <- mhw_sat_sst_5_day_prep %>%
     anom_days = sum(anom>0, na.rm=TRUE),
     anom_sev = sum(anom, na.rm=TRUE), 
     anom_int = anom_sev / anom_days 
-  ) %>% 
+  )%>% 
   group_by(ref_yr) %>% 
   mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
   ungroup() %>% 
   mutate(anom_int = replace_na(anom_int, 0))  
 
-mhw_summary_soda_sst <- mhw_soda_sst %>% 
+mhw_summary_sat_sst_5_day_nod <- mhw_sat_sst_5_day_nod_prep %>% 
   group_by(ref_yr) %>% 
-  arrange(date) %>% 
+  mutate(anom = ifelse(counter >= 5, anom, NA))%>%  # overwrite anom values that aren't part of a >=5 day event
   summarise(
-    anomMonths = sum(anom>0, na.rm=TRUE), 
-    anom_sev = sum(anom, na.rm=TRUE),
-    anom_int = anom_sev / anomMonths # not comparable to anom_int from daily data!
-  ) %>% 
+    anom_days = sum(anom>0, na.rm=TRUE),
+    anom_sev = sum(anom, na.rm=TRUE), 
+    anom_int = anom_sev / anom_days 
+  )%>% 
   group_by(ref_yr) %>% 
-  mutate(mhw_yes_no = ifelse(anomMonths>0, "yes", "no")) %>% 
+  mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
   ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0)) 
+  mutate(anom_int = replace_na(anom_int, 0))  
 
-mhw_summary_soda_sbt <- mhw_soda_sbt %>% 
-  group_by(ref_yr) %>% 
-  arrange(date) %>% 
-  summarise(
-    anomMonths = sum(anom>0, na.rm=TRUE), 
-    anom_sev = sum(anom, na.rm=TRUE),
-    anom_int = anom_sev / anomMonths # not comparable to anom_int from daily data!
-  ) %>% 
-  group_by(ref_yr) %>% 
-  mutate(mhw_yes_no = ifelse(anomMonths>0, "yes", "no")) %>% 
-  ungroup() %>% 
-  mutate(anom_int = replace_na(anom_int, 0)) 
+# mhw_summary_soda_sst <- mhw_soda_sst %>% 
+#   group_by(ref_yr) %>% 
+#   arrange(date) %>% 
+#   summarise(
+#     anomMonths = sum(anom>0, na.rm=TRUE), 
+#     anom_sev = sum(anom, na.rm=TRUE),
+#     anom_int = anom_sev / anomMonths # not comparable to anom_int from daily data!
+#   ) %>% 
+#   group_by(ref_yr) %>% 
+#   mutate(mhw_yes_no = ifelse(anomMonths>0, "yes", "no")) %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0)) 
+# 
+# mhw_summary_soda_sbt <- mhw_soda_sbt %>% 
+#   group_by(ref_yr) %>% 
+#   arrange(date) %>% 
+#   summarise(
+#     anomMonths = sum(anom>0, na.rm=TRUE), 
+#     anom_sev = sum(anom, na.rm=TRUE),
+#     anom_int = anom_sev / anomMonths # not comparable to anom_int from daily data!
+#   ) %>% 
+#   group_by(ref_yr) %>% 
+#   mutate(mhw_yes_no = ifelse(anomMonths>0, "yes", "no")) %>% 
+#   ungroup() %>% 
+#   mutate(anom_int = replace_na(anom_int, 0)) 
 
 # 
 # # datasets based on calendar year -- use only for characterizing regional MHWs, not for comparing to trawl data -- BE CAREFUL ABOUT MERGING THE DATASETS GENERATED BELOW THIS LINE WITH THE SURVEYS!
@@ -448,8 +502,10 @@ write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
 # MHWs paired with ref_years
 write_csv(mhw_summary_sat_sst_any, here("processed-data","MHW_satellite_sst.csv"))
 write_csv(mhw_summary_sat_sst_5_day, here("processed-data","MHW_satellite_sst_5_day_threshold.csv"))
-write_csv(mhw_summary_soda_sst, here("processed-data","MHW_soda_sst.csv"))
-write_csv(mhw_summary_soda_sbt, here("processed-data","MHW_soda_sbt.csv"))
+write_csv(mhw_summary_sat_sst_nod_any, here("processed-data","MHW_satellite_sst_no_detrending.csv"))
+write_csv(mhw_summary_sat_sst_5_day_nod, here("processed-data","MHW_satellite_sst_5_day_threshold_no_detrending.csv"))
+#write_csv(mhw_summary_soda_sst, here("processed-data","MHW_soda_sst.csv"))
+#write_csv(mhw_summary_soda_sbt, here("processed-data","MHW_soda_sbt.csv"))
 
 # calendar year datasets -- for summary statistics and plots only, no trawl data analysis
 # write_csv(mhw_calendar_sat_sst_5_day, here("processed-data","MHW_calendar_year_satellite_sst_5_day_threshold.csv"))
