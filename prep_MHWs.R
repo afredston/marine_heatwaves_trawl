@@ -379,7 +379,7 @@ mhw_summary_oisst_d_5_day <- mhw_oisst_d_5_day_prep %>%
   ungroup() %>% 
   mutate(anom_int = replace_na(anom_int, 0))  
 
-mhw_summary_oisst_5_day_nod <- mhw_oisst_nod_5_day_prep %>% 
+mhw_summary_oisst_nod_5_day <- mhw_oisst_nod_5_day_prep %>% 
   group_by(ref_yr) %>% 
   mutate(anom = ifelse(counter >= 5, anom, NA))%>%
   summarise(
@@ -502,7 +502,7 @@ write_csv(survey_start_times, here("processed-data","survey_start_times.csv"))
 write_csv(mhw_summary_oisst_d_any, here("processed-data","MHW_oisst.csv"))
 write_csv(mhw_summary_oisst_d_5_day, here("processed-data","MHW_oisst_5_day_threshold.csv"))
 write_csv(mhw_summary_oisst_nod_any, here("processed-data","MHW_oisst_no_detrending.csv"))
-write_csv(mhw_summary_oisst_nod_5_day, here("processed-data","MHW_satellite_oisst_5_day_threshold_no_detrending.csv"))
+write_csv(mhw_summary_oisst_nod_5_day, here("processed-data","MHW_oisst_5_day_threshold_no_detrending.csv"))
 
 write_csv(mhw_summary_glorys_d_any, here("processed-data","MHW_glorys.csv"))
 write_csv(mhw_summary_glorys_d_5_day, here("processed-data","MHW_glorys_5_day_threshold.csv"))

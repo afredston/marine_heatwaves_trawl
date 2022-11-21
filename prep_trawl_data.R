@@ -84,7 +84,7 @@ goa_hauls_del <- unique(raw[survey=='GOA' & year < 1999, haul_id]) #drop trienni
 bad_hauls <- c(bad_hauls, bits_hauls_del, evhoe_hauls_del, gmex_hauls_del, gsl_s_hauls_del, neus_hauls_del, nigfs_hauls_del, nor_bts_hauls_del, ns_ibts_hauls_del, pt_ibts_hauls_del, scs_hauls_del, seus_hauls_del, swc_ibts_hauls_del,goa_hauls_del, "EVHOE 2019 4 FR 35HT GOV X0510 64", neus_bad_hauls) #add EVHOE long haul (24 hours; EVHOE 2019 4 FR 35HT GOV X0510 64) to bad hauls
 
 # trim out all data in or before 1982, the earliest year for which we are using temperature data 
-haul_info <- haul_info[year>1983]
+haul_info <- haul_info[year>1982]
 
 # trim out surveys shorter than 10 years, taking into account the data trimming above 
 short_surveys <- unique(copy(haul_info)[!haul_id %in% bad_hauls][, .(survey, year)])[, .N, by=.(survey)][N < 10]$survey 
