@@ -15,7 +15,7 @@ library(data.table)
 library(betapart)
 
 ########
-# load data (run most recently on June 2, 2022 by Zoë)
+# load data (run most recently on Nov 21, 2022 by Alexa)
 ########
 #bring in biomass_time data (prepped on annotate)
 biomass_time <- fread(here("processed-data","biomass_time.csv"))
@@ -186,4 +186,3 @@ richness_metric_year <- ggplot(data = biomass_time_temporal_beta.l[type == "rich
 
 ggsave(beta_diversity_metric_year, file = "beta_diversity_metric_year.jpg", path = "figures/beta_diversity", width = 15, height = 9, unit = "in")
 ggsave(richness_metric_year, file = "richness_metric_year.jpg", path = "figures/beta_diversity", width = 10, height = 4, unit = "in")
-

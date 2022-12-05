@@ -44,14 +44,16 @@ select <- dplyr::select
 set.seed(42)
 
 # marine heatwave data for joining with survey data
-# mhw_summary_sat_sst_any <- read_csv(here("processed-data","mhw_satellite_sst.csv")) # MHW summary stats from satellite SST record, using any anomaly as a MHW
-mhw_summary_sat_sst_5_day <- read_csv(here("processed-data","mhw_satellite_sst_5_day_threshold.csv")) # MHW summary stats from satellite SST record, defining MHWs as events >=5 days
-mhw_summary_soda_sst <-  read_csv(here("processed-data","mhw_soda_sst.csv")) # modeled SST from SODA
-mhw_summary_soda_sbt <-  read_csv(here("processed-data","mhw_soda_sbt.csv")) # modeled SBT from SODA
-total_mhws <- read_csv(here("processed-data","total_number_mhws.csv"))
+mhw_summary_oisst_d_5_day <- read_csv(here("processed-data","MHW_oisst_5_day_threshold.csv"))
+mhw_summary_glorys_d_5_day <- read_csv(here("processed-data","MHW_glorys_5_day_threshold.csv"))
 
-# survey data 
-survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_sat_sst_5_day) %>%
+total_mhws_oisst_d <- read_csv(here("processed-data","total_number_mhws_oisst_d.csv")) %>% 
+  select(2:4)
+total_mhws_glorys_d <- read_csv(here("processed-data","total_number_mhws_glorys_d.csv"))%>% 
+  select(2:4)
+
+# survey data joined to SBT MHWs
+survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% inner_join(mhw_summary_glorys_d_5_day) %>%
   group_by(survey) %>% 
   mutate(
     wt_mt_scale = as.numeric(scale(wt_mt, center=TRUE, scale=TRUE)),
@@ -68,6 +70,7 @@ survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.c
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
 haul_info <- read_csv(here("processed-data","haul_info.csv")) 
+haul_stats <- read_csv(here("processed-data","stats_about_raw_data.csv")) 
 survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
                                     "PT-IBTS","SCS",
                                     "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US'))
@@ -75,16 +78,21 @@ write_csv(survey_names, here('processed-data','survey_names.csv'))
 beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
   left_join(survey_start_times) %>% # add in the ref_yr column 
   select(-month_year, -survey_date) %>% 
-  left_join(mhw_summary_sat_sst_5_day) %>%  # add in mhw data
+  left_join(mhw_summary_glorys_d_5_day) %>%  # add in mhw data
   group_by(survey)  %>% 
   # scale and center all beta diversity measures within regions 
   mutate(across(jaccard_dissimilarity_turnover:richness_percent_change, ~scale(., center=TRUE, scale=TRUE), .names="{.col}_scale")) %>% # UPDATE IF COLUMNS CHANGE!
   ungroup()
 
-sim_test_summ_gamma <- readRDS(here("processed-data","sim_test_summ_gamma.rds"))
-sim_test_summ_yrs <- readRDS(here("processed-data","sim_test_summ_yrs.rds"))
-colnames(sim_test_summ_gamma) <- c('exp_gamma','propsig')
-colnames(sim_test_summ_yrs) <- c('n_years','propsig','n_years_tot')
+sim_test_summ_gamma_glorys <- readRDS(here("processed-data","sim_test_summ_gamma_glorys.rds"))
+sim_test_summ_yrs_glorys <- readRDS(here("processed-data","sim_test_summ_yrs_glorys.rds"))
+colnames(sim_test_summ_gamma_glorys) <- c('exp_gamma','propsig')
+colnames(sim_test_summ_yrs_glorys) <- c('n_years','propsig','n_years_tot')
+
+sim_test_summ_gamma_oisst <- readRDS(here("processed-data","sim_test_summ_gamma_oisst.rds"))
+sim_test_summ_yrs_oisst <- readRDS(here("processed-data","sim_test_summ_yrs_oisst.rds"))
+colnames(sim_test_summ_gamma_oisst) <- c('exp_gamma','propsig')
+colnames(sim_test_summ_yrs_oisst) <- c('n_years','propsig','n_years_tot')
 
 # map data 
 haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
@@ -94,7 +102,19 @@ haul_info_map <- fread(here::here("processed-data","haul_info.csv"))
 ######
 
 # how many MHWs total?
-sum(total_mhws$n_mhw)
+sum(total_mhws_glorys_d$n_mhw)
+sum(total_mhws_oisst_d$n_mhw)
+
+# how many hauls total?
+haul_info_oisst <- haul_info %>% 
+  mutate(year = as.numeric(year)) %>% 
+  filter(year<2020)
+haul_info_glorys <- haul_info %>% 
+  mutate(year = as.numeric(year)) %>% 
+  filter(year<2020, year>1993)
+nrow(haul_info_oisst)
+nrow(haul_info_glorys)
+haul_stats
 
 # how many MHW vs non-MHW years?
 survey_summary %>% 
@@ -112,12 +132,6 @@ hauldat <- survey_summary %>%
   left_join(hauldat_prep, by="survey")
 glance(lm(abs_wt_mt_log ~ hyr, data=hauldat))
 
-# EBS 2017
-survey_summary %>% 
-  filter(survey=='EBS',year==2017) %>% 
-  select(wt_mt_log, anom_sev)%>% 
-  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
-
 # GOA 2017
 survey_summary %>% 
   filter(survey=='GOA',year==2017) %>% 
@@ -130,17 +144,35 @@ survey_summary %>%
   select(wt_mt_log, anom_sev) %>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
+# NS 
+survey_summary %>% 
+  filter(survey=='NS-IBTS',year == 2008) %>% 
+  select(wt_mt_log, anom_sev)%>% 
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# Scotland 2014 (2018 almost identical)
+# survey_summary %>%
+#   filter(survey=='SWC-IBTS', year==2014) %>%
+#   select(wt_mt_log, anom_sev) %>%
+#   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# SEUS 1996
+survey_summary %>%
+  filter(survey=='SEUS', year==1996) %>%
+  select(wt_mt_log, anom_sev) %>%
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
+# Portugal 2009
+survey_summary %>%
+  filter(survey=='PT-IBTS', year==2009) %>%
+  select(wt_mt_log, anom_sev) %>%
+  mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
+
 # GSL 2012-2013
 survey_summary %>% 
   filter(survey=='GSL-S', year %in% c(2011, 2012, 2013)) %>% 
-  select(year, wt_mt_log, anom_sev)  %>% 
+  select(year, wt_mt_log, anom_sev, wt_mt)  %>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
-
-# Norway 2015
-# survey_summary %>% 
-#   filter(survey=='Nor-BTS', year==1995) %>% 
-#   select(wt_mt_log, anom_sev) %>% 
-#   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
 # statistical tests 
 
@@ -157,14 +189,19 @@ median(wt_mhw)
 sd(wt_mhw)
 median(wt_no_mhw)
 sd(wt_no_mhw)
-t.test(wt_mhw, wt_no_mhw)
+t.test(wt_mhw, wt_no_mhw, alternative = "two.sided")
 
 # absolute variation in log ratios
 median(abs(wt_mhw))
 sd(abs(wt_mhw))
 median(abs(wt_no_mhw))
 sd(abs(wt_no_mhw))
-t.test(abs(wt_mhw), abs(wt_no_mhw))
+t.test(abs(wt_mhw), abs(wt_no_mhw), alternative = "two.sided")
+
+# how many followed MHWs?
+survey_summary %>% 
+  group_by(mhw_yes_no) %>% 
+  summarise(n=n())
 
 cti_no_mhw <- survey_summary %>% 
   filter(mhw_yes_no == "no", !is.na(cti_diff)) %>%
@@ -178,20 +215,20 @@ median(cti_no_mhw)
 sd(cti_no_mhw)
 median(cti_mhw)
 sd(cti_mhw)
-t.test(cti_no_mhw, cti_mhw)
+t.test(cti_no_mhw, cti_mhw, alternative = "two.sided")
 
 # how correlated are SODA SBT and SODA SST?
-cor.test(
-  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
-  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
-  method="spearman"
-)
-
-cor.test(
-  mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
-  mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
-  method="spearman"
-)
+# cor.test(
+#   mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
+#   mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
+#   method="spearman"
+# )
+# 
+# cor.test(
+#   mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
+#   mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
+#   method="spearman"
+# )
 
 
 # regressions
@@ -265,10 +302,12 @@ survey_summary %>%
 # power analysis
 
 # what % biomass loss could we detect with our sample size, aiming for a power of >80%?
-sim_test_summ_gamma %>% filter(propsig>0.8)
+sim_test_summ_gamma_glorys %>% filter(propsig>0.8)
+sim_test_summ_gamma_oisst %>% filter(propsig>0.8)
 
 # how many sample-years would we need to detect a 6% loss of biomass with the same power threshold?
-sim_test_summ_yrs %>% filter(propsig>0.8)
+sim_test_summ_yrs_glorys %>% filter(propsig>0.8)
+sim_test_summ_yrs_oisst %>% filter(propsig>0.8)
 
 ############
 # community turnover
@@ -276,51 +315,51 @@ sim_test_summ_yrs %>% filter(propsig>0.8)
 
 # biomass weighted 
 bc_mhw_substitution <- beta_div %>% 
-  filter(anom_days>0, !is.na(bray_dissimilarity_turnover_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(bray_dissimilarity_turnover_scale)) %>% 
   pull(bray_dissimilarity_turnover_scale)
 bc_no_mhw_substitution <- beta_div %>% 
-  filter(anom_days==0, !is.na(bray_dissimilarity_turnover_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_turnover_scale)) %>% 
   pull(bray_dissimilarity_turnover_scale)
 bc_mhw_subset <- beta_div %>% 
-  filter(anom_days>0, !is.na(bray_dissimilarity_nestedness_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(bray_dissimilarity_nestedness_scale)) %>% 
   pull(bray_dissimilarity_nestedness_scale)
 bc_no_mhw_subset <- beta_div %>% 
-  filter(anom_days==0, !is.na(bray_dissimilarity_nestedness_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_nestedness_scale)) %>% 
   pull(bray_dissimilarity_nestedness_scale)
 bc_mhw_total <- beta_div %>% 
-  filter(anom_days>0, !is.na(bray_dissimilarity_total_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(bray_dissimilarity_total_scale)) %>% 
   pull(bray_dissimilarity_total_scale)
 bc_no_mhw_total <- beta_div %>% 
-  filter(anom_days==0, !is.na(bray_dissimilarity_total_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_total_scale)) %>% 
   pull(bray_dissimilarity_total_scale)
 
-t.test(bc_mhw_substitution, bc_no_mhw_substitution)
-t.test(bc_mhw_subset, bc_no_mhw_subset)
-t.test(bc_mhw_total, bc_no_mhw_total)
+t.test(bc_mhw_substitution, bc_no_mhw_substitution, alternative="two.sided")
+t.test(bc_mhw_subset, bc_no_mhw_subset, alternative="two.sided")
+t.test(bc_mhw_total, bc_no_mhw_total, alternative="two.sided")
 
 # occurrence based 
 jac_mhw_substitution <- beta_div %>% 
-  filter(anom_days>0, !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
   pull(jaccard_dissimilarity_turnover_scale)
 jac_no_mhw_substitution <- beta_div %>% 
-  filter(anom_days==0, !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_turnover_scale)) %>% 
   pull(jaccard_dissimilarity_turnover_scale)
 jac_mhw_subset <- beta_div %>% 
-  filter(anom_days>0, !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
   pull(jaccard_dissimilarity_nestedness_scale)
 jac_no_mhw_subset <- beta_div %>% 
-  filter(anom_days==0, !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
   pull(jaccard_dissimilarity_nestedness_scale)
 jac_mhw_total <- beta_div %>% 
-  filter(anom_days>0, !is.na(jaccard_dissimilarity_total_scale)) %>% 
+  filter(mhw_yes_no=="yes", !is.na(jaccard_dissimilarity_total_scale)) %>% 
   pull(jaccard_dissimilarity_total_scale)
 jac_no_mhw_total <- beta_div %>% 
-  filter(anom_days==0, !is.na(jaccard_dissimilarity_total_scale)) %>% 
+  filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_total_scale)) %>% 
   pull(jaccard_dissimilarity_total_scale)
 
-t.test(jac_mhw_substitution, jac_no_mhw_substitution)
-t.test(jac_mhw_subset, jac_no_mhw_subset)
-t.test(jac_mhw_total, jac_no_mhw_total)
+t.test(jac_mhw_substitution, jac_no_mhw_substitution, alternative="two.sided")
+t.test(jac_mhw_subset, jac_no_mhw_subset, alternative="two.sided")
+t.test(jac_mhw_total, jac_no_mhw_total, alternative="two.sided")
   
 
 ######
@@ -343,6 +382,13 @@ gg_mhw_biomass_point_marg <- survey_summary %>%
     panel.grid.minor = element_blank())
 margplot <- ggMarginal(gg_mhw_biomass_point_marg,type="density", margins="y", groupColour = TRUE, groupFill=TRUE, yparams=list(size=0.9))
 margplot
+# for labeling in inkscape
+survey_summary %>% 
+  select(ref_yr, wt_mt_log, anom_sev) %>%
+  filter(anom_sev>25) %>%
+  arrange(-anom_sev)
+# regression slope for figure caption
+summary(lm(wt_mt_log ~ anom_sev, data=survey_summary))
 
 ggsave(margplot, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=110, units="mm")
 
@@ -688,7 +734,7 @@ pal <-  wesanderson::wes_palette("Zissou1",100,type = "continuous")
 
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
-  tmp <- mhw_summary_sat_sst_5_day %>%
+  tmp <- mhw_summary_oisst_d_5_day %>%
     left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>%
     left_join(survey_names) %>%
     left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>%
@@ -755,13 +801,6 @@ reg_cti <- survey_summary %>%
   select(CTI, ref_yr) %>% 
   distinct()
 
-top_spp <- survey_spp_summary %>% 
-  group_by(survey, spp) %>% 
-  summarise(sumwt = sum(wt_mt)) %>% 
-  left_join(survey_spp_summary %>% select(spp, STI) %>% distinct()) %>% 
-  arrange(-sumwt) %>% 
-  slice(1:10)
-
 tax_list <- survey_spp_summary %>% 
   select(spp) %>% 
   distinct() %>% 
@@ -777,7 +816,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   left_join(reg_cti) %>% 
   mutate(STI_diff = STI - CTI,
          wt_mt_log = as.numeric(wt_mt_log)) %>% 
-  inner_join(mhw_summary_sat_sst_5_day, by="ref_yr") %>% # get MHW data matched to surveys
+  inner_join(mhw_summary_oisst_d_5_day, by="ref_yr") %>% # get MHW data matched to surveys
   filter(!is.na(STI_diff), mhw_yes_no=="yes", wt_mt_log < Inf, wt_mt_log > -Inf) %>% 
   ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_sev, fill=anom_sev)) +
   geom_point(size=0.5, position="jitter") + 
@@ -806,7 +845,7 @@ ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_c
 gg_mhw_cti_hist <- survey_summary %>%
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
   ggplot(aes(x=cti_diff, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
-  geom_freqpoly(binwidth=0.05, alpha=0.8, size=2) +
+  geom_freqpoly(binwidth=0.5, alpha=0.8, size=2) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
   theme_bw() + 

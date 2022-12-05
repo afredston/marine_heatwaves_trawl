@@ -343,6 +343,21 @@ for(i in unique(survey_start_times$survey)){
   mhw_glorys_nod_5_day_prep <- bind_rows(mhw_glorys_nod_5_day_prep, tmp)
 }
 
+# for supplement only, create file with only summer MHWs
+mhw_summary_glorys_d_any_summer <- mhw_glorys_d %>% 
+  mutate(anom = ifelse(month %in% c(6, 7, 8), anom, NA)) %>% # overwrite all non-summer anomalies 
+  group_by(ref_yr) %>% 
+  arrange(date) %>% 
+  summarise(
+    anom_days = sum(anom>0, na.rm=TRUE),
+    anom_sev = sum(anom, na.rm=TRUE),
+    anom_int = anom_sev / anom_days 
+  ) %>% 
+  group_by(ref_yr) %>% 
+  mutate(mhw_yes_no = ifelse(anom_days>0, "yes", "no")) %>% 
+  ungroup() %>% 
+  mutate(anom_int = replace_na(anom_int, 0)) 
+
 # how many distinct MHWs per year? (for main text stats)
 oisst_d_5_day_mhws_per_yr <- mhw_oisst_d_5_day_prep %>% 
   group_by(ref_yr) %>% 
@@ -505,6 +520,7 @@ write_csv(mhw_summary_oisst_nod_any, here("processed-data","MHW_oisst_no_detrend
 write_csv(mhw_summary_oisst_nod_5_day, here("processed-data","MHW_oisst_5_day_threshold_no_detrending.csv"))
 
 write_csv(mhw_summary_glorys_d_any, here("processed-data","MHW_glorys.csv"))
+write_csv(mhw_summary_glorys_d_any_summer, here("processed-data","MHW_glorys_summer_only.csv"))
 write_csv(mhw_summary_glorys_d_5_day, here("processed-data","MHW_glorys_5_day_threshold.csv"))
 write_csv(mhw_summary_glorys_nod_any, here("processed-data","MHW_glorys_no_detrending.csv"))
 write_csv(mhw_summary_glorys_nod_5_day, here("processed-data","MHW_glorys_5_day_threshold_no_detrending.csv"))
