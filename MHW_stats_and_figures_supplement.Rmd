@@ -87,23 +87,23 @@ traits <- read_csv(here("raw-data","TraitCollectionFishNAtlanticNEPacificContShe
 
 # fishing data from Sea Around Us
 # see https://dx.doi.org/10.14288/1.0404487
-sauprep <- read_csv(here("raw-data","20221110_taxa_for_deng GP.csv")) %>%
-  filter(!is.na(B_Bmsy)) %>% # taxa have either both B/Bmsy and F/Fmsy, or neither
-  select(survey, accepted_name, F_Fmsy, B_Bmsy)
-
-sau <- survey_spp_summary %>% 
-  inner_join(sauprep, by=c("survey","spp"="accepted_name")) %>%
-  inner_join(mhw_summary_glorys_d_5_day) %>%
-group_by(survey, spp) %>% 
-  mutate(
-    wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
-    anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
-    b_bmsy_scale =  as.numeric(scale(B_Bmsy, center=TRUE, scale=TRUE)),
-        f_fmsy_scale =  as.numeric(scale(F_Fmsy, center=TRUE, scale=TRUE))
-  ) %>%
-  ungroup() %>% 
-  select(survey, spp, year, wt_mt_log_scale,anom_sev_scale,  b_bmsy_scale,f_fmsy_scale )%>%
-  drop_na()
+# sauprep <- read_csv(here("raw-data","20221110_taxa_for_deng GP.csv")) %>%
+#   filter(!is.na(B_Bmsy)) %>% # taxa have either both B/Bmsy and F/Fmsy, or neither
+#   select(survey, accepted_name, F_Fmsy, B_Bmsy)
+# 
+# sau <- survey_spp_summary %>% 
+#   inner_join(sauprep, by=c("survey","spp"="accepted_name")) %>%
+#   inner_join(mhw_summary_glorys_d_5_day) %>%
+# group_by(survey, spp) %>% 
+#   mutate(
+#     wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+#     anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
+#     b_bmsy_scale =  as.numeric(scale(B_Bmsy, center=TRUE, scale=TRUE)),
+#         f_fmsy_scale =  as.numeric(scale(F_Fmsy, center=TRUE, scale=TRUE))
+#   ) %>%
+#   ungroup() %>% 
+#   select(survey, spp, year, wt_mt_log_scale,anom_sev_scale,  b_bmsy_scale,f_fmsy_scale )%>%
+#   drop_na()
 
 # clean up raw MHW data
 rawsourcedat <- bind_rows(oisst_raw_d,glorys_raw_d) %>%
@@ -288,6 +288,42 @@ kbl(wt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. All 
 
 \clearpage
 
+
+```{r tbl-models-byreg}
+byreg.tbl <- NULL
+colnames.byreg <- c('Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
+
+for(i in 1:nrow(survey_names)) {
+  surv_i = survey_names$survey[i]
+  tmpmod <- modeldat %>% filter(survey==surv_i)
+  lm.i <- lm(wt_mt_log_scale ~ anom_sev_scale, data=tmpmod)
+  int.wt.i <-  paste0(format(round(coef(summary(lm.i))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.i))[1,2], digits=3), nsmall=2))
+  coef.wt.i <- paste0(format(round(coef(summary(lm.i))[2,1], digits=3), nsmall=2)," ± ",
+         format(round(coef(summary(lm.i))[2,2], digits=3), nsmall=2))
+p.wt.i <- format(round(coef(summary(lm.i))[2,4], digits=3), nsmall=2)
+r2.wt.i <- format(round(
+             summary(lm.i)$r.squared, digits=3), nsmall=2)
+aic.wt.i <- round(AIC(lm.i))
+df.wt.i <- round(summary(lm.i)$df[2])
+
+wt.tbl.i <- data.frame(cbind(int.wt.i, coef.wt.i, p.wt.i, r2.wt.i, aic.wt.i, df.wt.i), row.names = survey_names$title[i]) 
+colnames(wt.tbl.i) <- colnames.byreg
+if(i==1){
+  byreg.tbl <- wt.tbl.i
+}else{
+byreg.tbl <- rbind(byreg.tbl, wt.tbl.i)
+}
+}
+
+# ±
+
+kbl(byreg.tbl, booktabs = TRUE, caption = "Linear models of biomass response to MHWs fitted individually within each region. All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys, calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text).",
+    escape = FALSE) %>%
+  kable_styling(font_size = 8, latex_options = c("striped")) 
+```
+
+\clearpage
+
 ```{r tbl-models-alt}
 null.altmhw <- lm(wt_mt_log_scale ~ 1, data = modeldat)
 lm.altmhw <- lm(wt_mt_log_scale ~ anom_sev_scale_alt, data = modeldat)
@@ -347,7 +383,7 @@ alt.tbl <- data.frame(rbind(int.altmhw, coef.altmhw, p.altmhw, r2.altmhw, aic.al
 colnames(alt.tbl) <- colnames.altmhw
 
 # ±
-kbl(alt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. This table is identical to Supp. Tab. 2, except rather than centering and scaling MHW severity within regions, it is centered and scaled among regions. The approach used in most of these models (centering and scaling MHW severity within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW severity matters regardless of the oceangraphic history of each region (centering and scaling MHW severity among regions). All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW severity in days (scaled and centered within surveys, calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
+kbl(alt.tbl, booktabs = TRUE, caption = "Models of biomass response to MHWs. This table is identical to Supp. Tab. 2, except rather than centering and scaling MHW severity within regions, it is centered and scaled among regions. The approach used in most of these models (centering and scaling MHW severity within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW severity matters regardless of the oceanographic history of each region (centering and scaling MHW severity among regions). All models were fitted to biomass log ratio values (scaled and centered within surveys) using MHW severity in days (scaled and centered within surveys, calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text). Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
@@ -447,44 +483,6 @@ kbl(gompertz.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and ge
 ```{r tbl-models-lat}
 null.lat <- lm(wt_mt_log_scale ~ med_lat_scale, data = modeldat)
 lm.lat <- lm(wt_mt_log_scale ~ anom_sev_scale + med_lat_scale, data = modeldat)
-
-int.lat <- c(
-  paste0(format(round(coef(summary(null.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.lat))[1,2], digits=3), nsmall=2)),
-  paste0(format(round(coef(summary(lm.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.lat))[1,2], digits=3), nsmall=2))
-)
-mhw.coef.lat <- c('NA',
-                  paste0(format(round(coef(summary(lm.lat))[2,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(lm.lat))[2,2], digits=3), nsmall=2))
-)
-lat.coef.lat <- c('NA',
-                  paste0(format(round(coef(summary(lm.lat))[3,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(lm.lat))[3,2], digits=3), nsmall=2))
-)
-p.lat <- c('NA',format(round(c(
-  coef(summary(lm.lat))[2,4]), digits=3), nsmall=2))
-
-r2.lat <- c('NA',format(round(c(
-  summary(lm.lat)$r.squared), digits=3), nsmall=2))
-aic.lat <- round(c(AIC(null.lat), AIC(lm.lat)))
-df.lat <- round(c(
-    summary(null.lat)$df[2],
-    summary(lm.lat)$df[2]))
-
-colnames.lat <- c('Null model','Linear model')
-rownames.lat <- c('Intercept', 'MHW coefficient','Latitude coefficient', "MHW coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
-
-lat.tbl <- data.frame(rbind(int.lat, mhw.coef.lat, lat.coef.lat, p.lat, r2.lat, aic.lat, df.lat), row.names=rownames.lat) 
-colnames(lat.tbl) <- colnames.lat
-
-kbl(lat.tbl, booktabs = TRUE, caption = "Null model (latitude-only) and model of biomass response to MHWs and latitude. Linear model was fitted to biomass log ratio values (scaled and centered within surveys) using MHW severity in °C days (scaled and centered within surveys, calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text) and median latitude of each survey (scaled and centered within surveys) as predictors.",
-    escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
-```
-
-
-```{r tbl-models-fish}
-null.fish <- lm(wt_mt_log_scale ~ f_fmsy_scale, data = sau)
-lm.lat <- lm(wt_mt_log_scale ~ anom_sev_scale + med_lat_scale, data = sau)
 
 int.lat <- c(
   paste0(format(round(coef(summary(null.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.lat))[1,2], digits=3), nsmall=2)),
@@ -732,7 +730,7 @@ gg_mhw_metric <- survey_summary %>%
 gg_mhw_metric
 ```
 
-```{r fig-mhw-source, fig.cap="Daily 95th percentile anomalies in the two MHW data sources: sea surface temperature from OISST and sea bottom temperature from GLORYS (both detrended). To simplify comparison we plot all anomalies, not just those MHWs that exceeded a five-day threshold. Note that the OISST time-series began in 1982 and GLORYS began in 1993. Region names are listed in Supp. Tab. 1."}
+```{r fig-mhw-source, fig.cap="Daily 95th percentile anomalies in the two MHW data sources: sea surface temperature from OISST and sea bottom temperature from GLORYS (both detrended). To simplify comparison we plot all anomalies, not just those MHWs that exceeded a five-day threshold. Note that the OISST time-series began in 1982 and GLORYS began in 1993. Region names are listed in Supp. Tab. 1." }
 
 gg_mhw_source <- ggplot(data=rawsourcedat %>% filter(date<="2019-12-31")) + 
   geom_point(aes(x=date, y=anom, color=source, fill=source), position="jitter", alpha=0.25, size=0.5) +
@@ -745,6 +743,7 @@ gg_mhw_source <- ggplot(data=rawsourcedat %>% filter(date<="2019-12-31")) +
 
 gg_mhw_source
 ```
+
 \clearpage
 
 # Supplementary figures: exploring additional predictors
