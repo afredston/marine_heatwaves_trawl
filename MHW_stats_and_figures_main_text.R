@@ -734,7 +734,7 @@ pal <-  wesanderson::wes_palette("Zissou1",100,type = "continuous")
 
 # generate many small panels for Fig 1
 for(reg in survey_names$survey) {
-  tmp <- mhw_summary_oisst_d_5_day %>%
+  tmp <- mhw_summary_glorys_d_5_day %>% # Updated dataset for revission
     left_join(survey_summary %>% select(ref_yr, survey, year) %>% distinct()) %>%
     left_join(survey_names) %>%
     left_join(haul_info %>% group_by(survey,year) %>% summarise(n=n())) %>%
