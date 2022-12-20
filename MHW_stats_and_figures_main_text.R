@@ -741,26 +741,56 @@ for(reg in survey_names$survey) {
     filter(survey==reg) %>%
     mutate(lowyr = plyr::round_any(min(year), 5, f=ceiling),
            hiyr = plyr::round_any(max(year), 5, f=floor))
+  
   coeff = ceiling(max(tmp$n)/max(tmp$anom_days))
+
+  # # Expand dataset for line gradient
+  # # i = 1
+  # for(i in 1:nrow(tmp)-1){
+  #   # Fix last row issue
+  #   if(i == 0){i = 1}
+  #   if(tmp$anom_days[i] == tmp$anom_days[i+1]){
+  #     df <- data.frame(anom_daysb = rep(tmp$anom_days[i],12),
+  #                      yearb = seq(tmp$year[i],tmp$year[i+1],0.083)[1:12],
+  #                      ref_yr = tmp$ref_yr[i])
+  #   }
+  #   # set the inter-years values if difference between years
+  #   if(tmp$anom_days[i] != tmp$anom_days[i+1]){
+  #     # Estimate the break between different values
+  #     sbreak = (tmp$anom_days[i+1]-tmp$anom_days[i])/12
+  #     tbreak = (tmp$year[i+1]-tmp$year[i])/12
+  #     df <- data.frame(anom_daysb = c(tmp$anom_days[i],seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak)[2:12]),
+  #                      yearb = seq(tmp$year[i],tmp$year[i+1],tbreak)[1:12],
+  #                      ref_yr = tmp$ref_yr[i])
+  #   }
+
+  
+  
   # Expand dataset for line gradient
-  # i = 1
+  # rm(long_tmp,df)
+  
   for(i in 1:nrow(tmp)-1){
-    # Fix last row issue
+    # Set 0s if no difference 
+    
     if(i == 0){i = 1}
     if(tmp$anom_days[i] == tmp$anom_days[i+1]){
       df <- data.frame(anom_daysb = rep(tmp$anom_days[i],12),
-                       yearb = seq(tmp$year[i],tmp$year[i+1],0.083)[1:12],
+                       yearb = seq(tmp$year[i],tmp$year[i+1],0.08)[1:12],
                        ref_yr = tmp$ref_yr[i])
     }
+    
     # set the inter-years values if difference between years
     if(tmp$anom_days[i] != tmp$anom_days[i+1]){
+      
       # Estimate the break between different values
       sbreak = (tmp$anom_days[i+1]-tmp$anom_days[i])/12
-      tbreak = (tmp$year[i+1]-tmp$year[i])/12
-      df <- data.frame(anom_daysb = c(tmp$anom_days[i],seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak)[2:12]),
-                       yearb = seq(tmp$year[i],tmp$year[i+1],tbreak)[1:12],
+      
+      df <- data.frame(anom_daysb = c(seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak),tmp$anom_days[i+1])[2:13],
+                       yearb = seq(tmp$year[i],tmp$year[i+1],0.08)[1:12],
                        ref_yr = tmp$ref_yr[i])
     }
+    
+
     # Create df
     if(i == 1){
       long_tmp <- df
@@ -769,6 +799,8 @@ for(reg in survey_names$survey) {
       long_tmp <- bind_rows(long_tmp,df)
     }
   }
+
+  
   # Plot me
   tmpplot <-
     ggplot(tmp) +
@@ -778,6 +810,7 @@ for(reg in survey_names$survey) {
     # scale_color_gradient(low=“#1E03CD”, high=“#B80D06") + # original option
     # scale_color_viridis_b() + # viridis option
     scale_color_gradientn(colours = pal) + # wesanderson option
+    # scale_color_gradient(low="#1e03cd", high="#b80d06") +
     scale_y_continuous(sec.axis = sec_axis(~ . * coeff, name = "Sampling events"))+
     scale_x_continuous(breaks = seq(tmp$lowyr[1], tmp$hiyr[1], 5)) +
     labs(title=tmp$title) +
