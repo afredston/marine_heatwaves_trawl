@@ -3,8 +3,8 @@
 ###########
 
 # general data wrangling 
-library(tidyverse)
-library(here)
+library(tidyverse) # needed JEPA
+library(here)  # needed JEPA
 library(lubridate) # for standardizing date format of MHW data
 library(data.table)
 library(googledrive)
@@ -62,18 +62,18 @@ survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) 
     cti_diff_scale =  as.numeric(scale(cti_diff, center=TRUE, scale=TRUE)),
     anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
     depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
-  ) 
+  ) # need JEPA
 
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
   rename('spp'=accepted_name) %>% 
   mutate(wt_mt_log = as.numeric(wt_mt_log))
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
-haul_info <- read_csv(here("processed-data","haul_info.csv")) 
+haul_info <- read_csv(here("processed-data","haul_info.csv")) # Need JEPA
 haul_stats <- read_csv(here("processed-data","stats_about_raw_data.csv")) 
 survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
                                     "PT-IBTS","SCS",
-                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US'))
+                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US')) # needed JEPA
 write_csv(survey_names, here('processed-data','survey_names.csv'))
 beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
   left_join(survey_start_times) %>% # add in the ref_yr column 
@@ -745,30 +745,7 @@ for(reg in survey_names$survey) {
   
   coeff = ceiling(max(tmp$n)/max(tmp$anom_days))
 
-  # # Expand dataset for line gradient
-  # # i = 1
-  # for(i in 1:nrow(tmp)-1){
-  #   # Fix last row issue
-  #   if(i == 0){i = 1}
-  #   if(tmp$anom_days[i] == tmp$anom_days[i+1]){
-  #     df <- data.frame(anom_daysb = rep(tmp$anom_days[i],12),
-  #                      yearb = seq(tmp$year[i],tmp$year[i+1],0.083)[1:12],
-  #                      ref_yr = tmp$ref_yr[i])
-  #   }
-  #   # set the inter-years values if difference between years
-  #   if(tmp$anom_days[i] != tmp$anom_days[i+1]){
-  #     # Estimate the break between different values
-  #     sbreak = (tmp$anom_days[i+1]-tmp$anom_days[i])/12
-  #     tbreak = (tmp$year[i+1]-tmp$year[i])/12
-  #     df <- data.frame(anom_daysb = c(tmp$anom_days[i],seq(tmp$anom_days[i],tmp$anom_days[i+1],sbreak)[2:12]),
-  #                      yearb = seq(tmp$year[i],tmp$year[i+1],tbreak)[1:12],
-  #                      ref_yr = tmp$ref_yr[i])
-  #   }
-
-  
-  
   # Expand dataset for line gradient
-  
   # i = 1
   for(i in 1:nrow(tmp)-1){
     
