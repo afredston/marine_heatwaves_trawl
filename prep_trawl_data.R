@@ -18,7 +18,7 @@ here <- here::here
 # Raw data
 #########
 
-raw <- fread(here("raw-data","FISHGLOB_public_v1.5_clean(1).csv"))
+raw <- fread(here("raw-data","FISHGLOB_public_v1.5_clean(1).csv"))[year<2020]
 ##############
 # trim datasets
 ##############
