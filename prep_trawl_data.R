@@ -375,8 +375,9 @@ raw_cpue <- raw_cpue %>%
 
 stats <- stats[haul_id %in% haul_info$haul_id] # update stats to only hauls being analyzed
 stats_dat <- data.frame(
-  'n_obs'=nrow(raw_zeros), 
-  'n_hauls'=nrow(haul_info), 
+  'n_obs_sst'=nrow(raw_zeros), 
+  'n_obs_sbt'=nrow(raw_zeros[year>1992]),
+  'n_hauls_sst'=nrow(haul_info), 
   'n_taxa'=length(unique(stats$accepted_name)), 
   'prop_ID_species'=(length(unique(stats[rank=='Species']$accepted_name)) / length(unique(stats$accepted_name))), 
   'prop_ID_genus'=(length(unique(stats[rank=='Genus']$accepted_name)) / length(unique(stats$accepted_name))))
