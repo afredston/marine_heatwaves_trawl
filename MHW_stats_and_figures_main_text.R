@@ -5,23 +5,23 @@
 # general data wrangling 
 library(tidyverse) # needed JEPA
 library(here)  # needed JEPA
-library(lubridate) # for standardizing date format of MHW data
+#library(lubridate) # for standardizing date format of MHW data
 library(data.table)
-library(googledrive)
+#library(googledrive)
 
 # formatting 
 # library(kableExtra)
-library(gridExtra)
-library(patchwork)
-library(cowplot)
-library(pals)
-library(ggforce)
+# library(gridExtra)
+# library(patchwork)
+# library(cowplot)
+# library(pals)
+# library(ggforce)
 library(ggExtra)
 
 # modeling 
 library(broom)
 #library(pwr)
-library(mgcv)
+#library(mgcv)
 #library(lme4)
 #library(mcp)
 
@@ -30,14 +30,14 @@ library(mgcv)
 library(sf)
 #library(rnaturalearth)
 #library(ggrepel)
-library(rgdal)
+#library(rgdal)
 library(raster)
-library(sp)
+#library(sp)
 #library(rnaturalearthdata)
-library(rgeos)
-library(geosphere)  #to calculate distance between lat lon of grid cells
+#library(rgeos)
+#library(geosphere)  #to calculate distance between lat lon of grid cells
 library(concaveman)
-library("robinmap")
+#library("robinmap")
 library(maptools)
 
 select <- dplyr::select
@@ -62,7 +62,7 @@ survey_summary <-read_csv(here("processed-data","survey_biomass_with_CTI.csv")) 
     cti_diff_scale =  as.numeric(scale(cti_diff, center=TRUE, scale=TRUE)),
     anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
     depth_wt_scale =  as.numeric(scale(depth_wt, center=TRUE, scale=TRUE))
-  ) # need JEPA
+  ) 
 
 survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.csv")) %>% 
   rename('spp'=accepted_name) %>% 
@@ -73,7 +73,7 @@ haul_info <- read_csv(here("processed-data","haul_info.csv")) # Need JEPA
 haul_stats <- read_csv(here("processed-data","stats_about_raw_data.csv")) 
 survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
                                     "PT-IBTS","SCS",
-                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US')) # needed JEPA
+                                    "SEUS",  "SWC-IBTS","WCANN"), title=c('Baltic Sea','British Columbia','Eastern Bering Sea','France','English Channel','Gulf of Mexico','Gulf of Alaska','Gulf of Saint Lawrence','Ireland','Northeast US','Northern Ireland','Norway','North Sea','Portugal','Scotian Shelf','Southeast US','Scotland','West Coast US')) 
 write_csv(survey_names, here('processed-data','survey_names.csv'))
 beta_div <- read_csv(here("processed-data","survey_temporal_beta_diversity.csv")) %>% 
   left_join(survey_start_times) %>% # add in the ref_yr column 
@@ -454,19 +454,16 @@ ggsave(gg_nep_wt, width=70, height=30, units="mm", dpi=300, filename=here("figur
 ggsave(gg_nep_cti, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_cti.png"), scale=1.5)
 ggsave(gg_nep_bray, width=70, height=42, units="mm", dpi=300, filename=here("figures","nepacific_bray.png"), scale=1.5)
 
-#if positive, subtract 360
-# haul_info_map[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
-
 #delete if NA for longitude or latitude
 haul_info_map.r <- haul_info_map[complete.cases(haul_info_map[,.(longitude, latitude)])]
 
 haul_info.r.split <- split(haul_info_map.r, haul_info_map.r$survey)
 haul_info.r.split.sf <- lapply(haul_info.r.split, st_as_sf, coords = c("longitude", "latitude"))
 haul_info.r.split.concave <- lapply(haul_info.r.split.sf, concaveman, concavity = 3, length_threshold = 2)
-haul_info.r.split.concave.binded <- do.call('rbind', haul_info.r.split.concave)
-haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
+haul_info.r.split.concave.bind <- do.call('rbind', haul_info.r.split.concave)
+haul_info.r.split.concave.bind.spdf <- as_Spatial(haul_info.r.split.concave.bind)
 
-haul_info.r.split.concave.binded.spdf$survey <- levels(as.factor(haul_info_map.r$survey))
+haul_info.r.split.concave.bind.spdf$survey <- levels(as.factor(haul_info_map.r$survey))
 
 # get other objects needed for map plot 
 survey_palette <- c("#AAF400","#B5EFB5","#F6222E","#FE00FA", 
@@ -479,13 +476,15 @@ x_lines <- seq(-120,180, by = 60)
 data("wrld_simpl", package = "maptools")                                                                            
 wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  
 
-
-# ---------------------------- #
-#### Juliano's Map tweeks #####
-# ---------------------------- #
+labels <- haul_info_map %>% 
+  group_by(survey) %>% 
+  summarise(
+    lon = mean(longitude),
+    lat = mean(latitude)
+  )
 
 survey_regions_polar_polygon_jepa <- ggplot() +
-  geom_polygon(data = haul_info.r.split.concave.binded.spdf,
+  geom_polygon(data = haul_info.r.split.concave.bind.spdf,
                aes(x = long, 
                    y = lat, 
                    group = group, 
@@ -513,197 +512,14 @@ survey_regions_polar_polygon_jepa <- ggplot() +
         #panel.border = element_blank(),
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank()
-  );survey_regions_polar_polygon_jepa
+  )
+survey_regions_polar_polygon_jepa
 
 #save global map
 ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
-       filename = "survey_regions_polar_polygon_jepa.jpg",height = 5, width = 6, unit = "in") # JEPA
+       filename = "survey_regions_polar_polygon_jepa.jpg",height = 5, width = 6, unit = "in") 
 
-# map filled by MHW impacts 
-
-# get the most severe MHW in each region, and its biomass impacts 
-mapfill <- survey_summary %>% 
-  group_by(survey) %>% 
-  filter(anom_days == max(anom_days)) %>% 
-  select(survey, anom_days, wt_mt_log) %>% 
-  mutate(fill = case_when(
-    anom_days > 60 & wt_mt_log > 0 ~ "big_MHW_gain",
-    anom_days <= 60 & wt_mt_log > 0 ~ "small_MHW_gain",
-    anom_days > 60 & wt_mt_log < 0 ~ "big_MHW_loss",
-    anom_days <= 60 & wt_mt_log < 0 ~ "small_MHW_loss"
-  )) %>% 
-  arrange(survey)
-# nrow(mapfill) == length(unique(survey_summary$survey)) # check no duplicates
-mapfill$id = as.character(1:nrow(mapfill))
-
-# attach the map fill column to the spdf
-mhw_map_spdf <- as_Spatial(haul_info.r.split.concave.binded)
-mhw_map_spdf$survey <- levels(as.factor(haul_info_map.r$survey))
-mhw_map_fort <- fortify(mhw_map_spdf) %>% 
-  left_join(mapfill, by="id")
-
-# map 
-mhw_map <- ggplot() +
-  geom_polygon(data = mhw_map_fort,
-               aes(x = long, y = lat, group=group, fill=fill, color=fill),
-               alpha = 0.8) +
-  scale_color_manual(values = c("#960867","#8a0620","#670e96","#2f4578"), labels=c("Long MHW + biomass","Long MHW - biomass", "Short MHW + biomass", "Short MHW - biomass")) +
-  scale_fill_manual(values = c("#960867","#8a0620","#670e96","#2f4578"), labels=c("Long MHW + biomass","Long MHW - biomass", "Short MHW + biomass", "Short MHW - biomass")) +
-  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4" ) + 
-  scale_y_continuous(breaks = seq(-90,180,15)) +
-  scale_x_continuous(breaks = c(-100,-45,0)) +
-  coord_map("ortho", orientation = c(50, -45, 0),
-            xlim=c(-180,180),
-            ylim=c(35,90)) +
-  theme_bw() +
-  theme(panel.grid = element_line(colour="grey"),
-        panel.grid.major = element_line(size=0.1),
-        #panel.border = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.title.y = element_blank(), 
-        legend.position="bottom", 
-        legend.title = element_blank(),
-        axis.title.x = element_blank(),
-  ) +
-  guides(colour = guide_legend(nrow = 2))
-
-#save global map
-ggsave(mhw_map, path = here("figures"),
-       filename = "map_mhw_fill.jpg",height = 5, width = 6, unit = "in") 
-
-# Labeles to correclty allocate mini maps on big map
-
-labels <- haul_info_map %>% 
-  group_by(survey) %>% 
-  summarise(
-    lon = mean(longitude),
-    lat = mean(latitude)
-  )
-
-ggplot() +
-  # geom_point(data = subset(haul_info_map, survey == "SCS")) +
-  geom_point(data = haul_info_map,
-    aes(
-      x = longitude,
-      y = latitude,
-      color = survey
-    )
-  ) +
-  coord_map("ortho", orientation = c(50, -45, 0),
-            xlim=c(-180,180),
-            ylim=c(35,90)) +
-  geom_label(data = labels,
-             aes(x = lon,
-                 y = lat,
-                 label = survey))
-
-# ---------------------------- #
-# -----------end JEPA--------- #
-# ---------------------------- #
-
-
-survey_regions_polar_polygon <- ggplot() +
-  geom_polygon(data = haul_info.r.split.concave.binded.spdf,
-               aes(x = long, y = lat, group = group, fill = group, color = group),
-               alpha = 0.8) +
-  scale_color_manual(values = survey_palette) +
-  scale_fill_manual(values = survey_palette)  +
-  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
-               # colour = "black"
-               #,
-               # alpha = 0.8
-  ) +
-  
-  # Adds axes
-  geom_hline(aes(yintercept = 22), size = 1)  +
-  geom_segment(aes(y = 22, yend = 90, x = x_lines, xend = x_lines), linetype = "dashed", alpha = 0.3) +
-  
-  # Convert to polar coordinates
-  coord_map("ortho", orientation = c(50, -50, -20)) +
-  scale_y_continuous(breaks = seq(0, 90, by = 5), labels = NULL) +
-  
-  #axis
-  geom_text(aes(x = x_lines, y = 15, label = c("120°W", "60°W", "0°", "60°E", "120°E", "180°W"))) +
-  
-  # Change theme to remove axes and ticks
-  theme_classic() +
-  theme(axis.text = element_blank(), axis.title = element_blank(),
-        axis.line = element_blank(), axis.ticks = element_blank(),
-        legend.position = "none")
-
-#save global map
-ggsave(survey_regions_polar_polygon, path = here::here("figures"),
-       filename = "survey_regions_polar_polygon.jpg",height = 5, width = 6, unit = "in")
-
-# map color-coded by MHW duration and biomass response 
-# check that there are no years tied for longest MHWs
-survey_summary %>% 
-  group_by(survey) %>% 
-  summarise(max_mhw=max(anom_days, na.rm = TRUE)) %>% 
-  arrange(survey)
-
-# generate columns for map fill
-mapfill <- survey_summary %>% 
-  group_by(survey) %>% 
-  mutate(max_mhw=max(anom_days, na.rm = TRUE),
-         sd = sd(wt_mt_log, na.rm=TRUE)) %>% 
-  filter(anom_days == max_mhw) %>% 
-  mutate(case = case_when(
-    abs(wt_mt_log) < 0.1 & anom_days<50 ~ "low_null",
-    abs(wt_mt_log) < 0.1 & anom_days>=50 ~ "high_null",
-    wt_mt_log >= 0.1 & anom_days<50 ~ "low_gain",
-    wt_mt_log >= 0.1 & anom_days>=50 ~ "high_gain",
-    wt_mt_log <= -0.1 & anom_days<50 ~ "low_loss",
-    wt_mt_log <= -0.1 & anom_days>=50 ~ "high_loss"))
-
-# generate filled map 
-
-haul_info_map2 <- merge(copy(haul_info_map), mapfill, all.x=TRUE, by=c("survey","year")) # get columns for map fill 
-
-#if positive, subtract 360
-haul_info_map2[,longitude_s := ifelse(longitude > 150,(longitude-360),(longitude))]
-
-#delete if NA for longitude or latitude
-haul_info_map2 <- haul_info_map2[complete.cases(haul_info_map2[,.(longitude, latitude)])]
-
-# split_prep <- split(haul_info_map2, haul_info_map2$case)
-# split_sf <- lapply(split_prep, st_as_sf, coords = c("longitude", "latitude"))
-# split_conc <- lapply(split_sf, concaveman, concavity = 3, length_threshold = 2)
-
-prep_sf <- st_as_sf(haul_info_map2, coords = c("longitude", "latitude"))
-prep_conc <- concaveman(prep_sf, concavity=3, length_threshold=2)
-prep_conc_sf <- as(prep_conc, "sf")
-haul_info.r.split.concave.binded.spdf <- as_Spatial(haul_info.r.split.concave.binded)
-prep_conc_sf$survey <- levels(as.factor(haul_info_map2$case))
-
-boop <- st_as_sf(haul_info.r.split.concave.binded.spdf) %>% 
-  left_join(mapfill)
-
-ggplot() + 
-  geom_sf(boop, mapping=aes(fill=survey, color=survey, group=survey, geometry=geometry)) +
-  geom_polygon(data = wm_polar, aes(x = long, y = lat, group = group), fill = "azure4", 
-               # colour = "black"
-               #,
-               # alpha = 0.8
-  ) +
-  
-  # Adds axes
-  geom_hline(aes(yintercept = 22), size = 1)  +
-  geom_segment(aes(y = 22, yend = 90, x = x_lines, xend = x_lines), linetype = "dashed", alpha = 0.3) +
-  
-  # Convert to polar coordinates
-  coord_map("ortho", orientation = c(50, -50, -20)) +
-  scale_y_continuous(breaks = seq(0, 90, by = 5), labels = NULL)
-
-
-# ---------------------------- #
-#### Sub-Pannels #####
-# ---------------------------- #
-
-
-# JEPA #
-# Include abbreviation on title for plot
+# make subpanels for Fig 1
 
 survey_names <- survey_names %>% 
   mutate(abb = c(
@@ -728,7 +544,6 @@ survey_names <- survey_names %>%
   ),
   title = ifelse(title == "Norway", "Western Barents Sea (WBS)", paste(title, abb))
   ) 
-
 
 # Generate figure palette
 pal <-  wesanderson::wes_palette("Zissou1",100,type = "continuous")
@@ -811,6 +626,8 @@ for(reg in survey_names$survey) {
   # plot_crop(here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)))
 }
 
+# Make Fig 3A
+
 reg_cti <- survey_summary %>% 
   select(CTI, ref_yr) %>% 
   distinct()
@@ -855,6 +672,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
 gg_mhw_biomass_point_spp
 ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
 
+# make Fig 3B
 
 gg_mhw_cti_hist <- survey_summary %>%
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
