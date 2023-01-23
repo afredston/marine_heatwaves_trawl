@@ -150,12 +150,6 @@ survey_summary %>%
   select(wt_mt_log, anom_sev)%>% 
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
-# Scotland 2014 (2018 almost identical)
-# survey_summary %>%
-#   filter(survey=='SWC-IBTS', year==2014) %>%
-#   select(wt_mt_log, anom_sev) %>%
-#   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
-
 # SEUS 1996
 survey_summary %>%
   filter(survey=='SEUS', year==1996) %>%
@@ -185,6 +179,7 @@ wt_mhw <- survey_summary %>%
 shapiro.test(wt_no_mhw)
 shapiro.test(wt_mhw)
 
+# biomass log ratios with/without MHWs 
 median(wt_mhw)
 sd(wt_mhw)
 median(wt_no_mhw)
@@ -216,20 +211,6 @@ sd(cti_no_mhw)
 median(cti_mhw)
 sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw, alternative = "two.sided")
-
-# how correlated are SODA SBT and SODA SST?
-# cor.test(
-#   mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_sev),
-#   mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_sev),
-#   method="spearman"
-# )
-# 
-# cor.test(
-#   mhw_summary_soda_sbt %>% arrange(ref_yr) %>% pull(anom_int),
-#   mhw_summary_soda_sst %>% arrange(ref_yr) %>% pull(anom_int),
-#   method="spearman"
-# )
-
 
 # regressions
 
