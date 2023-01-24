@@ -478,10 +478,11 @@ survey_regions_polar_polygon_jepa <- ggplot() +
                aes(x = long, y = lat, group = group), 
                fill = "azure4",
   ) +
-  geom_label(data = labels,
-             aes(x = lon,
-                 y = lat,
-                 label = survey))+
+  # geom_label(data = labels,
+  #            aes(x = lon,
+  #                y = lat,
+  #                label = survey))+
+  labs(x="",y="") +
   scale_y_continuous(breaks = seq(-90,180,15)) +
   scale_x_continuous(breaks = c(-100,-50,-10)) +
   coord_map("ortho", orientation = c(50, -45, 0),
