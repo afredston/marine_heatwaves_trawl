@@ -1,5 +1,5 @@
 ---
-title: "Marine heatwaves are not a dominant driver of change in temperate fishes"
+title: "Marine heatwaves are not a dominant driver of change in fish communities"
 subtitle: "Supplementary Information"
 author: "Fredston et al."
 date: 2023
@@ -151,46 +151,64 @@ modeldat <- survey_summary %>%
     anom_sev_scale_alt =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))
   ) 
 
+#pull in catch data and merge with modeldat
+
+catch_me <- read_csv(here("raw-data","MEcatchdataforAlexa.csv")) %>% # by marine ecoregion (ME)
+  rename(year=Year)
+me_dat <- read_csv(here("raw-data","ME_to_surveys.csv")) # note that some surveys are matched with more than one ME (big coastwide US surveys) and some with zero (small Europe ones)
+catchdat <- full_join(catch_me, me_dat, by="ME") %>% 
+  left_join(survey_summary %>% select(ref_yr, survey, year), by=c("survey", "year")) %>% 
+  filter(!is.na(ref_yr)) %>% 
+  group_by(survey, year, ref_yr) %>% 
+  summarise(catch = sum(Catch)) %>% # aggregate catches for surveys that cover multiple MEs (WCANN and NEUS) 
+  ungroup() %>% 
+  arrange(year) %>% 
+  group_by(survey) %>% 
+  mutate(catch_3yr = (catch + lag(catch) + lag(catch, n=2))/3, # calculate mean of past 3 years
+  catch_3yr_scale = scale(catch_3yr, center=TRUE, scale=TRUE)) %>% 
+  ungroup() %>% 
+  right_join(modeldat)
+
 # currently only used for fishing analysis
-modeldat_spp <- survey_spp_summary %>% 
-  inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
-  filter(wt_mt_log<Inf, wt_mt_log>-Inf, !is.na(anom_sev)) %>% # lots of infinite values in wt_mt_log because individual spp are often zero in any given year 
-  group_by(survey) %>% # not grouping by spp here as well because including a random slope and intercept for species in the models does basically the same thing
-  mutate(wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
-         anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))) %>% 
-  ungroup() 
+# modeldat_spp <- survey_spp_summary %>% 
+#   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
+#   filter(wt_mt_log<Inf, wt_mt_log>-Inf, !is.na(anom_sev)) %>% # lots of infinite values in wt_mt_log because individual spp are often zero in any given year 
+#   group_by(survey) %>% # not grouping by spp here as well because including a random slope and intercept for species in the models does basically the same thing
+#   mutate(wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+#          anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))) %>% 
+#   ungroup() 
 
 # fishing data from Sea Around Us
 # see https://dx.doi.org/10.14288/1.0404487
-stock_names <- read_csv(here("raw-data","20221110_taxa_for_deng GP.csv"))  %>% 
-  select(survey, accepted_name, Stock) %>% 
-  distinct()
+# stock_names <- read_csv(here("raw-data","20221110_taxa_for_deng GP.csv"))  %>% 
+#   select(survey, accepted_name, Stock) %>% 
+#   distinct()
 
 # Deng sent me an Excel pivot table with the time-varying data which I copy-pasted into the CSV loaded below 
-fdat_raw <- read_csv(here("raw-data","20230109_taxa_for_alexa_edited_f_data_only.csv")) %>% 
-  pivot_longer(!`Row Labels`, names_to="year", values_to = "F_Fmsy") %>%
-  rename(Stock = `Row Labels`) %>% 
-  left_join(stock_names)
+# fdat_raw <- read_csv(here("raw-data","20230109_taxa_for_alexa_edited_f_data_only.csv")) %>% 
+#   pivot_longer(!`Row Labels`, names_to="year", values_to = "F_Fmsy") %>%
+#   rename(Stock = `Row Labels`) %>% 
+#   left_join(stock_names)
+# 
+# # check for duplicates
+# tmp <- fdat_raw %>% 
+#   select(-year,-F_Fmsy) %>% 
+#   distinct() %>% 
+#   group_by(accepted_name, survey) %>% 
+#   mutate(n=n())
+# write_csv(tmp, file=here("processed-data","spp_with_multiple_stock_ID.csv"))
 
-# check for duplicates
-tmp <- fdat_raw %>% 
-  select(-year,-F_Fmsy) %>% 
-  distinct() %>% 
-  group_by(accepted_name, survey) %>% 
-  mutate(n=n())
-write_csv(tmp, file=here("processed-data","spp_with_multiple_stock_ID.csv"))
-
-fdat <-fdat_raw %>% 
-  mutate(year = as.numeric(year)) %>% 
-  left_join(survey_start_times, by=c("year","survey")) %>% # to get ref_yr column
-  select(-survey_date, -month_year) %>% 
-  filter(!is.na(ref_yr)) %>% # drop early years of F data that don't match a trawl survey
-  inner_join(modeldat_spp, by=c("ref_yr","year","survey","accepted_name"="spp")) %>% # get MHW data
-  filter(!is.na(anom_sev), !is.na(F_Fmsy)) %>% 
-  group_by(accepted_name, survey) %>% 
-  mutate(n=n()) %>%  # all 7 or greater except one with one year. think 7+ is OK; ditch the 1 
-  filter(n>1) %>% 
-  ungroup()
+# fdat <-fdat_raw %>% 
+#   mutate(year = as.numeric(year)) %>% 
+#   left_join(survey_start_times, by=c("year","survey")) %>% # to get ref_yr column
+#   select(-survey_date, -month_year) %>% 
+#   filter(!is.na(ref_yr)) %>% # drop early years of F data that don't match a trawl survey
+#   inner_join(modeldat_spp, by=c("ref_yr","year","survey","accepted_name"="spp")) %>% # get MHW data
+#   filter(!is.na(anom_sev), !is.na(F_Fmsy)) %>% 
+#   group_by(accepted_name, survey) %>% 
+#   mutate(n=n()) %>%  # all 7 or greater except one with one year. think 7+ is OK; ditch the 1 
+#   filter(n>1) %>% 
+#   ungroup()
 
 
 
@@ -534,13 +552,6 @@ kbl(lat.tbl, booktabs = TRUE, caption = "Null model (latitude-only) and model of
 
 \clearpage
 
-```{r tbl-models-fish}
-#null.fish <- lme(wt_mt_log_scale ~ F_Fmsy + (1+F_Fmsy|accepted_name), data = fdat)
-
-```
-
-\clearpage
-
 ```{r tbl-models-depth}
 null.depth <- lm(depth_wt_scale ~ 1, data = modeldat)
 lm.depth <- lm(depth_wt_scale ~ anom_sev_scale, data = modeldat)
@@ -572,6 +583,51 @@ kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 
+```
+
+\clearpage
+
+```{r tbl-models-catch}
+null.catch <- lm(wt_mt_log_scale ~ catch_3yr_scale, data=catchdat)
+lm.catch <- lm(wt_mt_log_scale ~ anom_sev_scale + catch_3yr_scale, data=catchdat)
+
+int.catch <- c(
+  paste0(format(round(coef(summary(null.catch))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.catch))[1,2], digits=3), nsmall=2)),
+  paste0(format(round(coef(summary(lm.catch))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.catch))[1,2], digits=3), nsmall=2))
+)
+mhw.coef.catch <- c('NA',
+                  paste0(format(round(coef(summary(lm.catch))[2,1], digits=3), nsmall=2)," ± ",
+                         format(round(coef(summary(lm.catch))[2,2], digits=3), nsmall=2))
+)
+catch.coef.catch <- c(paste0(format(round(coef(summary(null.catch))[2,1], digits=3), nsmall=2)," ± ",
+                         format(round(coef(summary(null.catch))[2,2], digits=3), nsmall=2)),
+                  paste0(format(round(coef(summary(lm.catch))[3,1], digits=3), nsmall=2)," ± ",
+                         format(round(coef(summary(lm.catch))[3,2], digits=3), nsmall=2))
+)
+p.catch.mhw <- c('NA',format(round(c(
+  coef(summary(lm.catch))[2,4]), digits=3), nsmall=2))
+
+p.catch.catch <- c(format(round(c(
+  coef(summary(null.catch))[2,4]), digits=3), nsmall=2),
+  format(round(c(
+  coef(summary(lm.catch))[3,4]), digits=3), nsmall=2))
+
+r2.catch <- c('NA',format(round(c(
+  summary(lm.catch)$r.squared), digits=3), nsmall=2))
+aic.catch <- round(c(AIC(null.catch), AIC(lm.catch)))
+df.catch <- round(c(
+  summary(null.catch)$df[2],
+  summary(lm.catch)$df[2]))
+
+colnames.catch <- c('Null model','Linear model')
+rownames.catch <- c('Intercept', 'MHW coefficient','Catch coefficient', "MHW coefficient p-value",'Catch coefficient p-value','R$^2$',"AIC","Degrees of freedom")
+
+catch.tbl <- data.frame(rbind(int.catch, mhw.coef.catch, catch.coef.catch, p.catch.mhw, p.catch.catch, r2.catch, aic.catch, df.catch), row.names=rownames.catch) 
+colnames(catch.tbl) <- colnames.catch
+
+kbl(catch.tbl, booktabs = TRUE, caption = "Null model (catch-only) and model of biomass response to MHWs and catch. We matched survey footprints to Marine Ecoregions (MEs) and extracted catch data from the Sea Around Us database (see Methods). Surveys from the English Channel and France did not correspond well to ME boundaries and were omitted. Because catch was available by calendar year and surveys occur midyear, we compared biomass change to the mean of the last three years of catch (i.e., biomass change in a 2010 survey was predicted by mean catch in 2008, 2009, and 2010), scaled and centered within surveys. Biomass log ratio values were also scaled and centered within surveys. This linear model used MHW cumulative intensity in °C days (scaled and centered within surveys, calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text).",
+    escape = FALSE) %>%
+  kable_styling(font_size = 8, latex_options = c("striped"))
 ```
 
 \clearpage

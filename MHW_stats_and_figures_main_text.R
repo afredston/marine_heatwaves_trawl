@@ -3,41 +3,20 @@
 ###########
 
 # general data wrangling 
-library(tidyverse) # needed JEPA
-library(here)  # needed JEPA
-#library(lubridate) # for standardizing date format of MHW data
+library(tidyverse) 
+library(here) 
 library(data.table)
-#library(googledrive)
 
 # formatting 
-# library(kableExtra)
-# library(gridExtra)
-# library(patchwork)
-# library(cowplot)
-# library(pals)
-# library(ggforce)
 library(ggExtra)
 
 # modeling 
 library(broom)
-#library(pwr)
-#library(mgcv)
-#library(lme4)
-#library(mcp)
 
 # making maps 
-# JULIANO, do we still need these?
 library(sf)
-#library(rnaturalearth)
-#library(ggrepel)
-#library(rgdal)
 library(raster)
-#library(sp)
-#library(rnaturalearthdata)
-#library(rgeos)
-#library(geosphere)  #to calculate distance between lat lon of grid cells
 library(concaveman)
-#library("robinmap")
 library(maptools)
 
 select <- dplyr::select
@@ -69,7 +48,7 @@ survey_spp_summary <- read_csv(here("processed-data","species_biomass_with_CTI.c
   mutate(wt_mt_log = as.numeric(wt_mt_log))
 survey_start_times <- read_csv(here("processed-data","survey_start_times.csv"))
 coords_dat <- read_csv(here("processed-data","survey_coordinates.csv"))
-haul_info <- read_csv(here("processed-data","haul_info.csv")) # Need JEPA
+haul_info <- read_csv(here("processed-data","haul_info.csv")) 
 haul_stats <- read_csv(here("processed-data","stats_about_raw_data.csv")) 
 survey_names <- data.frame(survey=c("BITS",'DFO-QCS',  "EBS","EVHOE","FR-CGFS","GMEX", "GOA",'GSL-S',  "IE-IGFS", "NEUS",  "NIGFS", "Nor-BTS",  "NS-IBTS", 
                                     "PT-IBTS","SCS",

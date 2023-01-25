@@ -1,8 +1,8 @@
-# Marine heatwaves have not emerged as a dominant driver of ecological change
+# Marine heatwaves are not a dominant driver of change in fish communities
 
-Alexa L. Fredston, William W. L. Cheung, Thomas L. Frölicher, Zoë Kitchel, Aurore A. Maureaud, James T. Thorson, Arnaud Auber, Bastien Mérigot, Juliano Palacios-Abrantes, Maria Lourdes D. Palomares, Laurène Pecuchet, Nancy Shackell, Malin Pinsky
+*Alexa L. Fredston, William W. L. Cheung, Thomas L. Frölicher, Zoë Kitchel, Aurore A. Maureaud, James T. Thorson, Arnaud Auber, Bastien Mérigot, Juliano Palacios-Abrantes, Maria Lourdes D. Palomares, Laurène Pecuchet, Nancy Shackell, Malin Pinsky*
 
-Please contact A. Fredston with questions about this project. A DOI will be associated with this repository when it is published. Please cite the manuscript for all references to this project and its results, as well as the Zenodo DOI if data or code are reused. 
+Please contact [A. Fredston](https://www.alexafredston.com/) with questions about this project. A DOI will be associated with this repository when it is published. Please cite the manuscript for all references to this project and its results, as well as the Zenodo DOI if data or code are reused. 
 
 ## Where do the raw data come from?
 
@@ -11,7 +11,7 @@ We used of a number of datasets that are already publicly available and/or publi
 * Trawl data from [FISHGLOB](https://github.com/AquaAuma/FishGlob_data), a project to harmonize publicly available trawl survey records from federal agencies around the globe. 
 * Sea bottom temperature data from [GLORYS](https://www.mercator-ocean.eu/en/ocean-science/glorys/), an ocean reanalysis data product by the European Copernicus Marine Environment Modeling Service available beginning in 1993. 
 * Sea surface temperature data from [OISST](https://www.ncei.noaa.gov/products/optimum-interpolation-sst), a historical satellite temperature record from the U.S. National Oceanic and Atmospheric Administration beginning in 1982. 
-* Historical fishing pressure estimates from [Sea Around Us calculated for the Minderoo Foundation](https://s3.us-west-2.amazonaws.com/legacy.seaaroundus/researcher/dpauly/PDF/2021/Book%2C+chapters%2C+reports/Palomares%2Bet%2Bal%2B2021%2BEstimating%2Bthe%2Bbiomass%2Bof%2Bcommercially%2Bexploited%2Bfisheries%2Bstocks%2Bleft%2Bin%2Bthe%2Bocean.pdf).
+* Historical fishing pressure estimates from [Sea Around Us](https://www.seaaroundus.org/).
 * Species-specific realized thermal niche estimates from [Burrows et al. 2018](https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1).
 
 ## What's in this repository, and in what order should things be run?
