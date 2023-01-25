@@ -484,7 +484,7 @@ ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
 
 survey_names <- survey_names %>% 
   mutate(abb = c(
-    "(BS)",
+    "(BalS)",
     "(BC)",
     "(EBS)",
     "(FR)",
@@ -503,7 +503,7 @@ survey_names <- survey_names %>%
     "(SC)",
     "(WUS)"
   ),
-  title = ifelse(title == "Norway", "Barents Sea (BS)", paste(title, abb))
+  title = ifelse(title == "Norway", "Barents Sea (BarS)", paste(title, abb))
   ) 
 
 # Generate figure palette
