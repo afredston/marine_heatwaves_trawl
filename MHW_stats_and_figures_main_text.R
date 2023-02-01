@@ -436,8 +436,9 @@ x_lines <- seq(-120,180, by = 60)
 data("wrld_simpl", package = "maptools")                                                                            
 wm_polar <- crop(wrld_simpl, extent(-180, 180, 22, 90))  
 
-labels <- haul_info_map %>% 
-  group_by(survey) %>% 
+# No need for labels, will add manually
+labels <- haul_info_map %>%
+  group_by(survey) %>%
   summarise(
     lon = mean(longitude),
     lat = mean(latitude)
@@ -473,18 +474,17 @@ survey_regions_polar_polygon_jepa <- ggplot() +
         #panel.border = element_blank(),
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank()
-  )
-survey_regions_polar_polygon_jepa
+  );survey_regions_polar_polygon_jepa
 
 #save global map
 ggsave(survey_regions_polar_polygon_jepa, path = here::here("figures"),
-       filename = "survey_regions_polar_polygon_jepa.jpg",height = 5, width = 6, unit = "in") 
+       filename = "survey_regions_polar_polygon.jpg",height = 5, width = 6, unit = "in") 
 
 # make subpanels for Fig 1
 
 survey_names <- survey_names %>% 
   mutate(abb = c(
-    "(BS)",
+    "(BalS)",
     "(BC)",
     "(EBS)",
     "(FR)",
@@ -503,7 +503,7 @@ survey_names <- survey_names %>%
     "(SC)",
     "(WUS)"
   ),
-  title = ifelse(title == "Norway", "Western Barents Sea (WBS)", paste(title, abb))
+  title = ifelse(title == "Norway", "Barents Sea (BarS)", paste(title, abb))
   ) 
 
 # Generate figure palette

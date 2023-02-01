@@ -253,7 +253,32 @@ knitr::opts_chunk$set(
 # Supplementary tables
 
 ```{r tbl-surveys}
-kbl(survey_names, booktabs=TRUE, col.names=c("Code","Survey"), caption="Survey names used in this analysis, and corresponding codes used in figures and tables in this Supplement.") %>%
+
+# Include abbreviations used on Figure 1
+survey_names %>% 
+  mutate(title = paste(title, c(
+    "(BalS)",
+    "(BC)",
+    "(EBS)",
+    "(FR)",
+    "(EC)",
+    "(GoM)",
+    "(GoA)",
+    "(GSL)",
+    "(IR)",
+    "(NeUS)",
+    "(NI)",
+    "(NO)",
+    "(NS)",
+    "(PO)",
+    "(SS)",
+    "(SeUS)",
+    "(SC)",
+    "(WUS)"
+  )),
+  title = ifelse(title == "Norway (NO)", "Barents Sea (BarS)",title)
+  ) %>% 
+  kbl(booktabs=TRUE, col.names=c("Code","Survey"), caption="Survey names used in this analysis, and corresponding codes used in figures and tables in this Supplement.") %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
 
