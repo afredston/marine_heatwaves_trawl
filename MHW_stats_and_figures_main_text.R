@@ -334,7 +334,7 @@ gg_mhw_biomass_point_marg <- survey_summary %>%
   geom_smooth(method="lm", color = "gray35") +
   theme_bw() + 
   coord_cartesian(clip = "off") +
-  labs(x="Marine heatwave severity (°C-days)", y="Biomass log ratio") +
+  labs(x="Marine heatwave cumulative intensity (°C-days)", y="Biomass log ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
   theme(
     legend.position = "none", 
@@ -612,11 +612,8 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
   filter(!is.na(STI_diff), mhw_yes_no=="yes", wt_mt_log < Inf, wt_mt_log > -Inf) %>% 
   ggplot(aes(x=STI_diff, y=wt_mt_log, color=anom_sev, fill=anom_sev)) +
   geom_point(size=0.5, position="jitter") + 
- scale_color_distiller(palette="RdPu", name="MHW severity\n(°C-days)", direction=1) +
-  scale_fill_distiller(palette="RdPu", name="MHW severity\n(°C-days)", direction=1) +
- # scale_color_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
- # scale_fill_gradient(low="#1F78B4", high="#E31A1C", name="MHW duration\n(days)") +
-  # geom_smooth(method="lm")+
+ scale_color_distiller(palette="RdPu", name="MHW cumulative \nintensity (°C-days)", direction=1) +
+  scale_fill_distiller(palette="RdPu", name="MHW cumulative \nintensity (°C-days)", direction=1) +
   theme_bw() + 
   coord_cartesian(clip = "off") +
   labs(x="Species thermal bias", y="Biomass log ratio") +
@@ -628,7 +625,6 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
         panel.grid.minor = element_blank(), 
         legend.position="bottom",
         legend.margin=margin(t=-10)) +
-  # facet_wrap(~survey) +
   NULL
 gg_mhw_biomass_point_spp
 ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
