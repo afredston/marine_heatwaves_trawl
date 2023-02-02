@@ -666,11 +666,11 @@ ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_c
 gg_mhw_cti_hist <- survey_summary %>%
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
   ggplot(aes(x=cti_diff, group=mhw_yes_no, fill=mhw_yes_no, color=mhw_yes_no)) +
-  geom_freqpoly(binwidth=0.5, alpha=0.8, size=2) +
+  geom_freqpoly(binwidth=0.5, alpha=0.8, size=1.5) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
   theme_bw() + 
-  labs(x="CTI difference", y="Frequency") +``
+  labs(x="CTI difference", y="Frequency") +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         legend.position = "none")

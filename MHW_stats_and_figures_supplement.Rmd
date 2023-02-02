@@ -174,14 +174,14 @@ modeldat <- survey_summary %>%
 
 #pull in catch data and merge with modeldat
 
-catch_me <- read_csv(here("raw-data","MEcatchdataforAlexa.csv")) %>% # by marine ecoregion (ME)
+catch_me <- read_csv(here("raw-data","MEcatchdataforAlexa-2.csv")) %>% # by marine ecoregion (ME)
   rename(year=Year)
 me_dat <- read_csv(here("raw-data","ME_to_surveys.csv")) # note that some surveys are matched with more than one ME (big coastwide US surveys) and some with zero (small Europe ones)
 catchdat <- full_join(catch_me, me_dat, by="ME") %>% 
   left_join(survey_summary %>% select(ref_yr, survey, year), by=c("survey", "year")) %>% 
   filter(!is.na(ref_yr)) %>% 
   group_by(survey, year, ref_yr) %>% 
-  summarise(catch = sum(Catch)) %>% # aggregate catches for surveys that cover multiple MEs (WCANN and NEUS) 
+  summarise(catch = sum(Catch)) %>% # aggregate catches for surveys that cover multiple MEs (WCANN, Nor-BTS and NEUS) 
   ungroup() %>% 
   arrange(year) %>% 
   group_by(survey) %>% 
@@ -514,7 +514,9 @@ lat.coef.lat <- c(paste0(format(round(coef(summary(null.lat))[2,1], digits=3), n
 p.lat <- c('NA',format(round(c(
   coef(summary(lm.lat))[2,4]), digits=3), nsmall=2))
 
-r2.lat <- c('NA',format(round(c(
+r2.lat <- c(format(round(c(
+  summary(null.lat)$r.squared), digits=3), nsmall=2),
+  format(round(c(
   summary(lm.lat)$r.squared), digits=3), nsmall=2))
 aic.lat <- round(c(AIC(null.lat), AIC(lm.lat)))
 df.lat <- round(c(
@@ -594,7 +596,9 @@ p.catch.catch <- c(format(round(c(
   format(round(c(
   coef(summary(lm.catch))[3,4]), digits=3), nsmall=2))
 
-r2.catch <- c('NA',format(round(c(
+r2.catch <- c(format(round(c(
+  summary(null.catch)$r.squared), digits=3), nsmall=2),
+  format(round(c(
   summary(lm.catch)$r.squared), digits=3), nsmall=2))
 aic.catch <- round(c(AIC(null.catch), AIC(lm.catch)))
 df.catch <- round(c(
