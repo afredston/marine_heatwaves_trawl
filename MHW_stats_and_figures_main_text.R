@@ -286,16 +286,16 @@ bc_mhw_subset <- beta_div %>%
 bc_no_mhw_subset <- beta_div %>% 
   filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_nestedness_scale)) %>% 
   pull(bray_dissimilarity_nestedness_scale)
-bc_mhw_total <- beta_div %>% 
-  filter(mhw_yes_no=="yes", !is.na(bray_dissimilarity_total_scale)) %>% 
-  pull(bray_dissimilarity_total_scale)
-bc_no_mhw_total <- beta_div %>% 
-  filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_total_scale)) %>% 
-  pull(bray_dissimilarity_total_scale)
+# bc_mhw_total <- beta_div %>% 
+#   filter(mhw_yes_no=="yes", !is.na(bray_dissimilarity_total_scale)) %>% 
+#   pull(bray_dissimilarity_total_scale)
+# bc_no_mhw_total <- beta_div %>% 
+#   filter(mhw_yes_no=="no", !is.na(bray_dissimilarity_total_scale)) %>% 
+#   pull(bray_dissimilarity_total_scale)
 
 t.test(bc_mhw_substitution, bc_no_mhw_substitution, alternative="two.sided")
 t.test(bc_mhw_subset, bc_no_mhw_subset, alternative="two.sided")
-t.test(bc_mhw_total, bc_no_mhw_total, alternative="two.sided")
+#t.test(bc_mhw_total, bc_no_mhw_total, alternative="two.sided")
 
 # occurrence based 
 jac_mhw_substitution <- beta_div %>% 
@@ -310,16 +310,16 @@ jac_mhw_subset <- beta_div %>%
 jac_no_mhw_subset <- beta_div %>% 
   filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_nestedness_scale)) %>% 
   pull(jaccard_dissimilarity_nestedness_scale)
-jac_mhw_total <- beta_div %>% 
-  filter(mhw_yes_no=="yes", !is.na(jaccard_dissimilarity_total_scale)) %>% 
-  pull(jaccard_dissimilarity_total_scale)
-jac_no_mhw_total <- beta_div %>% 
-  filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_total_scale)) %>% 
-  pull(jaccard_dissimilarity_total_scale)
+# jac_mhw_total <- beta_div %>% 
+#   filter(mhw_yes_no=="yes", !is.na(jaccard_dissimilarity_total_scale)) %>% 
+#   pull(jaccard_dissimilarity_total_scale)
+# jac_no_mhw_total <- beta_div %>% 
+#   filter(mhw_yes_no=="no", !is.na(jaccard_dissimilarity_total_scale)) %>% 
+#   pull(jaccard_dissimilarity_total_scale)
 
 t.test(jac_mhw_substitution, jac_no_mhw_substitution, alternative="two.sided")
 t.test(jac_mhw_subset, jac_no_mhw_subset, alternative="two.sided")
-t.test(jac_mhw_total, jac_no_mhw_total, alternative="two.sided")
+#t.test(jac_mhw_total, jac_no_mhw_total, alternative="two.sided")
   
 
 ######
@@ -365,7 +365,7 @@ nep <- survey_summary %>%
 
 gg_nep_wt <- nep %>% 
   ggplot() +
-  geom_rect(aes(xmin=2015, xmax=2017, ymin=-2, ymax=3), color="grey", fill="grey", alpha=0.5) +
+  geom_rect(aes(xmin=2014, xmax=2016, ymin=-2, ymax=3), color="grey", fill="grey", alpha=0.5) +
   geom_line(aes(x=year, y=wt_scale, color=title, fill=title)) +
   geom_point(aes(x=year, y=wt_scale, color=title, fill=title), ) +
   scale_fill_manual(values=c("#B8EFB8","#F74F57","#FDBE43","#5DAAFF"), guide="none") +
@@ -380,7 +380,7 @@ gg_nep_wt
 
 gg_nep_cti <- nep %>% 
   ggplot() +
-  geom_rect(aes(xmin=2015, xmax=2017, ymin=-3, ymax=2), color="grey", fill="grey", alpha=0.5) +
+  geom_rect(aes(xmin=2014, xmax=2016, ymin=-3, ymax=2), color="grey", fill="grey", alpha=0.5) +
   geom_line(aes(x=year, y=cti_scale, color=title, fill=title)) +
   geom_point(aes(x=year, y=cti_scale, color=title, fill=title), ) +
   scale_fill_manual(values=c("#B8EFB8","#F74F57","#FDBE43","#5DAAFF"), guide="none") +
@@ -395,7 +395,7 @@ gg_nep_cti
 
 gg_nep_bray <- nep %>% 
   ggplot() +
-  geom_rect(aes(xmin=2015, xmax=2017, ymin=0, ymax=0.3), color="grey", fill="grey", alpha=0.5) +
+  geom_rect(aes(xmin=2014, xmax=2016, ymin=0, ymax=0.3), color="grey", fill="grey", alpha=0.5) +
   geom_line(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title)) +
   geom_point(aes(x=year, y=bray_dissimilarity_turnover, color=title, fill=title), ) +
   scale_fill_manual(values=c("#B8EFB8","#F74F57","#FDBE43","#5DAAFF")) +

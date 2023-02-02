@@ -80,7 +80,28 @@ haul_info <- read_csv(here("processed-data","haul_info.csv"))
 #biomass_time <- read_csv(here("processed-data","biomass_time.csv"))
 #footprint <- read_csv(here("processed-data","spatial_standardization_summary.csv"))
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
-survey_names <- read_csv(here("processed-data","survey_names.csv"))
+survey_names <- read_csv(here("processed-data","survey_names.csv")) %>%
+  mutate(title = recode(title, 'Norway' = 'Barents Sea')) %>% 
+  mutate(abbr = c(
+    "BalS",
+    "BC",
+    "EBS",
+    "FR",
+    "EC",
+    "GoM",
+    "GoA",
+    "GSL",
+    "IR",
+    "NeUS",
+    "NI",
+    "BarS",
+    "NS",
+    "PO",
+    "SS",
+    "SeUS",
+    "SC",
+    "WUS"
+  )) 
 
 # traits data
 traits <- read_csv(here("raw-data","TraitCollectionFishNAtlanticNEPacificContShelf.csv")) %>% 
@@ -169,48 +190,6 @@ catchdat <- full_join(catch_me, me_dat, by="ME") %>%
   ungroup() %>% 
   right_join(modeldat)
 
-# currently only used for fishing analysis
-# modeldat_spp <- survey_spp_summary %>% 
-#   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
-#   filter(wt_mt_log<Inf, wt_mt_log>-Inf, !is.na(anom_sev)) %>% # lots of infinite values in wt_mt_log because individual spp are often zero in any given year 
-#   group_by(survey) %>% # not grouping by spp here as well because including a random slope and intercept for species in the models does basically the same thing
-#   mutate(wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
-#          anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))) %>% 
-#   ungroup() 
-
-# fishing data from Sea Around Us
-# see https://dx.doi.org/10.14288/1.0404487
-# stock_names <- read_csv(here("raw-data","20221110_taxa_for_deng GP.csv"))  %>% 
-#   select(survey, accepted_name, Stock) %>% 
-#   distinct()
-
-# Deng sent me an Excel pivot table with the time-varying data which I copy-pasted into the CSV loaded below 
-# fdat_raw <- read_csv(here("raw-data","20230109_taxa_for_alexa_edited_f_data_only.csv")) %>% 
-#   pivot_longer(!`Row Labels`, names_to="year", values_to = "F_Fmsy") %>%
-#   rename(Stock = `Row Labels`) %>% 
-#   left_join(stock_names)
-# 
-# # check for duplicates
-# tmp <- fdat_raw %>% 
-#   select(-year,-F_Fmsy) %>% 
-#   distinct() %>% 
-#   group_by(accepted_name, survey) %>% 
-#   mutate(n=n())
-# write_csv(tmp, file=here("processed-data","spp_with_multiple_stock_ID.csv"))
-
-# fdat <-fdat_raw %>% 
-#   mutate(year = as.numeric(year)) %>% 
-#   left_join(survey_start_times, by=c("year","survey")) %>% # to get ref_yr column
-#   select(-survey_date, -month_year) %>% 
-#   filter(!is.na(ref_yr)) %>% # drop early years of F data that don't match a trawl survey
-#   inner_join(modeldat_spp, by=c("ref_yr","year","survey","accepted_name"="spp")) %>% # get MHW data
-#   filter(!is.na(anom_sev), !is.na(F_Fmsy)) %>% 
-#   group_by(accepted_name, survey) %>% 
-#   mutate(n=n()) %>%  # all 7 or greater except one with one year. think 7+ is OK; ditch the 1 
-#   filter(n>1) %>% 
-#   ungroup()
-
-
 
 # lagged effects of MHW cumulative intensity on biomass, for GAMs
 lags <- modeldat %>%
@@ -256,29 +235,7 @@ knitr::opts_chunk$set(
 
 # Include abbreviations used on Figure 1
 survey_names %>% 
-  mutate(title = paste(title, c(
-    "(BalS)",
-    "(BC)",
-    "(EBS)",
-    "(FR)",
-    "(EC)",
-    "(GoM)",
-    "(GoA)",
-    "(GSL)",
-    "(IR)",
-    "(NeUS)",
-    "(NI)",
-    "(NO)",
-    "(NS)",
-    "(PO)",
-    "(SS)",
-    "(SeUS)",
-    "(SC)",
-    "(WUS)"
-  )),
-  title = ifelse(title == "Norway (NO)", "Barents Sea (BarS)",title)
-  ) %>% 
-  kbl(booktabs=TRUE, col.names=c("Code","Survey"), caption="Survey names used in this analysis, and corresponding codes used in figures and tables in this Supplement.") %>%
+  kbl(booktabs=TRUE, col.names=c("FISHGLOB Code","Survey","Abbreviation"), caption="Survey names used in this analysis, and corresponding abbreviations used in figures and tables in this Supplement. The survey codes from FISHGLOB are also listed for comparison to other data from the FISHGLOB Consortium.") %>%
   kable_styling(font_size = 8, latex_options = c("striped"))
 ```
 
@@ -727,10 +684,11 @@ kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index (
 ```{r fig-mhw-point-by-reg, fig.cap="Alternate version of Fig. 2 from the main text, showing results by region. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Points represent log ratios of mean biomass in a survey from one year to the next. The fitted lines are linear regressions. The shaded areas are 95% confidence intervals. Survey names are listed in Supp. Tab. 1.", fig.width=9, fig.height=7}
 gg_mhw_biomass_point <- survey_summary %>% 
   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
+  left_join(survey_names) %>%
   ggplot(aes(x=anom_sev, y=wt_mt_log)) +
   geom_point() +
   geom_smooth(method="lm", color = "gray35") +
-  facet_wrap(~survey, ncol=4) +
+  facet_wrap(~abbr, ncol=4) +
   theme_bw() +
   coord_cartesian(clip = "off") +
   labs(x="MHW cumulative intensity (°C days)", y="Biomass log ratio") +
@@ -774,10 +732,11 @@ tmpdat <- mhw_summary_glorys_d %>%
 
 gg_mhw_incidence <- survey_summary %>% 
   inner_join(tmpdat, by="ref_yr") %>%
+  left_join(survey_names) %>%
   ggplot(aes(x=year, y=anom_sev, group=group, color=group)) + 
   scale_color_manual(values=c(cbpal6[3], cbpal6[4]))+ 
   geom_line() + 
-  facet_wrap(~survey, scales="free_y", ncol=4)+
+  facet_wrap(~abbr, scales="free_y", ncol=4)+
   theme_bw() +
   labs(x="Year",y="MHW cumulative intensity") +
   theme(legend.title = element_blank(),
@@ -840,7 +799,7 @@ gg_mhw_source <- ggplot(data=rawsourcedat %>% filter(date<="2019-12-31")) +
   geom_point(aes(x=date, y=anom, color=source, fill=source), position="jitter", alpha=0.25, size=0.5) +
   theme_classic() +
   labs(x="Date", y="Detrended temperature anomaly", fill="Dataset", color="Dataset") +
-  facet_wrap(~survey) +
+  facet_wrap(~abbr) +
   scale_color_manual(values=cbpal6[3:4]) +
   scale_fill_manual(values=cbpal6[3:4]) +
   theme(legend.position = "bottom")
@@ -983,7 +942,7 @@ ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_sev, y=wt_
 
 # Supplementary figures: community dissimilarity 
 
-```{r fig-dissim-mhw, fig.cap="Box-and-whisker plots of temporal community dissimilarity and MHW incidence for partitioned occurence-based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass-based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text."}
+```{r fig-dissim-mhw, fig.cap="Box-and-whisker plots of temporal community dissimilarity and MHW incidence for partitioned occurrence-based beta diversity metrics of substitution and subset (Jaccard turnover and nestedness, respectively; top) and partitioned biomass-based beta diversity metricsof substitution and subset of substitution and subset (Bray-Curtis balanced variation and biomass gradient, respectively; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text."}
 
 #convert mhw_yes_no to factor
 beta_div$mhw_yes_no <- factor(beta_div$mhw_yes_no)
@@ -1028,59 +987,59 @@ plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blan
           align = "hv")
 ```
 
-```{r fig-dissim-length, fig.cap="Temporal community dissimilarity and MHW cumulative intensity (total anomaly in °C days) for partitioned occurrence-based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass-based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."}
+<!-- ```{r fig-dissim-length, fig.cap="Temporal community dissimilarity and MHW cumulative intensity (total anomaly in °C days) for partitioned occurrence-based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass-based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."} -->
 
-#Turnover Component
+<!-- #Turnover Component -->
 
-anom_sev_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_turnover)) +
-  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
-  geom_smooth(method="lm", color = "gray35") + 
-  theme_bw() + 
-  labs(x="MHW cumulative intensity (°C days)", y="Turnover Component\nJaccard Dissimilarity") + 
-  geom_hline(aes(yintercept=mean(jaccard_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  stat_regline_equation(aes(label=..rr.label..), label.x=100) 
+<!-- anom_sev_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_turnover)) + -->
+<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
+<!--   geom_smooth(method="lm", color = "gray35") +  -->
+<!--   theme_bw() +  -->
+<!--   labs(x="MHW cumulative intensity (°C days)", y="Turnover Component\nJaccard Dissimilarity") +  -->
+<!--   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") + -->
+<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
+<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
 
-#Nestedness Component
+<!-- #Nestedness Component -->
 
-anom_sev_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_nestedness)) +
-  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
-  geom_smooth(method="lm", color = "gray35") + 
-  theme_bw() + 
-  labs(x="MHW cumulative intensity (°C days)", y="Nestedness Component\nJaccard Dissimilarity") + 
-  geom_hline(aes(yintercept=mean(jaccard_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  stat_regline_equation(aes(label=..rr.label..), label.x=100) 
+<!-- anom_sev_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_nestedness)) + -->
+<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
+<!--   geom_smooth(method="lm", color = "gray35") +  -->
+<!--   theme_bw() +  -->
+<!--   labs(x="MHW cumulative intensity (°C days)", y="Nestedness Component\nJaccard Dissimilarity") +  -->
+<!--   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") + -->
+<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
+<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
 
-#Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics)
+<!-- #Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics) -->
 
-anom_sev_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_turnover)) +
-  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
-  geom_smooth(method="lm", color = "gray35") + 
-  theme_bw() + 
-  labs(x="MHW cumulative intensity (°C days)", y="Balanced Variation Component\nBray-Curtis Dissimilarity") + 
-  geom_hline(aes(yintercept=mean(bray_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  stat_regline_equation(aes(label=..rr.label..), label.x=100) 
+<!-- anom_sev_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_turnover)) + -->
+<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
+<!--   geom_smooth(method="lm", color = "gray35") +  -->
+<!--   theme_bw() +  -->
+<!--   labs(x="MHW cumulative intensity (°C days)", y="Balanced Variation Component\nBray-Curtis Dissimilarity") +  -->
+<!--   geom_hline(aes(yintercept=mean(bray_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") + -->
+<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
+<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
 
-#Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics)
+<!-- #Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics) -->
 
-anom_sev_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_nestedness)) +
-  geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") +
-  geom_smooth(method="lm", color = "gray35") + 
-  theme_bw() + 
-  labs(x="MHW cumulative intensity (°C days)", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") + 
-  geom_hline(aes(yintercept=mean(bray_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  stat_regline_equation(aes(label=..rr.label..), label.x=100) 
+<!-- anom_sev_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_nestedness)) + -->
+<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
+<!--   geom_smooth(method="lm", color = "gray35") +  -->
+<!--   theme_bw() +  -->
+<!--   labs(x="MHW cumulative intensity (°C days)", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") +  -->
+<!--   geom_hline(aes(yintercept=mean(bray_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") + -->
+<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
+<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
 
-plot_grid(anom_sev_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()),
-          anom_sev_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
-          anom_sev_bray_dissimilarity_turnover,
-          anom_sev_bray_dissimilarity_nestedness,
-          ncol = 2, nrow = 2,
-          align = "hv")
-```
+<!-- plot_grid(anom_sev_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()), -->
+<!--           anom_sev_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()), -->
+<!--           anom_sev_bray_dissimilarity_turnover, -->
+<!--           anom_sev_bray_dissimilarity_nestedness, -->
+<!--           ncol = 2, nrow = 2, -->
+<!--           align = "hv") -->
+<!-- ``` -->
 
 \clearpage
 
@@ -1142,6 +1101,9 @@ gg_power_gamma_oisst
 
 ```{r fig-spp, fig.keep="all", fig.height=4, fig.cap=paste0("Biomass trends and historical MHWs in a single region. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. The top five taxa by biomass are highlighted. Shaded grey rectangles denote when any MHWs occurred in the preceding survey-year."), message = F, echo = F, warning = F}
 
+survey_names <- survey_names %>%
+  mutate(plot_title = paste0(title, " (", abbr, ")"))
+
 # generate_title <- function(x){
 #     plot_title_placeholder <<- survey_names[survey_names$survey==x,]$title
 # }
@@ -1181,7 +1143,7 @@ plot_spp <- function(x){
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           legend.position="right",
           legend.title = element_blank()) + 
-    labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$title) +
+    labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$plot_title) +
     NULL
   
   
