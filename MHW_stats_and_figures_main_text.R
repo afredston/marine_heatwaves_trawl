@@ -581,7 +581,7 @@ for(reg in survey_names$survey) {
             axis.title.y=element_blank(),
             panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
             axis.text.x=element_text(angle = 45, vjust=0.5, size = 14),
-            axis.text.y=element_text(size = 14),
+            axis.text.y=element_text(size = 15),
             #    axis.title.x=element_text(vjust=5),
             #    plot.title.position = “plot”,
             # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
@@ -608,7 +608,7 @@ for(reg in survey_names$survey) {
           axis.title.y=element_blank(),
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           axis.text.x=element_text(angle = 45, vjust=0.5, size = 14),
-          axis.text.y=element_text(size = 14),
+          axis.text.y=element_text(size = 15),
           #    axis.title.x=element_text(vjust=5),
           #    plot.title.position = “plot”,
           # plot.title = element_text(hjust=0.3, vjust = -7) # JEPA
