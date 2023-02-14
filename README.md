@@ -13,6 +13,7 @@ We used of a number of datasets that are already publicly available and/or publi
 * Sea surface temperature data from [OISST](https://www.ncei.noaa.gov/products/optimum-interpolation-sst), a historical satellite temperature record from the U.S. National Oceanic and Atmospheric Administration beginning in 1982. 
 * Historical fishing pressure estimates from [Sea Around Us](https://www.seaaroundus.org/).
 * Species-specific realized thermal niche estimates from [Burrows et al. 2018](https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1).
+* Species traits from [Beukhof et al. 2019](https://doi.org/10.5061/dryad.ttdz08kt8).
 
 ## What's in this repository, and in what order should things be run?
 

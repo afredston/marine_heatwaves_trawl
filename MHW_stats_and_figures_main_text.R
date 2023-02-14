@@ -25,6 +25,8 @@ set.seed(42)
 # marine heatwave data for joining with survey data
 mhw_summary_oisst_d_5_day <- read_csv(here("processed-data","MHW_oisst_5_day_threshold.csv"))
 mhw_summary_glorys_d_5_day <- read_csv(here("processed-data","MHW_glorys_5_day_threshold.csv"))
+mhw_summary_glorys_d_any_summer <- read_csv(here("processed-data","MHW_glorys_summer_only.csv"))
+
 
 total_mhws_oisst_d <- read_csv(here("processed-data","total_number_mhws_oisst_d.csv")) %>% 
   select(2:4)
@@ -135,9 +137,9 @@ survey_summary %>%
   select(wt_mt_log, anom_sev) %>%
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
-# Portugal 2009
+# NS-IBTS 2011
 survey_summary %>%
-  filter(survey=='PT-IBTS', year==2009) %>%
+  filter(survey=='NS-IBTS', year==2011) %>%
   select(wt_mt_log, anom_sev) %>%
   mutate(wt_mt_per = (exp(wt_mt_log)-1)*100)
 
@@ -185,9 +187,9 @@ cti_mhw <- survey_summary %>%
   pull(cti_diff)
 shapiro.test(cti_no_mhw)
 shapiro.test(cti_mhw)
-median(cti_no_mhw)
+mean(cti_no_mhw)
 sd(cti_no_mhw)
-median(cti_mhw)
+mean(cti_mhw)
 sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw, alternative = "two.sided")
 
@@ -197,6 +199,16 @@ lm_wt <- lm(wt_mt_log_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_wt)
 lm_cti <- lm(cti_diff_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_cti)
+lm_summer <- read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% 
+  inner_join(mhw_summary_glorys_d_any_summer) %>%
+  group_by(survey) %>% 
+  mutate(
+    wt_mt_log_scale = as.numeric(scale(wt_mt_log, center=TRUE, scale=TRUE)),
+    anom_sev_scale =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))
+  ) %>% 
+  ungroup() %>% 
+  lm(wt_mt_log_scale ~ anom_sev_scale, data = .)
+summary(lm_summer)
 
 # how many taxa total?
 survey_spp_summary %>% 
