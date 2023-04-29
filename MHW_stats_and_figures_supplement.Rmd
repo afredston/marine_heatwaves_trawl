@@ -5,6 +5,7 @@ author: "Fredston et al."
 date: 2023
 output: 
   bookdown::pdf_document2: default
+classoption: landscape
 header-includes: 
   - \renewcommand{\figurename}{Supplementary Figure }
   - \renewcommand{\tablename}{Supplementary Table}
@@ -236,7 +237,7 @@ knitr::opts_chunk$set(
 # Include abbreviations used on Figure 1
 survey_names %>% 
   kbl(booktabs=TRUE, col.names=c("FISHGLOB Code","Survey","Abbreviation"), caption="Survey names used in this analysis, and corresponding abbreviations used in figures and tables in this Supplement. The survey codes from FISHGLOB are also listed for comparison to other data from the FISHGLOB Consortium.") %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -248,7 +249,7 @@ lm.fixed.wt <- lm(wt_mt_log_scale ~ anom_sev_scale + factor(survey), data = mode
 gam.wt <- gam(wt_mt_log_scale ~ s(anom_sev_scale), data = modeldat )
 gam.re.wt <- gam(wt_mt_log_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-formulas.wt <- c('Biomass LR* $~$ 1','Biomass LR* ~ MHW CInt*','Biomass LR* ~ MHW CInt* + Survey[fixed]','Biomass LR* ~ s(MHW CInt*)','Biomass LR* ~ s(MHW CInt*) + s(Survey[random])')
+formulas.wt <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt*','Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt*)','Biomass LR* $\\sim$ s(MHW CInt*) + s(Survey[random])')
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.wt <- c(
   paste0(format(round(coef(summary(null.wt))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.wt))[1,2], digits=3), nsmall=2)),
@@ -306,7 +307,7 @@ colnames(wt.tbl) <- colnames.wt
 # ±
 kbl(wt.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt). MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect. * denotes variables that were scaled and centered within surveys and s() denotes a GAM smoother.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -340,9 +341,9 @@ for(i in 1:nrow(survey_names)) {
 
 # ±
 
-kbl(byreg.tbl, booktabs = TRUE, caption = "Linear models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt) in each individual region (model formula: Biomass LR* ~ MHW CInt*, where * denotes variables that were scaled and centered within surveys). MHW Cint was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
+kbl(byreg.tbl, booktabs = TRUE, caption = "Linear models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt) in each individual region (model formula: Biomass LR* $\\sim$ MHW CInt*, where * denotes variables that were scaled and centered within surveys). MHW Cint was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped")) 
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE) 
 ```
 
 \clearpage
@@ -354,7 +355,7 @@ lm.fixed.altmhw <- lm(wt_mt_log_scale ~ anom_sev_scale_alt + factor(survey), dat
 gam.altmhw <- gam(wt_mt_log_scale ~ s(anom_sev_scale_alt), data = modeldat )
 gam.re.altmhw <- gam(wt_mt_log_scale ~ s(anom_sev_scale_alt) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-formulas.altmhw <- c('Biomass LR* ~ 1','Biomass LR* ~ MHW CInt**','Biomass LR* ~ MHW CInt** + Survey[fixed]','Biomass LR* ~ s(MHW CInt**)','Biomass LR* ~ s(MHW CInt**) + s(Survey[random])')
+formulas.altmhw <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt**','Biomass LR* $\\sim$ MHW CInt** + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt**)','Biomass LR* $\\sim$ s(MHW CInt**) + s(Survey[random])')
 
 int.altmhw <- c(
   paste0(format(round(coef(summary(null.altmhw))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.altmhw))[1,2], digits=3), nsmall=2)),
@@ -408,7 +409,7 @@ colnames(alt.tbl) <- colnames.altmhw
 
 kbl(alt.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt). MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect. * denotes variables that were scaled and centered within surveys, ** denotes variables that were scaled and centered across surveys, and s() denotes a GAM smoother. This table is identical to Supp. Tab. 2, except rather than centering and scaling MHW CInt within regions, it is centered and scaled across regions. The approach used in most of our analysis (centering and scaling MHW CInt within regions) assumes that history matters in ecological responses to MHW responses, i.e., that biomass change should be compared to how anomalous a MHW is relative to other MHWs that occurred in the region. Here, we test the hypothesis that absolute MHW CInt matters regardless of the oceanographic history of each region by centering and scaling MHW CInt across regions.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -420,7 +421,7 @@ gam2 = gam( wt_mt_log_scale ~ s(as.matrix(lags)[,2:4]), data=lags )
 gam3= gam( wt_mt_log_scale ~ s(as.matrix(lags)[,2:5]), data=lags )
 gam4 =gam( wt_mt_log_scale ~ s(as.matrix(lags)[,2:6]), data=lags )
 
-formulas.lags = c('Biomass LR* ~ s(matrix(MHW CInt*[lag1:2]))','Biomass LR* ~ s(matrix(MHW CInt*[lag1:3]))','Biomass LR* ~ s(matrix(MHW CInt*[lag1:4]))','Biomass LR* ~ s(matrix(MHW CInt*[lag1:5]))')
+formulas.lags = c('Biomass LR* $\\sim$ s(matrix(MHW CInt*[lag1:2]))','Biomass LR* $\\sim$ s(matrix(MHW CInt*[lag1:3]))','Biomass LR* $\\sim$ s(matrix(MHW CInt*[lag1:4]))','Biomass LR* $\\sim$ s(matrix(MHW CInt*[lag1:5]))')
 
 r2.lags <- format(round(c(
   summary(gam1)$r.sq,
@@ -456,7 +457,7 @@ colnames(lags.tbl) <- colnames.lags
 
 kbl(lags.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to lagged MHW cumulative intensity in °C-days (MHW CInt). MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. These are generalized additive models (GAMs) that use a smoothed predictor matrix containing lagged MHW data for up to five years into the past. Results from the GAM for 0-1 years in the past, i.e., the twelve months preceding a survey, can be found in Supp. Tab. 2. * denotes variables that were scaled and centered within surveys and s() denotes a GAM smoother.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -465,7 +466,7 @@ kbl(lags.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) respo
 gompertz.glmm = glmmTMB(wt_mt_log ~ factor(survey) + anom_sev_scale + wt_mt_lag:factor(survey), data=modeldat, dispformula = ~survey, family=gaussian())
 gompertz.null = glmmTMB(wt_mt_log ~ 1, data=modeldat, dispformula = ~survey, family=gaussian())
 
-formulas.gompertz <- c('Biomass LR ~ 1','Biomass LR ~ MHW CInt* + Lag(Log Biomass) + Survey + MHW CInt*:Survey')
+formulas.gompertz <- c('Biomass LR $\\sim$ 1','Biomass LR $\\sim$ MHW CInt* + Lag(Log Biomass) + Survey + MHW CInt*:Survey')
 
 gompertz.summary <- summary(gompertz.glmm)$coefficients$cond
 
@@ -493,7 +494,7 @@ colnames(gompertz.tbl) <- colnames.gompertz
 
 kbl(gompertz.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and generalized linear model (GLM) of biomass log ratio (LR) as a function of MHW cumulative intensity in °C-days (MHW CInt) and biomass from the previous time step. * denotes variables that were scaled and centered within surveys and : denotes an interaction term between two variables. This Gompertz model accounts for autoregressive properties of the biomass time-series and tests whether the magnitude of biomass in any given year affected the biomass LR in the following year. MHW Cint was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Rather than centering and scaling biomass variables, to account for variability and heteroskedasticity among surveys, we included survey identity as a fixed effect and allowed dispersion to vary among surveys.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 
 ```
 
@@ -503,7 +504,7 @@ kbl(gompertz.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and ge
 null.lat <- lm(wt_mt_log_scale ~ med_lat_scale, data = modeldat)
 lm.lat <- lm(wt_mt_log_scale ~ anom_sev_scale + med_lat_scale + med_lat_scale:anom_sev_scale, data = modeldat)
 
-formulas.lat <- c('Biomass LR* ~ Latitude**','Biomass LR* ~ Latitude** + MHW CInt* + Latitude**:MHW CInt*')
+formulas.lat <- c('Biomass LR* $\\sim$ Latitude**','Biomass LR* $\\sim$ Latitude** + MHW CInt* + Latitude**:MHW CInt*')
 
 int.lat <- c(
   paste0(format(round(coef(summary(null.lat))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.lat))[1,2], digits=3), nsmall=2)),
@@ -552,7 +553,7 @@ colnames(lat.tbl) <- colnames.lat
 
 kbl(lat.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to latitude only (null model) or MHW cumulative intensity in °C-days (MHW CInt) and latitude. Latitude was calculated as the median latitude of each survey. * denotes variables that were scaled and centered within surveys, ** denotes variables that were scaled and centered across surveys, and : denotes an interaction term between two variables. MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -561,7 +562,7 @@ kbl(lat.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) respon
 null.depth <- lm(depth_wt_scale ~ 1, data = modeldat)
 lm.depth <- lm(depth_wt_scale ~ anom_sev_scale, data = modeldat)
 
-formulas.depth <- c('Depth* ~ 1','Depth* ~ MHW CInt*')
+formulas.depth <- c('Depth* $\\sim$ 1','Depth* $\\sim$ MHW CInt*')
 
 int.depth <- c(
   paste0(format(round(coef(summary(null.depth))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.depth))[1,2], digits=3), nsmall=2)),
@@ -588,7 +589,7 @@ colnames(depth.tbl) <- colnames.depth
 
 kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model of depth response to MHW cumulative intensity in °C-days (MHW CInt). Depth was calculated as the  weighted mean depth of the fish assemblage every year. * denotes variables that were scaled and centered within surveys. We calculated MHW CInt from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 
 ```
 
@@ -598,7 +599,7 @@ kbl(depth.tbl, booktabs = TRUE, caption = "Null (intercept-only) model and model
 null.catch <- lm(wt_mt_log_scale ~ catch_3yr_scale, data=catchdat)
 lm.catch <- lm(wt_mt_log_scale ~ anom_sev_scale + catch_3yr_scale + catch_3yr_scale:anom_sev_scale, data=catchdat)
 
-formulas.catch <- c('Biomass LR* ~ Catch*','Biomass LR* ~ MHW CInt* + Catch* + MHW CInt*:Catch*')
+formulas.catch <- c('Biomass LR* $\\sim$ Catch*','Biomass LR* $\\sim$ MHW CInt* + Catch* + MHW CInt*:Catch*')
 
 int.catch <- c(
   paste0(format(round(coef(summary(null.catch))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.catch))[1,2], digits=3), nsmall=2)),
@@ -647,7 +648,7 @@ colnames(catch.tbl) <- colnames.catch
 
 kbl(catch.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to catch only (null model) or MHW cumulative intensity in °C-days (MHW CInt) and catch. We matched survey footprints to Marine Ecoregions (MEs) and extracted catch data from the Sea Around Us database (see Methods). Surveys from the English Channel and France did not correspond well to ME boundaries and were omitted. Because catch was available by calendar year and surveys occur midyear, we compared biomass change to the mean of the last three years of catch (i.e., biomass change in a 2010 survey was predicted by mean catch in 2008, 2009, and 2010). * denotes variables that were scaled and centered within surveys and : denotes an interaction term between two variables.  MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -660,7 +661,7 @@ gam.cti <- gam(cti_diff_scale ~ s(anom_sev_scale), data = modeldat )
 gam.re.cti <- gam(cti_diff_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
 
-formulas.cti <- c('CTI Diff* ~ 1','CTI Diff* ~ MHW CInt*','CTI Diff* ~ MHW CInt* + Survey[fixed]','CTI Diff* ~ s(MHW CInt*)','CTI Diff* ~ s(MHW CInt*) + s(Survey[random])')
+formulas.cti <- c('CTI Diff* $\\sim$ 1','CTI Diff* $\\sim$ MHW CInt*','CTI Diff* $\\sim$ MHW CInt* + Survey[fixed]','CTI Diff* $\\sim$ s(MHW CInt*)','CTI Diff* $\\sim$ s(MHW CInt*) + s(Survey[random])')
 
 int.cti <- c(
   paste0(format(round(coef(summary(null.cti))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.cti))[1,2], digits=3), nsmall=2)),
@@ -713,13 +714,9 @@ colnames(cti.tbl) <- colnames.cti
 
 kbl(cti.tbl, booktabs = TRUE, caption = "Models of Community Temperature Index change (measured as year-over-year difference values, CTI Diff) and MHW cumulative intensity in °C-days (MHW CInt). * denotes variables that were scaled and centered within surveys and s() denotes a GAM smoother. MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect.",
     escape = FALSE) %>%
-  kable_styling(font_size = 8, latex_options = c("striped"))
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 
 ```
-
-\clearpage
-
-# Supplementary figures: sensitivity of main results to metrics and methods
 
 ```{r fig-mhw-point-by-reg, fig.cap="Alternate version of Fig. 2 from the main text, showing results by region. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Points represent log ratios of mean biomass in a survey from one year to the next. The fitted lines are linear regressions. The shaded areas are 95% confidence intervals. Survey names are listed in Supp. Tab. 1.", fig.width=9, fig.height=7}
 gg_mhw_biomass_point <- survey_summary %>% 
@@ -736,7 +733,7 @@ gg_mhw_biomass_point <- survey_summary %>%
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   stat_regline_equation(aes(label=..rr.label..), label.x=50, label.y=1) +
   NULL
-gg_mhw_biomass_point
+#gg_mhw_biomass_point
 
 ggsave(gg_mhw_biomass_point, filename=here("extended","mainplot_by_reg.jpg"), dpi=300, width=10, height=7, scale=0.9)
 
@@ -764,7 +761,7 @@ gg_mhw_cpue_metric_point <- survey_summary %>%
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   stat_regline_equation(aes(label=..rr.label..), label.x=50) +
   NULL
-gg_mhw_cpue_metric_point
+#gg_mhw_cpue_metric_point
 ggsave(gg_mhw_cpue_metric_point, filename=here("extended","fish_metric.jpg"), dpi=300, width=6, height=7, scale=0.9)
 ```
 
@@ -786,7 +783,7 @@ gg_mhw_incidence <- survey_summary %>%
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
-gg_mhw_incidence
+#gg_mhw_incidence
 ggsave(gg_mhw_incidence, filename=here("extended","detrending_by_reg.jpg"), dpi=300, width=9, height=7, scale=0.9)
 ```
 
@@ -802,7 +799,7 @@ gg_mhw_detrending <- survey_summary %>%
   stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 
-gg_mhw_detrending
+#gg_mhw_detrending
 ggsave(gg_mhw_detrending, filename=here("extended","detrending_scatter.jpg"), dpi=300, width=4, height=4)
 ```
 
@@ -818,7 +815,7 @@ gg_mhw_summer <- survey_summary %>%
   stat_regline_equation(aes(label=..rr.label..), label.x=15, label.y=1.5) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 
-gg_mhw_summer
+#gg_mhw_summer
 ```
 
 ```{r fig-mhw-sst, fig.cap="Alternate version of Fig. 2 from the main text, showing biomass change (log ratio) and MHW cumulative intensity (total anomaly in °C-days, using detrended OISST sea surface temperature data with the five-day MHW threshold). The fitted lines are linear regressions. The shaded areas are 95% confidence intervals."}
@@ -833,7 +830,7 @@ gg_mhw_sst <- survey_summary %>%
   stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 
-gg_mhw_sst
+#gg_mhw_sst
 ggsave(gg_mhw_sst, filename=here("extended","oisst_scatter.jpg"), dpi=300, width=4, height=4)
 ```
 
@@ -853,7 +850,7 @@ gg_mhw_metric <- survey_summary %>%
   labs(x="MHW metric",y="Biomass log ratio") +
   theme_bw() + 
   NULL
-gg_mhw_metric
+#gg_mhw_metric
 
 gg_mhw_metric_save <- survey_summary %>% 
   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
@@ -895,13 +892,9 @@ gg_mhw_source <- ggplot(data=rawsourcedat %>% filter(date<="2019-12-31")) +
   scale_fill_manual(values=cbpal6[3:4]) +
   theme(legend.position = "bottom")
 
-gg_mhw_source
+#gg_mhw_source
 ggsave(gg_mhw_source, filename=here("extended","oisst_vs_glorys_by_reg.jpg"), dpi=300, width=10, height=7, scale=0.9)
 ```
-
-\clearpage
-
-# Supplementary figures: exploring additional predictors
 
 ```{r fig-abs-biomass, fig.cap="MHW cumulative intensity (total anomaly in °C-days) and absolute value of biomass log ratio. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. The fitted line is a linear regression. The shaded area is its 95% confidence interval."}
 
@@ -914,7 +907,7 @@ gg_mhw_biomass_point_abs <- survey_summary %>%
   labs(x="MHW cumulative intensity (°C-days)", y="Absolute biomass log ratio") +
   stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
-gg_mhw_biomass_point_abs
+#gg_mhw_biomass_point_abs
 
 ```
 
@@ -929,7 +922,7 @@ gg_mhw_biomass_point_depth <- survey_summary %>% inner_join(mhw_summary_glorys_d
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
   stat_regline_equation(aes(label=..rr.label..), label.y=0.5, label.x=25)
 
-gg_mhw_biomass_point_depth # lm estimate is 0.3 with SE 0.16, p = 0.0575
+#gg_mhw_biomass_point_depth # lm estimate is 0.3 with SE 0.16, p = 0.0575
 
 ggsave(gg_mhw_biomass_point_depth, filename=here("extended","depthpoint.jpg"), dpi=300, width=6, height=4, scale=0.9)
 ```
@@ -945,7 +938,7 @@ gg_mhw_biomass_hist_depth <- survey_summary %>% inner_join(mhw_summary_glorys_d_
   labs(x="Depth log ratio", y="Frequency") + 
   theme(legend.position = "right", legend.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
 
-gg_mhw_biomass_hist_depth
+#gg_mhw_biomass_hist_depth
 ggsave(gg_mhw_biomass_hist_depth, filename=here("extended","depthhist.jpg"), dpi=300, width=6, height=4, scale=0.9)
 
 ```
@@ -965,7 +958,7 @@ gg_mhw_biomass_point_latitude <- survey_summary %>% inner_join(mhw_summary_glory
   geom_smooth(method="lm", color="gray35")+
   stat_regline_equation(aes(label=..rr.label..))
 
-gg_mhw_biomass_point_latitude
+#gg_mhw_biomass_point_latitude
 
 ```
 
@@ -988,7 +981,7 @@ gg_mhw_biomass_point_lags <- survey_summary %>%
   facet_wrap(~lag) +
   stat_regline_equation(aes(label=..rr.label..), label.x=40)
 
-gg_mhw_biomass_point_lags
+#gg_mhw_biomass_point_lags
 ```
 
 ```{r fig-spp-tl, fig.cap="Biomass log ratio and MHW cumulative intensity (total anomaly in °C-days) grouped by trophic level of each taxon. Trophic levels are binned (2-3, 3-4, and 4-5). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."}
@@ -1003,7 +996,7 @@ ggtl <- ggplot(tl %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_sev
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   stat_regline_equation(aes(label=..rr.label..), label.x=40)
 
-ggtl
+#ggtl
 ggsave(ggtl, filename=here("extended","trophic.jpg"), dpi=300, height=9, width=3, scale=0.8)
 ```
 
@@ -1019,7 +1012,7 @@ ggfeed <- ggplot(feed %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   stat_regline_equation(aes(label=..rr.label..), label.x = 40, label.y = 8)
 
-ggfeed 
+#ggfeed 
 
 ggsave(ggfeed, filename=here("extended","feeding.jpg"), dpi=300, width=3, height=9, scale=0.8)
 ```
@@ -1036,13 +1029,9 @@ gghab <- ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_s
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   stat_regline_equation(aes(label=..rr.label..), label.x=40, label.y=8)
 
-gghab
+#gghab
 ggsave(gghab, filename=here("extended","habitat.jpg"), dpi=300, width=6, height=9, scale=0.8)
 ```
-
-\clearpage
-
-# Supplementary figures: community dissimilarity 
 
 ```{r fig-dissim-mhw, fig.cap="Box-and-whisker plots of temporal community dissimilarity and MHW incidence for partitioned occurrence-based beta diversity metrics of substitution and subset (Jaccard turnover and nestedness, respectively; top) and partitioned biomass-based beta diversity metrics of substitution and subset (Bray-Curtis balanced variation and biomass gradient, respectively; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text."}
 
@@ -1092,63 +1081,6 @@ ggcomm <- plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = el
 ggsave(ggcomm, filename=here("extended","community.jpg"), dpi=300, width=6, height=7, scale=0.8)
 ```
 
-<!-- ```{r fig-dissim-length, fig.cap="Temporal community dissimilarity and MHW cumulative intensity (total anomaly in °C-days) for partitioned occurrence-based beta diversity metrics (Jaccard turnover and nestedness; top) and partitioned biomass-based beta diversity metrics (Bray-Curtis balanced variation and biomass gradient; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."} -->
-
-<!-- #Turnover Component -->
-
-<!-- anom_sev_jaccard_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_turnover)) + -->
-<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
-<!--   geom_smooth(method="lm", color = "gray35") +  -->
-<!--   theme_bw() +  -->
-<!--   labs(x="MHW cumulative intensity (°C-days)", y="Turnover Component\nJaccard Dissimilarity") +  -->
-<!--   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") + -->
-<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
-<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
-
-<!-- #Nestedness Component -->
-
-<!-- anom_sev_jaccard_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=jaccard_dissimilarity_nestedness)) + -->
-<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
-<!--   geom_smooth(method="lm", color = "gray35") +  -->
-<!--   theme_bw() +  -->
-<!--   labs(x="MHW cumulative intensity (°C-days)", y="Nestedness Component\nJaccard Dissimilarity") +  -->
-<!--   geom_hline(aes(yintercept=mean(jaccard_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") + -->
-<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
-<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
-
-<!-- #Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics) -->
-
-<!-- anom_sev_bray_dissimilarity_turnover <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_turnover)) + -->
-<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
-<!--   geom_smooth(method="lm", color = "gray35") +  -->
-<!--   theme_bw() +  -->
-<!--   labs(x="MHW cumulative intensity (°C-days)", y="Balanced Variation Component\nBray-Curtis Dissimilarity") +  -->
-<!--   geom_hline(aes(yintercept=mean(bray_dissimilarity_turnover, na.rm = T)), linetype="dashed", color="black") + -->
-<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
-<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
-
-<!-- #Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics) -->
-
-<!-- anom_sev_bray_dissimilarity_nestedness <- ggplot(beta_div, aes(x=anom_sev, y=bray_dissimilarity_nestedness)) + -->
-<!--   geom_point(size=0.5, fill="grey70", color="grey30", alpha=0.5, position = "jitter") + -->
-<!--   geom_smooth(method="lm", color = "gray35") +  -->
-<!--   theme_bw() +  -->
-<!--   labs(x="MHW cumulative intensity (°C-days)", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") +  -->
-<!--   geom_hline(aes(yintercept=mean(bray_dissimilarity_nestedness, na.rm = T)), linetype="dashed", color="black") + -->
-<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + -->
-<!--   stat_regline_equation(aes(label=..rr.label..), label.x=100)  -->
-
-<!-- plot_grid(anom_sev_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()), -->
-<!--           anom_sev_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()), -->
-<!--           anom_sev_bray_dissimilarity_turnover, -->
-<!--           anom_sev_bray_dissimilarity_nestedness, -->
-<!--           ncol = 2, nrow = 2, -->
-<!--           align = "hv") -->
-<!-- ``` -->
-
-\clearpage
-
-# Supplementary figures: power analysis
 
 ```{r fig-power-yrs-glorys, fig.cap="Results from a power analysis applying our methods to a simulated dataset in which MHWs reduced biomass by 6% and study duration was varied. The sample sizes plotted are total survey-years across all regions. Dashed vertical line shows the sample size of our actual dataset. Dashed horizontal line denotes one conventionally accepted threshold for power (0.8). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Simulations were run to 200 years per survey (3600 total survey-years across the 18 regions) but truncated in this figure after power saturated at 1.0."}
 gg_power_yrs_glorys <- sim_test_summ_yrs_glorys %>% 
@@ -1159,7 +1091,7 @@ gg_power_yrs_glorys <- sim_test_summ_yrs_glorys %>%
   labs(x="Sample size (survey-years)", y="Power", title='GLORYS')+
   theme_bw() +
   scale_y_continuous(limits=c(0, 1))
-gg_power_yrs_glorys
+#gg_power_yrs_glorys
 ggsave(gg_power_yrs_glorys, filename=here("extended","power_yrs_glorys.jpg"), dpi=300, width=5, height=4, scale=0.8)
 
 ```
@@ -1173,7 +1105,7 @@ gg_power_yrs_oisst <- sim_test_summ_yrs_oisst %>%
   labs(x="Sample size (survey-years)", y="Power", title="OISST")+
   theme_bw() +
   scale_y_continuous(limits=c(0, 1))
-gg_power_yrs_oisst
+#gg_power_yrs_oisst
 ggsave(gg_power_yrs_oisst, filename=here("extended","power_yrs_oisst.jpg"), dpi=300, width=5, height=4, scale=0.8)
 ```
 
@@ -1187,7 +1119,7 @@ gg_power_gamma_glorys <- sim_test_summ_gamma_glorys %>%
   labs(x="MHW effect on biomass (%)", y="Power", title="GLORYS")+
   theme_bw() +
   scale_y_continuous(limits=c(0, 1))
-gg_power_gamma_glorys
+#gg_power_gamma_glorys
 ggsave(gg_power_gamma_glorys, filename=here("extended","power_gamma_glorys.jpg"), dpi=300, width=5, height=4, scale=0.8)
 
 ```
@@ -1202,7 +1134,7 @@ gg_power_gamma_oisst <- sim_test_summ_gamma_oisst %>%
   labs(x="MHW effect on biomass (%)", y="Power", title="OISST")+
   theme_bw() +
   scale_y_continuous(limits=c(0, 1))
-gg_power_gamma_oisst
+#gg_power_gamma_oisst
 ggsave(gg_power_gamma_oisst, filename=here("extended","power_gamma_oisst.jpg"), dpi=300, width=5, height=4, scale=0.8)
 ```
 
