@@ -102,6 +102,11 @@ survey_summary %>%
   group_by(mhw_yes_no) %>% 
   summarise(n=n())
 
+# what was the depth range?
+quantile(haul_info$depth, na.rm=TRUE)
+quantile(haul_info$depth, probs = c(0.05, 0.95), na.rm=TRUE)
+length(na.omit(haul_info$depth))/nrow(haul_info)
+
 # is absolute variability predicted by number of hauls in a region?
 hauldat_prep <- haul_info %>% 
   group_by(survey) %>% 
@@ -340,7 +345,7 @@ t.test(jac_mhw_subset, jac_no_mhw_subset, alternative="two.sided")
 
 gg_mhw_biomass_point_marg <- survey_summary %>% 
   ggplot(aes(x=anom_sev, y=wt_mt_log)) +
-  geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) +
+  geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) + # need this in here for the marginal plot
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   geom_point(color="black") +
   geom_smooth(method="lm", color = "gray35") +
@@ -363,6 +368,27 @@ survey_summary %>%
 summary(lm(wt_mt_log ~ anom_sev, data=survey_summary))
 
 ggsave(margplot, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=110, units="mm")
+
+gg_mhw_biomass_point_abs <- survey_summary %>% 
+  mutate(wt_mt_log_abs = abs(wt_mt_log)) %>% 
+  ggplot(aes(x=anom_sev, y=wt_mt_log_abs)) +
+  geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) +
+  scale_color_manual(values=c("#E31A1C","#1F78B4")) +
+  geom_point(color="black") +
+  geom_smooth(method="lm", color = "gray35") +
+  theme_bw() + 
+  coord_cartesian(clip = "off") +
+  labs(x="Marine heatwave cumulative intensity (°C-days)", y="Absolute biomass log ratio") +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
+  theme(
+    legend.position = "none", 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank())
+margplot_abs <- ggMarginal(gg_mhw_biomass_point_abs,type="density", margins="y", groupColour = TRUE, groupFill=TRUE, yparams=list(size=0.9))
+margplot_abs
+
+ggsave(margplot_abs, scale=0.8, filename=here("figures","final_biomass_point_abs.png"), width=170, height=110, units="mm")
+
 
 # time-series of NE Pacific surveys
 nep <- survey_summary %>% 
