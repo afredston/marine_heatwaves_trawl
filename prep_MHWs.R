@@ -29,6 +29,10 @@ oisst_raw_nod <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf_no_d
 glorys_raw <- read.delim(here("raw-data","MHW_95P_surveys_glorys_surf.csv"), sep=";") 
 glorys_raw_nod <- read.delim(here("raw-data","MHW_95P_surveys_glorys_surf_no_detrend.csv"), sep=";") 
 
+# DHDs 
+dhd_raw_nod <- read.delim(here("raw-data","all_1993_2020_wo_leap_dhd.csv"), sep=";") 
+dhd_raw_d <- read.delim(here("raw-data","all_1993_2020_wo_leap_detrend_dhd.csv"), sep=";") 
+
 # reshape MHW data, and fix some inconsistencies in region names (match MHWs to FISHGLOB)
 oisst_d <- oisst_raw %>% 
   rename("dateRaw"=X) %>% 
@@ -81,6 +85,38 @@ glorys_d <- glorys_raw %>%
 glorys_nod <- glorys_raw_nod %>% 
   rename("dateRaw"=X) %>% 
   pivot_longer(cols=2:ncol(oisst_raw_nod), names_to="survey", values_to="anom") %>% 
+  mutate(survey = gsub('_','-',survey),
+         survey = toupper(survey),
+         survey = recode(survey, 
+                         "BALTIC-SEA" = "BITS",
+                         "BRITISH-COLUMBIA" = "DFO-QCS", 
+                         "EASTERN-BERING-SEA" = "EBS",
+                         "GULF-OF-MEXICO" = "GMEX",
+                         "GULF-OF-ALASKA" = "GOA",
+                         "NOR-BTS" = "Nor-BTS",
+                         "SCOTIAN-SHELF" = "SCS",
+                         "SOUTHEAST" = "SEUS",
+                         "WEST-COAST" = "WCANN"))
+
+dhd_nod <- dhd_raw_nod %>% 
+  rename("dateRaw"=X) %>% 
+  pivot_longer(cols=2:ncol(dhd_raw_nod), names_to="survey", values_to="anom") %>% 
+  mutate(survey = gsub('_','-',survey),
+         survey = toupper(survey),
+         survey = recode(survey, 
+                         "BALTIC-SEA" = "BITS",
+                         "BRITISH-COLUMBIA" = "DFO-QCS", 
+                         "EASTERN-BERING-SEA" = "EBS",
+                         "GULF-OF-MEXICO" = "GMEX",
+                         "GULF-OF-ALASKA" = "GOA",
+                         "NOR-BTS" = "Nor-BTS",
+                         "SCOTIAN-SHELF" = "SCS",
+                         "SOUTHEAST" = "SEUS",
+                         "WEST-COAST" = "WCANN"))
+
+dhd_d <- dhd_raw_d %>% 
+  rename("dateRaw"=X) %>% 
+  pivot_longer(cols=2:ncol(dhd_raw_nod), names_to="survey", values_to="anom") %>% 
   mutate(survey = gsub('_','-',survey),
          survey = toupper(survey),
          survey = recode(survey, 
@@ -232,6 +268,46 @@ mhw_glorys_nod %<>%
   filter(date_lag < 365,
          date_lag >= 0) 
 
+mhw_dhd_nod <- dhd_nod %>% 
+  mutate(date = dmy(dateRaw),
+         year = year(date),
+         month = month(date),
+         month_year = paste0(month,"-",year)
+  ) %>% 
+  select(-dateRaw) %>% 
+  filter(str_detect(date, '-02-29', negate=TRUE)) %>% 
+  left_join(glorys_ref_yrs, by=c('survey','month_year')) %>% 
+  filter(!is.na(ref_yr)) 
+tmp <- mhw_dhd_nod %>% group_by(ref_yr) %>% summarise(n=length(anom))
+if(min(tmp$n) < 365){ 
+  bad_ref_yrs <- tmp %>% filter(n<365) %>% pull(ref_yr) 
+  mhw_dhd_nod %<>% filter(!ref_yr %in% bad_ref_yrs)
+}
+mhw_dhd_nod %<>%
+  mutate(date_lag = survey_date - date) %>%
+  filter(date_lag < 365,
+         date_lag >= 0) 
+
+mhw_dhd_d <- dhd_d %>% 
+  mutate(date = dmy(dateRaw),
+         year = year(date),
+         month = month(date),
+         month_year = paste0(month,"-",year)
+  ) %>% 
+  select(-dateRaw) %>% 
+  filter(str_detect(date, '-02-29', negate=TRUE)) %>% 
+  left_join(glorys_ref_yrs, by=c('survey','month_year')) %>% 
+  filter(!is.na(ref_yr)) 
+tmp <- mhw_dhd_d %>% group_by(ref_yr) %>% summarise(n=length(anom))
+if(min(tmp$n) < 365){ 
+  bad_ref_yrs <- tmp %>% filter(n<365) %>% pull(ref_yr) 
+  mhw_dhd_d %<>% filter(!ref_yr %in% bad_ref_yrs)
+}
+mhw_dhd_d %<>%
+  mutate(date_lag = survey_date - date) %>%
+  filter(date_lag < 365,
+         date_lag >= 0) 
+
 ########
 # make summary datasets 
 ########
@@ -342,6 +418,20 @@ for(i in unique(survey_start_times$survey)){
   tmp <- transform(tmp, counter = ave(yn, rleid(ref_yr, yn), FUN=sum)) 
   mhw_glorys_nod_5_day_prep <- bind_rows(mhw_glorys_nod_5_day_prep, tmp)
 }
+
+mhw_summary_dhd_nod <- mhw_dhd_nod %>% 
+  group_by(ref_yr) %>% 
+  arrange(date) %>% 
+  summarise(
+    dhd = sum(anom>=1, na.rm=TRUE)  ) %>% 
+  ungroup() 
+
+mhw_summary_dhd_d <- mhw_dhd_d %>% 
+  group_by(ref_yr) %>% 
+  arrange(date) %>% 
+  summarise(
+    dhd = sum(anom>=1, na.rm=TRUE)  ) %>% 
+  ungroup() 
 
 # for supplement only, create file with only summer MHWs
 mhw_summary_glorys_d_any_summer <- mhw_glorys_d %>% 

@@ -202,6 +202,10 @@ t.test(cti_no_mhw, cti_mhw, alternative = "two.sided")
 
 lm_wt <- lm(wt_mt_log_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_wt)
+
+lm_wt_abs <- lm(wt_mt_log_scale_abs ~ anom_sev_scale, data = survey_summary %>% mutate(wt_mt_log_scale_abs = abs(wt_mt_log_scale)))
+summary(lm_wt_abs)
+
 lm_cti <- lm(cti_diff_scale ~ anom_sev_scale, data = survey_summary)
 summary(lm_cti)
 lm_summer <- read_csv(here("processed-data","survey_biomass_with_CTI.csv")) %>% 
