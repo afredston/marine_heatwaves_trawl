@@ -4,12 +4,13 @@ subtitle: "Supplementary Information"
 author: "Fredston et al."
 date: 2023
 output: 
-  bookdown::pdf_document2: default
+  bookdown::pdf_document2:
+    toc: true
 classoption: landscape
 header-includes: 
   - \renewcommand{\figurename}{Supplementary Figure }
   - \renewcommand{\tablename}{Supplementary Table}
-  - \makeatletter
+  - \makeatletter 
   - \def\fnum@figure{\figurename\thefigure}
   - \makeatother
 editor_options: 
@@ -59,6 +60,7 @@ mhw_summary_glorys_nod_5_day <- read_csv(here("processed-data","MHW_glorys_5_day
 
 mhw_summary_glorys_d_any_summer <- read_csv(here("processed-data","MHW_glorys_summer_only.csv"))
 
+mhw_summary_dhd <- read_csv(here("processed-data","MHW_glorys_dhd_no_detrending.csv"))
 
 # raw MHW data
 oisst_raw_d <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf.csv"), sep=";") %>% 
@@ -170,7 +172,8 @@ modeldat <- survey_summary %>%
     wt_mt_lag = log(lag(wt_mt))) %>% 
   ungroup() %>% 
   mutate( # alternative scaling method--among, not within, regions
-    anom_sev_scale_alt =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE))
+    anom_sev_scale_alt =  as.numeric(scale(anom_sev, center=TRUE, scale=TRUE)),
+    wt_mt_log_scale_abs = abs(wt_mt_log_scale)
   ) 
 
 #pull in catch data and merge with modeldat
@@ -187,7 +190,7 @@ catchdat <- full_join(catch_me, me_dat, by="ME") %>%
   arrange(year) %>% 
   group_by(survey) %>% 
   mutate(catch_3yr = (catch + lag(catch) + lag(catch, n=2))/3, # calculate mean of past 3 years
-  catch_3yr_scale = scale(catch_3yr, center=TRUE, scale=TRUE)) %>% 
+         catch_3yr_scale = scale(catch_3yr, center=TRUE, scale=TRUE)) %>% 
   ungroup() %>% 
   right_join(modeldat)
 
@@ -229,8 +232,6 @@ knitr::opts_chunk$set(
 )
 #knitr::opts_knit$set(eval.after = "fig.cap")
 ```
-
-# Supplementary tables
 
 ```{r tbl-surveys}
 
@@ -341,9 +342,79 @@ for(i in 1:nrow(survey_names)) {
 
 # ±
 
-kbl(byreg.tbl, booktabs = TRUE, caption = "Linear models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt) in each individual region (model formula: Biomass LR* $\\sim$ MHW CInt*, where * denotes variables that were scaled and centered within surveys). MHW Cint was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
+kbl(byreg.tbl, booktabs = TRUE, caption = "Linear models of biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt) in each individual region (model formula: Biomass LR* $\\sim$ MHW CInt*, where * denotes variables that were scaled and centered within surveys). MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE) 
+```
+
+\clearpage
+
+```{r tbl-models-mhws-abs}
+null.abs <- lm(wt_mt_log_scale_abs ~ 1, data=modeldat)
+lm.abs <- lm(wt_mt_log_scale_abs ~ anom_sev_scale, data = modeldat)
+lm.fixed.abs <- lm(wt_mt_log_scale_abs ~ anom_sev_scale + factor(survey), data = modeldat)
+gam.abs <- gam(wt_mt_log_scale_abs ~ s(anom_sev_scale), data = modeldat )
+gam.re.abs <- gam(wt_mt_log_scale_abs ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
+
+formulas.abs <- c('Absolute Biomass LR* $\\sim$ 1','Absolute Biomass LR* $\\sim$ MHW CInt*','Absolute Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Absolute Biomass LR* $\\sim$ s(MHW CInt*)','Absolute Biomass LR* $\\sim$ s(MHW CInt*) + s(Survey[random])')
+# all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
+int.abs <- c(
+  paste0(format(round(coef(summary(null.abs))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.abs))[1,2], digits=3), nsmall=2)),
+  paste0(format(round(coef(summary(lm.abs))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.abs))[1,2], digits=3), nsmall=2)),
+  paste0(format(round(coef(summary(lm.fixed.abs))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.abs))[1,2], digits=3), nsmall=2)),
+  paste0(format(round(summary(gam.abs)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.abs)$p.table[1,2], digits=3), nsmall=2)),
+  paste0(format(round(summary(gam.re.abs)$p.table[1,1], digits=3), nsmall=2)," ± ", format(round(summary(gam.re.abs)$p.table[1,2], digits=3), nsmall=2))
+)
+coef.abs <- c(
+  "NA",
+  paste0(format(round(coef(summary(lm.abs))[2,1], digits=3), nsmall=2)," ± ",
+         format(round(coef(summary(lm.abs))[2,2], digits=3), nsmall=2)),
+  paste0(format(round(coef(summary(lm.fixed.abs))[2,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.fixed.abs))[2,2]), digits=3), nsmall=2),
+  "NA",
+  "NA"
+)
+p.abs <- c(
+  "NA",
+  format(round(coef(summary(lm.abs))[2,4], digits=3), nsmall=2),
+  format(round(coef(summary(lm.fixed.abs))[2,4], digits=3), nsmall=2),
+  format(round(summary(gam.abs)$s.pv, digits=3), nsmall=2),
+  format(round(summary(gam.re.abs)$s.pv[1], digits=3), nsmall=2)
+)
+
+r2.abs <- c("NA",
+            format(round(c(
+              summary(lm.abs)$r.squared, 
+              summary(lm.fixed.abs)$r.squared,
+              summary(gam.abs)$r.sq, 
+              summary(gam.re.abs)$r.sq
+            ), digits=3), nsmall=2))
+aic.abs <- round(c(
+  AIC(null.abs),
+  AIC(lm.abs),
+  AIC(lm.fixed.abs),
+  AIC(gam.abs),
+  AIC(gam.re.abs)
+))
+df.abs <- round(c(
+  summary(null.abs)$df[2], 
+  summary(lm.abs)$df[2], 
+  summary(lm.fixed.abs)$df[2],
+  gam.abs$df.residual, 
+  gam.re.abs$df.residual
+))
+
+
+colnames.abs <- c('Null','LM','LM Survey','GAM','GAM Survey')
+rownames.abs <- c('Model formula','Intercept', 'MHW coefficient',"Coefficient p-value",'R$^2$',"AIC","Degrees of freedom")
+
+
+wt.tbl <- data.frame(rbind(formulas.abs, int.abs, coef.abs, p.abs, r2.abs, aic.abs, df.abs), row.names=rownames.abs) 
+colnames(wt.tbl) <- colnames.abs
+
+# ±
+kbl(wt.tbl, booktabs = TRUE, caption = "Models of absolute biomass log ratio (LR) response to MHW cumulative intensity in °C-days (MHW CInt). MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Model names correspond to: null (intercept-only) model, linear model, linear model including survey as a fixed effect, generalized additive model (GAM), and GAM including survey as a random effect. * denotes variables that were scaled and centered within surveys and s() denotes a GAM smoother.",
+    escape = FALSE) %>%
+  kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 \clearpage
@@ -529,14 +600,14 @@ p.lat.mhw <- c('NA',format(round(c(
 p.lat.lat <- c(format(round(c(
   coef(summary(null.lat))[2,4]), digits=3), nsmall=2),
   format(round(c(
-  coef(summary(lm.lat))[3,4]), digits=3), nsmall=2))
+    coef(summary(lm.lat))[3,4]), digits=3), nsmall=2))
 p.lat.int <- c('NA',format(round(c(
   coef(summary(lm.lat))[4,4]), digits=3), nsmall=2))
 
 r2.lat <- c(format(round(c(
   summary(null.lat)$r.squared), digits=3), nsmall=2),
   format(round(c(
-  summary(lm.lat)$r.squared), digits=3), nsmall=2))
+    summary(lm.lat)$r.squared), digits=3), nsmall=2))
 aic.lat <- round(c(AIC(null.lat), AIC(lm.lat)))
 df.lat <- round(c(
   summary(null.lat)$df[2],
@@ -547,9 +618,6 @@ rownames.lat <- c('Model formula','Intercept', 'MHW coefficient','Latitude coeff
 
 lat.tbl <- data.frame(rbind(formulas.lat, int.lat, mhw.coef.lat, lat.coef.lat, int.coef.lat, p.lat.mhw, p.lat.lat, p.lat.int, r2.lat, aic.lat, df.lat), row.names=rownames.lat) 
 colnames(lat.tbl) <- colnames.lat
-
-"Null (intercept-only) model and generalized linear model (GLM) of biomass log ratio (LR) as a function of and biomass from the previous time step. This Gompertz model accounts for autoregressive properties of the biomass time-series and tests whether the magnitude of biomass in any given year affected the biomass LR in the following year. MHW Cint was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Rather than centering and scaling biomass variables, to account for variability and heteroskedasticity among surveys, we included survey identity as a fixed effect and allowed dispersion to vary among surveys."
-
 
 kbl(lat.tbl, booktabs = TRUE, caption = "Models of biomass log ratio (LR) response to latitude only (null model) or MHW cumulative intensity in °C-days (MHW CInt) and latitude. Latitude was calculated as the median latitude of each survey. * denotes variables that were scaled and centered within surveys, ** denotes variables that were scaled and centered across surveys, and : denotes an interaction term between two variables. MHW CInt was calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text.",
     escape = FALSE) %>%
@@ -606,17 +674,17 @@ int.catch <- c(
   paste0(format(round(coef(summary(lm.catch))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(lm.catch))[1,2], digits=3), nsmall=2))
 )
 mhw.coef.catch <- c('NA',
-                  paste0(format(round(coef(summary(lm.catch))[2,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(lm.catch))[2,2], digits=3), nsmall=2))
+                    paste0(format(round(coef(summary(lm.catch))[2,1], digits=3), nsmall=2)," ± ",
+                           format(round(coef(summary(lm.catch))[2,2], digits=3), nsmall=2))
 )
 catch.coef.catch <- c(paste0(format(round(coef(summary(null.catch))[2,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(null.catch))[2,2], digits=3), nsmall=2)),
-                  paste0(format(round(coef(summary(lm.catch))[3,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(lm.catch))[3,2], digits=3), nsmall=2))
+                             format(round(coef(summary(null.catch))[2,2], digits=3), nsmall=2)),
+                      paste0(format(round(coef(summary(lm.catch))[3,1], digits=3), nsmall=2)," ± ",
+                             format(round(coef(summary(lm.catch))[3,2], digits=3), nsmall=2))
 )
 int.coef.catch <- c('NA',
-                  paste0(format(round(coef(summary(lm.catch))[4,1], digits=3), nsmall=2)," ± ",
-                         format(round(coef(summary(lm.catch))[4,2], digits=3), nsmall=2))
+                    paste0(format(round(coef(summary(lm.catch))[4,1], digits=3), nsmall=2)," ± ",
+                           format(round(coef(summary(lm.catch))[4,2], digits=3), nsmall=2))
 )
 p.catch.mhw <- c('NA',format(round(c(
   coef(summary(lm.catch))[2,4]), digits=3), nsmall=2))
@@ -624,17 +692,17 @@ p.catch.mhw <- c('NA',format(round(c(
 p.catch.catch <- c(format(round(c(
   coef(summary(null.catch))[2,4]), digits=3), nsmall=2),
   format(round(c(
-  coef(summary(lm.catch))[3,4]), digits=3), nsmall=2))
+    coef(summary(lm.catch))[3,4]), digits=3), nsmall=2))
 
 
 p.catch.int <- c('NA',
-  format(round(c(
-  coef(summary(lm.catch))[4,4]), digits=3), nsmall=2))
+                 format(round(c(
+                   coef(summary(lm.catch))[4,4]), digits=3), nsmall=2))
 
 r2.catch <- c(format(round(c(
   summary(null.catch)$r.squared), digits=3), nsmall=2),
   format(round(c(
-  summary(lm.catch)$r.squared), digits=3), nsmall=2))
+    summary(lm.catch)$r.squared), digits=3), nsmall=2))
 aic.catch <- round(c(AIC(null.catch), AIC(lm.catch)))
 df.catch <- round(c(
   summary(null.catch)$df[2],
@@ -731,7 +799,7 @@ gg_mhw_biomass_point <- survey_summary %>%
   labs(x="MHW cumulative intensity (°C-days)", y="Biomass log ratio") +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  stat_regline_equation(aes(label=..rr.label..), label.x=50, label.y=1) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=-1) +
   NULL
 #gg_mhw_biomass_point
 
@@ -776,7 +844,7 @@ gg_mhw_incidence <- survey_summary %>%
   left_join(survey_names) %>%
   ggplot(aes(x=year, y=anom_sev, group=group, color=group)) + 
   scale_color_manual(values=c(cbpal6[3], cbpal6[4]))+ 
-  geom_line() + 
+  geom_line(position = position_dodge(width = 0.15)) + 
   facet_wrap(~abbr, scales="free_y", ncol=4)+
   theme_bw() +
   labs(x="Year",y="MHW cumulative intensity") +
@@ -792,11 +860,12 @@ ggsave(gg_mhw_incidence, filename=here("extended","detrending_by_reg.jpg"), dpi=
 gg_mhw_detrending <- survey_summary %>% 
   inner_join(mhw_summary_glorys_nod_5_day, by="ref_yr") %>%
   ggplot(aes(x=anom_sev, y=wt_mt_log)) + 
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
   geom_point() +
   theme_bw() + 
   geom_smooth(method="lm", color = "gray35") +
   labs(x="Non-detrended MHW cumulative intensity (°C-days)", y="Biomass log ratio") +
-  stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=1.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 
 #gg_mhw_detrending
@@ -824,56 +893,89 @@ gg_mhw_sst <- survey_summary %>%
   inner_join(mhw_summary_oisst_d_5_day, by="ref_yr") %>%
   ggplot(aes(x=anom_sev, y=wt_mt_log)) + 
   geom_point() +
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
   theme_bw() + 
   geom_smooth(method="lm", color = "gray35") +
   labs(x="SST MHW cumulative intensity (°C-days)", y="Biomass log ratio") +
-  stat_regline_equation(aes(label=..rr.label..), label.x=25, label.y=2.25) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=75, label.y=1.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
 
 #gg_mhw_sst
 ggsave(gg_mhw_sst, filename=here("extended","oisst_scatter.jpg"), dpi=300, width=4, height=4)
 ```
 
+```{r fig-mhw-dhd, fig.cap="Biomass change (log ratio) and degree heating days (number of days in the year preceding each survey that had anomalies of 1 °C or greater above the average temperatures in the hottest summer month; see Methods). The fitted lines are linear regressions. The shaded areas are 95% confidence intervals."}
+
+gg_mhw_dhd <- survey_summary %>% 
+  inner_join(mhw_summary_dhd, by="ref_yr") %>%
+  ggplot(aes(x=dhd_days, y=wt_mt_log)) + 
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
+  geom_point() +
+  theme_bw() + 
+  geom_smooth(method="lm", color = "gray35") +
+  labs(x="Degree heating days", y="Biomass log ratio") +
+  stat_regline_equation(aes(label=..rr.label..), label.x=75, label.y=1.25) +
+  geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+
+
+#gg_mhw_sst
+ggsave(gg_mhw_dhd, filename=here("extended","dhd_scatter.jpg"), dpi=300, width=4, height=4)
+```
+
 
 ```{r fig-mhw-metric, fig.cap="Biomass change (log ratio) and three alternative metrics of MHW impacts: cumulative intensity calculated from the detrended GLORYS sea bottom temperature data with no five-day cutoff duration (°C-days), and duration (total number of MHW-days) and intensity (cumulative intensity divided by duration) calculated from the detrended GLORYS sea bottom temperature data with a minimum MHW duration of five days. The fitted lines are linear regressions. The shaded areas are 95% confidence intervals." }
-gg_mhw_metric <- survey_summary %>% 
-  inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
-  select(ref_yr, anom_days, anom_int, wt_mt_log) %>% 
-  inner_join(mhw_summary_glorys_d %>% select(ref_yr, anom_sev)) %>% 
-  pivot_longer(cols=c(anom_days, anom_int, anom_sev), values_to = "value", names_to = "metric") %>% 
-  mutate(metric = recode(metric, anom_days= 'Duration (days)',anom_int= 'Intensity (°C)', anom_sev = ' Cumulative intensity, no 5-day cutoff (°C-days)')) %>% 
-  ggplot(aes(x=value, y=wt_mt_log)) +
-  geom_point() + 
-  geom_smooth(method="lm", color = "gray35") +
-  facet_wrap(~metric, scales="free_x", labeller = labeller(metric = label_wrap_gen(25))) +
-  stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
-  labs(x="MHW metric",y="Biomass log ratio") +
-  theme_bw() + 
-  NULL
+# gg_mhw_metric <- survey_summary %>% 
+#   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
+#   select(ref_yr, anom_days, anom_int, wt_mt_log) %>% 
+#   inner_join(mhw_summary_glorys_d %>% select(ref_yr, anom_sev)) %>% 
+#   pivot_longer(cols=c(anom_days, anom_int, anom_sev), values_to = "value", names_to = "metric") %>% 
+#   mutate(metric = recode(metric, anom_days= 'Duration (days)',anom_int= 'Intensity (°C)', anom_sev = ' Cumulative intensity, no 5-day cutoff (°C-days)')) %>% 
+#   ggplot(aes(x=value, y=wt_mt_log)) +
+#   geom_point() + 
+#   geom_smooth(method="lm", color = "gray35") +
+#   facet_wrap(~metric, scales="free_x", labeller = labeller(metric = label_wrap_gen(25))) +
+#   stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
+#   labs(x="MHW metric",y="Biomass log ratio") +
+#   theme_bw() + 
+#   NULL
 #gg_mhw_metric
 
-gg_mhw_metric_save <- survey_summary %>% 
+gg_mhw_metric_duration <- survey_summary %>% 
   inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
-  select(ref_yr, anom_days, anom_int, wt_mt_log) %>% 
-  pivot_longer(cols=c(anom_days, anom_int), values_to = "value", names_to = "metric") %>% 
-  mutate(metric = recode(metric, anom_days= 'Duration (days)',anom_int= 'Intensity (°C)')) %>% 
-  ggplot(aes(x=value, y=wt_mt_log)) +
+  select(ref_yr, anom_days, wt_mt_log) %>% 
+  ggplot(aes(x=anom_days, y=wt_mt_log)) +
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
   geom_point() + 
   geom_smooth(method="lm", color = "gray35") +
-  facet_wrap(~metric, scales="free_x", labeller = labeller(metric = label_wrap_gen(25)), ncol=1) +
-  stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
-  labs(x="MHW metric",y="Biomass log ratio") +
+  stat_regline_equation(aes(label=..rr.label..),label.x=50, label.y=1.25) +
+  labs(x="MHW duration (days)",y="Biomass log ratio") +
   theme_bw() + 
   NULL
 
-ggsave(gg_mhw_metric_save, filename=here("extended","mhw_metrics_scatter.jpg"), dpi=300, height=5, width=4)
+ggsave(gg_mhw_metric_duration, filename=here("extended","duration_scatter.jpg"), dpi=300, height=4, width=4)
+
+
+gg_mhw_metric_intensity <- survey_summary %>% 
+  inner_join(mhw_summary_glorys_d_5_day, by="ref_yr") %>% 
+  select(ref_yr, anom_int, wt_mt_log) %>% 
+  ggplot(aes(x=anom_int, y=wt_mt_log)) +
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
+  geom_point() + 
+  geom_smooth(method="lm", color = "gray35") +
+  stat_regline_equation(aes(label=..rr.label..), label.x=0.3, label.y=1.25) +
+  labs(x="MHW intensity (°C)",y="Biomass log ratio") +
+  theme_bw() + 
+  NULL
+
+ggsave(gg_mhw_metric_intensity, filename=here("extended","intensity_scatter.jpg"), dpi=300, height=4, width=4)
 
 gg_mhw_metric_no5 <- survey_summary %>% 
   inner_join(mhw_summary_glorys_d %>% select(ref_yr, anom_sev)) %>% 
   ggplot(aes(x=anom_sev, y=wt_mt_log)) +
   geom_point() + 
+  scale_y_continuous(limits=c(-1.5, 1.5)) +
   geom_smooth(method="lm", color = "gray35") +
-  stat_regline_equation(aes(label=..rr.label..), label.y=-2) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=50, label.y=1.25) +
   labs(x="Cumulative intensity, no 5-day cutoff (°C-days)",y="Biomass log ratio") +
   theme_bw() + 
   NULL
@@ -924,7 +1026,7 @@ gg_mhw_biomass_point_depth <- survey_summary %>% inner_join(mhw_summary_glorys_d
 
 #gg_mhw_biomass_point_depth # lm estimate is 0.3 with SE 0.16, p = 0.0575
 
-ggsave(gg_mhw_biomass_point_depth, filename=here("extended","depthpoint.jpg"), dpi=300, width=6, height=4, scale=0.9)
+ggsave(gg_mhw_biomass_point_depth, filename=here("extended","depthpoint.jpg"), dpi=600, width=6, height=4, scale=0.9)
 ```
 
 ```{r fig-depth-hist, fig.cap="Fish assemblage depth change (log ratio) and MHW occurrence. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text."}
@@ -939,7 +1041,7 @@ gg_mhw_biomass_hist_depth <- survey_summary %>% inner_join(mhw_summary_glorys_d_
   theme(legend.position = "right", legend.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) 
 
 #gg_mhw_biomass_hist_depth
-ggsave(gg_mhw_biomass_hist_depth, filename=here("extended","depthhist.jpg"), dpi=300, width=6, height=4, scale=0.9)
+ggsave(gg_mhw_biomass_hist_depth, filename=here("extended","depthhist.jpg"), dpi=600, width=6, height=4, scale=0.9)
 
 ```
 
@@ -997,7 +1099,7 @@ ggtl <- ggplot(tl %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_sev
   stat_regline_equation(aes(label=..rr.label..), label.x=40)
 
 #ggtl
-ggsave(ggtl, filename=here("extended","trophic.jpg"), dpi=300, height=9, width=3, scale=0.8)
+ggsave(ggtl, filename=here("extended","trophic.jpg"), dpi=300, height=9, width=3.6, scale=0.8)
 ```
 
 ```{r fig-spp-feed, fig.cap="Biomass log ratio and MHW cumulative intensity (total anomaly in °C-days) grouped by feeding mode of each taxon. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."}
@@ -1014,7 +1116,7 @@ ggfeed <- ggplot(feed %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom
 
 #ggfeed 
 
-ggsave(ggfeed, filename=here("extended","feeding.jpg"), dpi=300, width=3, height=9, scale=0.8)
+ggsave(ggfeed, filename=here("extended","feeding.jpg"), dpi=300, width=3.7, height=9, scale=0.8)
 ```
 
 ```{r fig-spp-hab, fig.cap="Biomass log ratio and MHW cumulative intensity (total anomaly in °C-days) grouped by habitat preference of each taxon. MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text. Fitted lines are linear regressions. Shaded areas are 95% confidence intervals."}
@@ -1030,7 +1132,7 @@ gghab <- ggplot(hab %>% filter(wt_mt_log < Inf & wt_mt_log > -Inf), aes(x=anom_s
   stat_regline_equation(aes(label=..rr.label..), label.x=40, label.y=8)
 
 #gghab
-ggsave(gghab, filename=here("extended","habitat.jpg"), dpi=300, width=6, height=9, scale=0.8)
+ggsave(gghab, filename=here("extended","habitat.jpg"), dpi=300, width=6, height=8, scale=0.8)
 ```
 
 ```{r fig-dissim-mhw, fig.cap="Box-and-whisker plots of temporal community dissimilarity and MHW incidence for partitioned occurrence-based beta diversity metrics of substitution and subset (Jaccard turnover and nestedness, respectively; top) and partitioned biomass-based beta diversity metrics of substitution and subset (Bray-Curtis balanced variation and biomass gradient, respectively; bottom). MHWs were calculated from the detrended GLORYS sea bottom temperature data with a five-day minimum duration threshold for MHWs, as used in the main text."}
@@ -1043,7 +1145,7 @@ beta_div$mhw_yes_no <- factor(beta_div$mhw_yes_no)
 MHW_jaccard_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_turnover)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
-  labs(x="Marine Heatwave", y="Turnover Component\nJaccard Dissimilarity") + 
+  labs(x="Marine heatwave", y="Turnover component\nJaccard dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 #Nestedness Component
@@ -1051,7 +1153,7 @@ MHW_jaccard_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(
 MHW_jaccard_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=jaccard_dissimilarity_nestedness)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
-  labs(x="Marine Heatwave", y="Nestedness Component\nJaccard Dissimilarity") + 
+  labs(x="Marine heatwave", y="Nestedness component\nJaccard dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 #Balanced Variation Component (we use 'turnover' as variable name for easier parallel with Jaccard metrics)
@@ -1059,7 +1161,7 @@ MHW_jaccard_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.case
 MHW_bray_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_turnover)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
-  labs(x="Marine Heatwave", y="Balanced Variation Component\nBray-Curtis Dissimilarity") + 
+  labs(x="Marine heatwave", y="Balanced variation component\nBray-Curtis dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 #Biomass Gradient Component (we use 'nestedness' as variable name for easier parallel with Jaccard metrics)
@@ -1067,15 +1169,15 @@ MHW_bray_dissimilarity_turnover <- ggplot(beta_div %>% filter(complete.cases(mhw
 MHW_bray_dissimilarity_nestedness <- ggplot(beta_div %>% filter(complete.cases(mhw_yes_no)), aes(x=mhw_yes_no, y=bray_dissimilarity_nestedness)) +
   geom_boxplot(outlier.size=0.5, outlier.fill="grey70", outlier.color="grey30", outlier.alpha=0.5) +
   theme_bw() + 
-  labs(x="Marine Heatwave", y="Biomass Gradient Component\nBray-Curtis Dissimilarity") + 
+  labs(x="Marine heatwave", y="Biomass gradient component\nBray-Curtis dissimilarity") + 
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 ggcomm <- plot_grid(MHW_jaccard_dissimilarity_turnover + theme(axis.title.x = element_blank()),
-          MHW_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
-          MHW_bray_dissimilarity_turnover,
-          MHW_bray_dissimilarity_nestedness,
-          ncol = 2, nrow = 2,
-          align = "hv")
+                    MHW_jaccard_dissimilarity_nestedness  + theme(axis.title.x = element_blank()),
+                    MHW_bray_dissimilarity_turnover,
+                    MHW_bray_dissimilarity_nestedness,
+                    ncol = 2, nrow = 2,
+                    align = "hv")
 
 
 ggsave(ggcomm, filename=here("extended","community.jpg"), dpi=300, width=6, height=7, scale=0.8)
@@ -1173,17 +1275,33 @@ plot_spp <- function(x){
     left_join(survey_names) %>% 
     mutate(spp = factor(spp, levels=c(topspp$spp, "Others")))
   
-  reg_plot <-  ggplot() +
-    geom_area(data=plot_prep, aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
-    geom_col(data=plot_prep %>% select(year, bar1) %>% distinct(), aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
-    scale_color_manual(values=cbpal6) +
-    scale_fill_manual(values=cbpal6) +
-    theme_bw() + 
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-          legend.position="right",
-          legend.title = element_blank()) + 
-    labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$plot_title) +
-    NULL
+  if(x=='NIGFS'){ # special case to force x-axis labels 
+    reg_plot <-  ggplot() +
+      geom_area(data=plot_prep, aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+      geom_col(data=plot_prep %>% select(year, bar1) %>% distinct(), aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+      scale_color_manual(values=cbpal6) +
+      scale_fill_manual(values=cbpal6) +
+      scale_x_continuous(breaks=c(2010, 2014, 2018)) +
+      theme_bw() + 
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            legend.position="right",
+            legend.title = element_blank()) + 
+      labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$plot_title) +
+      NULL
+    
+  } else {
+    reg_plot <-  ggplot() +
+      geom_area(data=plot_prep, aes(x=year, y=wt_mt, color=spp, fill=spp, group=spp)) + 
+      geom_col(data=plot_prep %>% select(year, bar1) %>% distinct(), aes(x=year, y=bar1), color="transparent", fill="grey70", alpha=0.5) +
+      scale_color_manual(values=cbpal6) +
+      scale_fill_manual(values=cbpal6) +
+      theme_bw() + 
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            legend.position="right",
+            legend.title = element_blank()) + 
+      labs(x="Year",y="Biomass (mt)", title=survey_names[survey_names$survey==x,]$plot_title) +
+      NULL
+  }
   
   ggsave(reg_plot, filename=here("extended",paste0("top_spp_biomass_",x,".jpg")), height=2, width=3, scale=1.7, dpi=300)
   #print plot

@@ -423,14 +423,16 @@ mhw_summary_dhd_nod <- mhw_dhd_nod %>%
   group_by(ref_yr) %>% 
   arrange(date) %>% 
   summarise(
-    dhd = sum(anom>=1, na.rm=TRUE)  ) %>% 
+    dhd_days = sum(anom>0, na.rm=TRUE),
+    dhd_sum = sum(anom, na.rm=TRUE)) %>% 
   ungroup() 
 
 mhw_summary_dhd_d <- mhw_dhd_d %>% 
   group_by(ref_yr) %>% 
   arrange(date) %>% 
   summarise(
-    dhd = sum(anom>=1, na.rm=TRUE)  ) %>% 
+    dhd_days = sum(anom>0, na.rm=TRUE),
+    dhd_sum = sum(anom, na.rm=TRUE)) %>% 
   ungroup() 
 
 # for supplement only, create file with only summer MHWs
@@ -614,3 +616,5 @@ write_csv(mhw_summary_glorys_d_any_summer, here("processed-data","MHW_glorys_sum
 write_csv(mhw_summary_glorys_d_5_day, here("processed-data","MHW_glorys_5_day_threshold.csv"))
 write_csv(mhw_summary_glorys_nod_any, here("processed-data","MHW_glorys_no_detrending.csv"))
 write_csv(mhw_summary_glorys_nod_5_day, here("processed-data","MHW_glorys_5_day_threshold_no_detrending.csv"))
+
+write_csv(mhw_summary_dhd_nod, here("processed-data","MHW_glorys_dhd_no_detrending.csv"))
