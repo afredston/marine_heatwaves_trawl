@@ -251,7 +251,7 @@ lm.fixed.wt <- lm(wt_mt_log_scale ~ anom_sev_scale + factor(survey), data = mode
 gam.wt <- gam(wt_mt_log_scale ~ s(anom_sev_scale), data = modeldat )
 gam.re.wt <- gam(wt_mt_log_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-formulas.wt <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt*','Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt*)','Biomass LR* $\\sim$ s(MHW CInt*) + s(Survey[random])')
+formulas.wt <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt*','Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt*)','Biomass LR* $\\sim$ s(MHW CInt*) + Survey[random]')
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.wt <- c(
   paste0(format(round(coef(summary(null.wt))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.wt))[1,2], digits=3), nsmall=2)),
@@ -276,8 +276,9 @@ p.wt <- c(
   format(round(summary(gam.re.wt)$s.pv[1], digits=3), nsmall=2)
 )
 
-r2.wt <- c("NA",
+r2.wt <- c(
            format(round(c(
+             summary(null.wt)$r.squared,
              summary(lm.wt)$r.squared, 
              summary(lm.fixed.wt)$r.squared,
              summary(gam.wt)$r.sq, 
@@ -357,7 +358,7 @@ lm.fixed.abs <- lm(wt_mt_log_scale_abs ~ anom_sev_scale + factor(survey), data =
 gam.abs <- gam(wt_mt_log_scale_abs ~ s(anom_sev_scale), data = modeldat )
 gam.re.abs <- gam(wt_mt_log_scale_abs ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-formulas.abs <- c('Absolute Biomass LR* $\\sim$ 1','Absolute Biomass LR* $\\sim$ MHW CInt*','Absolute Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Absolute Biomass LR* $\\sim$ s(MHW CInt*)','Absolute Biomass LR* $\\sim$ s(MHW CInt*) + s(Survey[random])')
+formulas.abs <- c('Absolute Biomass LR* $\\sim$ 1','Absolute Biomass LR* $\\sim$ MHW CInt*','Absolute Biomass LR* $\\sim$ MHW CInt* + Survey[fixed]','Absolute Biomass LR* $\\sim$ s(MHW CInt*)','Absolute Biomass LR* $\\sim$ s(MHW CInt*) + Survey[random]')
 # all of the ugly code below pulls out the correct table values from the models and formats them nicely so they don't have too many digits printed 
 int.abs <- c(
   paste0(format(round(coef(summary(null.abs))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.abs))[1,2], digits=3), nsmall=2)),
@@ -382,8 +383,9 @@ p.abs <- c(
   format(round(summary(gam.re.abs)$s.pv[1], digits=3), nsmall=2)
 )
 
-r2.abs <- c("NA",
+r2.abs <- c(
             format(round(c(
+              summary(null.abs)$r.squared,
               summary(lm.abs)$r.squared, 
               summary(lm.fixed.abs)$r.squared,
               summary(gam.abs)$r.sq, 
@@ -427,7 +429,7 @@ lm.fixed.altmhw <- lm(wt_mt_log_scale ~ anom_sev_scale_alt + factor(survey), dat
 gam.altmhw <- gam(wt_mt_log_scale ~ s(anom_sev_scale_alt), data = modeldat )
 gam.re.altmhw <- gam(wt_mt_log_scale ~ s(anom_sev_scale_alt) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
-formulas.altmhw <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt**','Biomass LR* $\\sim$ MHW CInt** + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt**)','Biomass LR* $\\sim$ s(MHW CInt**) + s(Survey[random])')
+formulas.altmhw <- c('Biomass LR* $\\sim$ 1','Biomass LR* $\\sim$ MHW CInt**','Biomass LR* $\\sim$ MHW CInt** + Survey[fixed]','Biomass LR* $\\sim$ s(MHW CInt**)','Biomass LR* $\\sim$ s(MHW CInt**) + Survey[random]')
 
 int.altmhw <- c(
   paste0(format(round(coef(summary(null.altmhw))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.altmhw))[1,2], digits=3), nsmall=2)),
@@ -451,7 +453,8 @@ p.altmhw <- c(
   format(round(summary(gam.altmhw)$s.pv, digits=3), nsmall=2),
   format(round(summary(gam.re.altmhw)$s.pv[1], digits=3), nsmall=2)
 )
-r2.altmhw <- c('NA',format(round(c(
+r2.altmhw <- c(format(round(c(
+    summary(null.altmhw)$r.squared, 
   summary(lm.altmhw)$r.squared, 
   summary(lm.fixed.altmhw)$r.squared,
   summary(gam.altmhw)$r.sq, 
@@ -550,7 +553,8 @@ coef.gompertz <- c('NA',paste0(format(round(gompertz.summary["anom_sev_scale","E
 
 p.gompertz <- c('NA',paste0(format(round(gompertz.summary["anom_sev_scale","Pr(>|z|)"] , digits=3), nsmall=2)))
 
-r2.gompertz <- c('NA',format(round(unname(performance::r2_xu(gompertz.glmm)), digits=3), nsmall=2)) # see performance() documentation -- xu is one of the simpler and more flexible R2 metrics
+r2.gompertz <- c(format(round(unname(performance::r2_xu(gompertz.null)), digits=3), nsmall=2),
+                 format(round(unname(performance::r2_xu(gompertz.glmm)), digits=3), nsmall=2)) # see performance() documentation -- xu is one of the simpler and more flexible R2 metrics
 
 aic.gompertz <- round(c(AIC(gompertz.null), AIC(gompertz.glmm)))
 
@@ -643,7 +647,10 @@ coef.depth <- c('NA',
 )
 p.depth <- c('NA',format(round(c(
   coef(summary(lm.depth))[2,4]), digits=3), nsmall=2))
-r2.depth <- c('NA',format(round(c(
+r2.depth <- c(
+  format(round(c(
+  summary(null.depth)$r.squared), digits=3), nsmall=2),
+  format(round(c(
   summary(lm.depth)$r.squared), digits=3), nsmall=2))
 aic.depth <- round(c(AIC(null.depth), AIC(lm.depth)))
 df.depth <- round(c(
@@ -730,7 +737,7 @@ gam.cti <- gam(cti_diff_scale ~ s(anom_sev_scale), data = modeldat )
 gam.re.cti <- gam(cti_diff_scale ~ s(anom_sev_scale) + s(survey, bs="re"), data = modeldat  %>% mutate(survey = as.factor(survey)))
 
 
-formulas.cti <- c('CTI Diff* $\\sim$ 1','CTI Diff* $\\sim$ MHW CInt*','CTI Diff* $\\sim$ MHW CInt* + Survey[fixed]','CTI Diff* $\\sim$ s(MHW CInt*)','CTI Diff* $\\sim$ s(MHW CInt*) + s(Survey[random])')
+formulas.cti <- c('CTI Diff* $\\sim$ 1','CTI Diff* $\\sim$ MHW CInt*','CTI Diff* $\\sim$ MHW CInt* + Survey[fixed]','CTI Diff* $\\sim$ s(MHW CInt*)','CTI Diff* $\\sim$ s(MHW CInt*) + Survey[random]')
 
 int.cti <- c(
   paste0(format(round(coef(summary(null.cti))[1,1], digits=3), nsmall=2)," ± ", format(round(coef(summary(null.cti))[1,2], digits=3), nsmall=2)),
@@ -753,8 +760,9 @@ p.cti <- c('NA',
            format(round(summary(gam.cti)$s.pv, digits=3), nsmall=2),
            format(round(summary(gam.re.cti)$s.pv[1], digits=3), nsmall=2)
 )
-r2.cti <- c('NA',format(round(c(
-  summary(lm.cti)$r.squared, 
+r2.cti <- c(format(round(c(
+    summary(null.cti)$r.squared, 
+summary(lm.cti)$r.squared, 
   summary(lm.fixed.cti)$r.squared,
   summary(gam.cti)$r.sq, 
   summary(gam.re.cti)$r.sq
