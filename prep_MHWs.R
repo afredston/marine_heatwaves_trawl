@@ -1,6 +1,6 @@
 # PLEASE CHECK EACH DF MANUALLY WHEN NEW REGIONS ARE INCORPORATED to be sure the lag calculations are working correctly and the region names were harmonized!
 
-# this script does two things:
+# this script does two things
 # reshapes the marine heatwave anomaly data (for multiple source datasets) and matches it with survey month*years
 # calculates aggregated biomass and community composition metrics for the survey data 
 
@@ -30,8 +30,10 @@ glorys_raw <- read.delim(here("raw-data","MHW_95P_surveys_glorys_surf.csv"), sep
 glorys_raw_nod <- read.delim(here("raw-data","MHW_95P_surveys_glorys_surf_no_detrend.csv"), sep=";") 
 
 # DHDs 
-dhd_raw_nod <- read.delim(here("raw-data","all_1993_2020_wo_leap_dhd.csv"), sep=";") 
-dhd_raw_d <- read.delim(here("raw-data","all_1993_2020_wo_leap_detrend_dhd.csv"), sep=";") 
+# dhd_raw_all_glorys_nod <- read.delim(here("raw-data","all_1993_2020_wo_leap_dhd.csv"), sep=";") # uses all years to calculate MMM
+# dhd_raw_all_glorys_d <- read.delim(here("raw-data","all_1993_2020_wo_leap_detrend_dhd.csv"), sep=";") 
+dhd_raw_baseline_glorys_nod <- read.delim(here("raw-data","all_1993_2020_wo_leap_dhd_1993_1997_baseline.csv"), sep=";") # uses a baseline period to calculate MMM
+dhd_raw_baseline_oisst_nod <- read.delim(here("raw-data","all_no_detrend_dhd_1985_1990_baseline.csv"), sep=";") 
 
 # reshape MHW data, and fix some inconsistencies in region names (match MHWs to FISHGLOB)
 oisst_d <- oisst_raw %>% 
@@ -98,9 +100,9 @@ glorys_nod <- glorys_raw_nod %>%
                          "SOUTHEAST" = "SEUS",
                          "WEST-COAST" = "WCANN"))
 
-dhd_nod <- dhd_raw_nod %>% 
+dhd_glorys <- dhd_raw_baseline_glorys_nod %>% 
   rename("dateRaw"=X) %>% 
-  pivot_longer(cols=2:ncol(dhd_raw_nod), names_to="survey", values_to="anom") %>% 
+  pivot_longer(cols=2:ncol(dhd_raw_baseline_glorys_nod), names_to="survey", values_to="anom") %>% 
   mutate(survey = gsub('_','-',survey),
          survey = toupper(survey),
          survey = recode(survey, 
@@ -114,9 +116,9 @@ dhd_nod <- dhd_raw_nod %>%
                          "SOUTHEAST" = "SEUS",
                          "WEST-COAST" = "WCANN"))
 
-dhd_d <- dhd_raw_d %>% 
+dhd_oisst <- dhd_raw_baseline_oisst_nod %>% 
   rename("dateRaw"=X) %>% 
-  pivot_longer(cols=2:ncol(dhd_raw_nod), names_to="survey", values_to="anom") %>% 
+  pivot_longer(cols=2:ncol(dhd_raw_baseline_oisst_nod), names_to="survey", values_to="anom") %>% 
   mutate(survey = gsub('_','-',survey),
          survey = toupper(survey),
          survey = recode(survey, 
@@ -138,6 +140,23 @@ minyr_glorys <- 1993
 cti <- read_csv(here("raw-data/6855203","mxesr.csv")) %>%  # https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1
   select(-`...1`) %>% # get rid of an unneeded column and some duplicated rows
   distinct()
+
+# make plot for Reviewer 2
+# reviewer2 <- dhd_glorys %>%
+#   mutate(date = dmy(dateRaw),
+#          dhd_anom = replace_na(anom, 0),
+#          .keep="unused") %>%
+#   inner_join(glorys_nod %>%
+#                mutate(date = dmy(dateRaw),
+#                       mhw_anom = replace_na(anom, 0),
+#                       .keep="unused"))
+# 
+# reviewer2_gg <- reviewer2 %>%
+#   ggplot(aes(x=mhw_anom, y=dhd_anom)) +
+#   geom_point() +
+#   theme_bw() +
+#   labs(x="Anomaly above 95th percentile", y="Anomaly above MMM")
+
 
 ########
 # match surveys to dates
@@ -268,7 +287,7 @@ mhw_glorys_nod %<>%
   filter(date_lag < 365,
          date_lag >= 0) 
 
-mhw_dhd_nod <- dhd_nod %>% 
+mhw_dhd_glorys <- dhd_glorys %>% 
   mutate(date = dmy(dateRaw),
          year = year(date),
          month = month(date),
@@ -278,17 +297,17 @@ mhw_dhd_nod <- dhd_nod %>%
   filter(str_detect(date, '-02-29', negate=TRUE)) %>% 
   left_join(glorys_ref_yrs, by=c('survey','month_year')) %>% 
   filter(!is.na(ref_yr)) 
-tmp <- mhw_dhd_nod %>% group_by(ref_yr) %>% summarise(n=length(anom))
+tmp <- mhw_dhd_glorys %>% group_by(ref_yr) %>% summarise(n=length(anom))
 if(min(tmp$n) < 365){ 
   bad_ref_yrs <- tmp %>% filter(n<365) %>% pull(ref_yr) 
-  mhw_dhd_nod %<>% filter(!ref_yr %in% bad_ref_yrs)
+  mhw_dhd_glorys %<>% filter(!ref_yr %in% bad_ref_yrs)
 }
-mhw_dhd_nod %<>%
+mhw_dhd_glorys %<>%
   mutate(date_lag = survey_date - date) %>%
   filter(date_lag < 365,
          date_lag >= 0) 
 
-mhw_dhd_d <- dhd_d %>% 
+mhw_dhd_oisst <- dhd_oisst %>% 
   mutate(date = dmy(dateRaw),
          year = year(date),
          month = month(date),
@@ -296,14 +315,14 @@ mhw_dhd_d <- dhd_d %>%
   ) %>% 
   select(-dateRaw) %>% 
   filter(str_detect(date, '-02-29', negate=TRUE)) %>% 
-  left_join(glorys_ref_yrs, by=c('survey','month_year')) %>% 
+  left_join(oisst_ref_yrs, by=c('survey','month_year')) %>% 
   filter(!is.na(ref_yr)) 
-tmp <- mhw_dhd_d %>% group_by(ref_yr) %>% summarise(n=length(anom))
+tmp <- mhw_dhd_oisst %>% group_by(ref_yr) %>% summarise(n=length(anom))
 if(min(tmp$n) < 365){ 
   bad_ref_yrs <- tmp %>% filter(n<365) %>% pull(ref_yr) 
-  mhw_dhd_d %<>% filter(!ref_yr %in% bad_ref_yrs)
+  mhw_dhd_oisst %<>% filter(!ref_yr %in% bad_ref_yrs)
 }
-mhw_dhd_d %<>%
+mhw_dhd_oisst %<>%
   mutate(date_lag = survey_date - date) %>%
   filter(date_lag < 365,
          date_lag >= 0) 
@@ -419,7 +438,7 @@ for(i in unique(survey_start_times$survey)){
   mhw_glorys_nod_5_day_prep <- bind_rows(mhw_glorys_nod_5_day_prep, tmp)
 }
 
-mhw_summary_dhd_nod <- mhw_dhd_nod %>% 
+mhw_summary_dhd_glorys <- mhw_dhd_glorys %>% 
   group_by(ref_yr) %>% 
   arrange(date) %>% 
   summarise(
@@ -427,7 +446,7 @@ mhw_summary_dhd_nod <- mhw_dhd_nod %>%
     dhd_sum = sum(anom, na.rm=TRUE)) %>% 
   ungroup() 
 
-mhw_summary_dhd_d <- mhw_dhd_d %>% 
+mhw_summary_dhd_oisst <- mhw_dhd_oisst %>% 
   group_by(ref_yr) %>% 
   arrange(date) %>% 
   summarise(
@@ -596,6 +615,8 @@ survey_summary_cti <- survey_summary %>%
   mutate(cti_diff = CTI - lag(CTI),
          cti_log = log(CTI / lag(CTI))) %>% 
   filter(!is.na(CTI))
+
+
 ########
 # write out dataframes 
 ########
@@ -617,4 +638,5 @@ write_csv(mhw_summary_glorys_d_5_day, here("processed-data","MHW_glorys_5_day_th
 write_csv(mhw_summary_glorys_nod_any, here("processed-data","MHW_glorys_no_detrending.csv"))
 write_csv(mhw_summary_glorys_nod_5_day, here("processed-data","MHW_glorys_5_day_threshold_no_detrending.csv"))
 
-write_csv(mhw_summary_dhd_nod, here("processed-data","MHW_glorys_dhd_no_detrending.csv"))
+write_csv(mhw_summary_dhd_glorys, here("processed-data","MHW_glorys_dhd_baseline.csv"))
+write_csv(mhw_summary_dhd_oisst, here("processed-data","MHW_oisst_dhd_baseline.csv"))

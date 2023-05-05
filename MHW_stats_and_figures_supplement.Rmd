@@ -1,11 +1,7 @@
 ---
-title: "Marine heatwaves are not a dominant driver of change in fish communities"
-subtitle: "Supplementary Information"
-author: "Fredston et al."
-date: 2023
 output: 
   bookdown::pdf_document2:
-    toc: true
+    toc: false
 classoption: landscape
 header-includes: 
   - \renewcommand{\figurename}{Supplementary Figure }
@@ -16,8 +12,6 @@ header-includes:
 editor_options: 
   markdown: 
     wrap: 72
-bibliography: references.bib
-csl: https://raw.githubusercontent.com/citation-style-language/styles/master/nature.csl
 ---
 
 ```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
@@ -60,7 +54,9 @@ mhw_summary_glorys_nod_5_day <- read_csv(here("processed-data","MHW_glorys_5_day
 
 mhw_summary_glorys_d_any_summer <- read_csv(here("processed-data","MHW_glorys_summer_only.csv"))
 
-mhw_summary_dhd <- read_csv(here("processed-data","MHW_glorys_dhd_no_detrending.csv"))
+# mhw_summary_dhd <- read_csv(here("processed-data","MHW_glorys_dhd_no_detrending.csv"))
+mhw_summary_dhd_glorys <- read_csv(here("processed-data","MHW_glorys_dhd_baseline.csv"))
+# mhw_summary_dhd_oisst <- read_csv(here("processed-data","MHW_oisst_dhd_baseline.csv"))
 
 # raw MHW data
 oisst_raw_d <- read.delim(here("raw-data","MHW_95P_surveys_satellite_surf.csv"), sep=";") %>% 
@@ -83,7 +79,12 @@ haul_info <- read_csv(here("processed-data","haul_info.csv"))
 #biomass_time <- read_csv(here("processed-data","biomass_time.csv"))
 #footprint <- read_csv(here("processed-data","spatial_standardization_summary.csv"))
 med_lat <- haul_info %>% group_by(survey) %>% summarise(med_lat = median(latitude))
+survey_n <- survey_summary %>% 
+  inner_join(mhw_summary_glorys_d_5_day) %>% 
+  group_by(survey) %>% 
+  summarise(n=n())
 survey_names <- read_csv(here("processed-data","survey_names.csv")) %>%
+  left_join(survey_n) %>% 
   mutate(title = recode(title, 'Norway' = 'Barents Sea')) %>% 
   mutate(abbr = c(
     "BalS",
@@ -237,7 +238,7 @@ knitr::opts_chunk$set(
 
 # Include abbreviations used on Figure 1
 survey_names %>% 
-  kbl(booktabs=TRUE, col.names=c("FISHGLOB Code","Survey","Abbreviation"), caption="Survey names used in this analysis, and corresponding abbreviations used in figures and tables in this Supplement. The survey codes from FISHGLOB are also listed for comparison to other data from the FISHGLOB Consortium.") %>%
+  kbl(booktabs=TRUE, col.names=c("FISHGLOB Code","Survey","Number of Survey-Years","Abbreviation"), caption="Survey names and sample sizes used in the main analysis, and corresponding abbreviations used in figures and tables. The survey codes from FISHGLOB are also listed for comparison to other data from the FISHGLOB Consortium.") %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
@@ -878,11 +879,14 @@ gg_mhw_summer <- survey_summary %>%
   inner_join(mhw_summary_glorys_d_any_summer, by="ref_yr") %>%
   ggplot(aes(x=anom_sev, y=wt_mt_log)) + 
   geom_point() +
-  theme_bw() + 
+    scale_y_continuous(limits=c(-1.5, 1.5)) +
+theme_bw() + 
   geom_smooth(method="lm", color = "gray35") +
   labs(x="Summer-only MHW cumulative intensity (°C-days)", y="Biomass log ratio") +
-  stat_regline_equation(aes(label=..rr.label..), label.x=15, label.y=1.5) +
+  stat_regline_equation(aes(label=..rr.label..), label.x=10, label.y=1.25) +
   geom_hline(aes(yintercept=0), linetype="dashed", color="black") 
+
+ggsave(gg_mhw_summer, filename=here("extended","summer_scatter.jpg"), dpi=300, width=4, height=4)
 
 #gg_mhw_summer
 ```
@@ -907,7 +911,7 @@ ggsave(gg_mhw_sst, filename=here("extended","oisst_scatter.jpg"), dpi=300, width
 ```{r fig-mhw-dhd, fig.cap="Biomass change (log ratio) and degree heating days (number of days in the year preceding each survey that had anomalies of 1 °C or greater above the average temperatures in the hottest summer month; see Methods). The fitted lines are linear regressions. The shaded areas are 95% confidence intervals."}
 
 gg_mhw_dhd <- survey_summary %>% 
-  inner_join(mhw_summary_dhd, by="ref_yr") %>%
+  inner_join(mhw_summary_dhd_glorys, by="ref_yr") %>%
   ggplot(aes(x=dhd_days, y=wt_mt_log)) + 
   scale_y_continuous(limits=c(-1.5, 1.5)) +
   geom_point() +

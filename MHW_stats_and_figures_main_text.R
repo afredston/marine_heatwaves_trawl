@@ -9,6 +9,7 @@ library(data.table)
 
 # formatting 
 library(ggExtra)
+library(ggpubr)
 
 # modeling 
 library(broom)
@@ -26,6 +27,7 @@ set.seed(42)
 mhw_summary_oisst_d_5_day <- read_csv(here("processed-data","MHW_oisst_5_day_threshold.csv"))
 mhw_summary_glorys_d_5_day <- read_csv(here("processed-data","MHW_glorys_5_day_threshold.csv"))
 mhw_summary_glorys_d_any_summer <- read_csv(here("processed-data","MHW_glorys_summer_only.csv"))
+mhw_summary_dhd_glorys <- read_csv(here("processed-data","MHW_glorys_dhd_baseline.csv"))
 
 
 total_mhws_oisst_d <- read_csv(here("processed-data","total_number_mhws_oisst_d.csv")) %>% 
@@ -106,6 +108,14 @@ survey_summary %>%
 quantile(haul_info$depth, na.rm=TRUE)
 quantile(haul_info$depth, probs = c(0.05, 0.95), na.rm=TRUE)
 length(na.omit(haul_info$depth))/nrow(haul_info)
+
+# how many survey-years with DHD >= 56? 
+nrow(mhw_summary_dhd_glorys %>% 
+  filter(dhd_days >= 56))
+
+# >= 28? 
+nrow(mhw_summary_dhd_glorys %>% 
+       filter(dhd_days >= 28))
 
 # is absolute variability predicted by number of hauls in a region?
 hauldat_prep <- haul_info %>% 
@@ -197,6 +207,12 @@ sd(cti_no_mhw)
 mean(cti_mhw)
 sd(cti_mhw)
 t.test(cti_no_mhw, cti_mhw, alternative = "two.sided")
+
+# are biomass log ratios for DHDs > 56 different than those < 56? 
+
+dhd_over28 <- survey_summary %>% 
+  inner_join(mhw_summary_dhd_nod) %>% 
+  filter(dhd_days >= 28)
 
 # regressions
 
@@ -347,6 +363,16 @@ t.test(jac_mhw_subset, jac_no_mhw_subset, alternative="two.sided")
 # figures
 ######
 
+# for reviewer 2
+# comparedat <- inner_join(mhw_summary_dhd_nod, mhw_summary_glorys_nod_any)
+# comparegg <- comparedat %>% 
+#   ggplot(aes(x=anom_sev, y=dhd_days)) + 
+#   geom_point() + 
+#   theme_bw() + 
+#   geom_smooth(method="lm") +
+#   stat_regline_equation(aes(label=..rr.label..)) +
+#   labs(x="MHW cumulative intensity (°C-days)", y="Number of DHDs")
+
 gg_mhw_biomass_point_marg <- survey_summary %>% 
   ggplot(aes(x=anom_sev, y=wt_mt_log)) +
   geom_point(aes(color=mhw_yes_no, fill=mhw_yes_no, group = mhw_yes_no)) + # need this in here for the marginal plot
@@ -390,6 +416,9 @@ gg_mhw_biomass_point_abs <- survey_summary %>%
     panel.grid.minor = element_blank())
 margplot_abs <- ggMarginal(gg_mhw_biomass_point_abs,type="density", margins="y", groupColour = TRUE, groupFill=TRUE, yparams=list(size=0.9))
 margplot_abs
+# regression slope for figure caption
+summary(lm(wt_mt_log_abs ~ anom_sev, data=survey_summary %>% 
+             mutate(wt_mt_log_abs = abs(wt_mt_log))))
 
 ggsave(margplot_abs, scale=0.8, filename=here("figures","final_biomass_point_abs.png"), width=170, height=110, units="mm")
 
@@ -661,7 +690,7 @@ for(reg in survey_names$survey) {
   # plot_crop(here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)))
 }
 
-# Make Fig 3A
+# Make Fig 4A
 
 reg_cti <- survey_summary %>% 
   select(CTI, ref_yr) %>% 
@@ -703,7 +732,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
 gg_mhw_biomass_point_spp
 ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
 
-# make Fig 3B
+# make Fig 4B
 
 gg_mhw_cti_hist <- survey_summary %>%
   mutate(mhw_yes_no = recode(mhw_yes_no, no="No Marine Heatwave", yes="Marine Heatwave")) %>% 
