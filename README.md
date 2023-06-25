@@ -9,8 +9,8 @@ Please contact [A. Fredston](https://www.alexafredston.com/) with questions abou
 We used of a number of datasets that are already publicly available and/or published with this project. These are fully described and cited in the manuscript, but we also list them here for ease of download, access, and attribution. 
 
 * Trawl data from [FISHGLOB](https://github.com/AquaAuma/FishGlob_data), a project to harmonize publicly available trawl survey records from federal agencies around the globe. The raw data files from FISHGLOB are too big to host on GitHub but they are available on [OSF](https://osf.io/). 
-* Sea bottom temperature data from [GLORYS](https://www.mercator-ocean.eu/en/ocean-science/glorys/), an ocean reanalysis data product by the European Copernicus Marine Environment Modeling Service available beginning in 1993. The GLORYS12 sea bottom temperature data were downloaded from https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_PHY_001_030/description (accessed November 2, 2022). 
-* Sea surface temperature data from [OISST](https://www.ncei.noaa.gov/products/optimum-interpolation-sst), a historical satellite temperature record from the U.S. National Oceanic and Atmospheric Administration beginning in 1982. The NOAA OISST data were downloaded from https://www.ncei.noaa.gov/data/sea-surface-temperature-optimum-interpolation/ (accessed June 17, 2020). 
+* Sea bottom temperature data from [GLORYS](https://www.mercator-ocean.eu/en/ocean-science/glorys/), an ocean reanalysis data product by the European Copernicus Marine Environment Modeling Service available beginning in 1993. 
+* Sea surface temperature data from [OISST](https://www.ncei.noaa.gov/products/optimum-interpolation-sst), a historical satellite temperature record from the U.S. National Oceanic and Atmospheric Administration beginning in 1982.
 * Historical fishing pressure estimates from [Sea Around Us](https://www.seaaroundus.org/).
 * Species-specific realized thermal niche estimates from [Burrows et al. 2018](https://figshare.com/articles/dataset/Species_Temperature_Index_and_thermal_range_information_forNorth_Pacific_and_North_Atlantic_plankton_and_bottom_trawl_species/6855203/1).
 * Species traits from [Beukhof et al. 2019](https://doi.org/10.5061/dryad.ttdz08kt8).
@@ -31,6 +31,8 @@ The following files are too big to host on GitHub and are available on [OSF](htt
 
 - The raw FISHGLOB data (a slightly earlier version of the dataset described in [Maureaud et al. 2023](https://doi.org/10.31219/osf.io/2bcjw)), `FISHGLOB_public_v1.5_clean(1).csv`. This should be downloaded from [OSF](https://osf.io/) and moved to `raw-data` to reproduce analyses.
 - The outputs of power analyses: `pwrout_yrs_glorys.rds`, `pwrout_yrs_oisst.rds`, `pwrout_gamma_glorys.rds`, and `pwrout_gamma_oisst.rds`. These should be downloaded from [OSF](https://osf.io/) and moved to `processed-data` to reproduce analyses.
+
+We did not host the raw GLORYS and OISST data on OSF because the source files are very large. The GLORYS12 sea bottom temperature data were downloaded from https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_PHY_001_030/description (accessed November 2, 2022). The NOAA OISST data were downloaded from https://www.ncei.noaa.gov/data/sea-surface-temperature-optimum-interpolation/ (accessed June 17, 2020). 
 
 ## In what order should things be run?
 
