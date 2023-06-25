@@ -319,6 +319,7 @@ haul_info <- haul_info[keep_90==TRUE] # get hauls that pass spatial standardizat
 
 raw <- copy(raw)[, .(survey, haul_id, wgt_cpue, num_cpue, accepted_name, startmonth)][haul_id %in% haul_info$haul_id] # trim to only taxon-level data for speed (but note there is a full taxonomy available, and other catch data), and to hauls in haul_info
 
+raw <- copy(raw)[!is.na(wgt_cpue)] # drop NA hauls (only 5873 of them)
 
 # what's going on with norway post-data-trimming?
 # nor_cod_post <- copy(raw)[survey=='Nor-BTS'][accepted_name=='Gadus morhua']
@@ -358,8 +359,8 @@ raw_zeros <- copy(raw_zeros)[survey=='NEUS', num_cpue := NA] #rewrite NEUS only 
 # calculate species-level mean CPUE in every year and region
 raw_cpue <- raw_zeros[,.(wtcpue_mean = mean(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
 raw_cpue_med <- raw_zeros[,.(wtcpue_median = median(wgt_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
-raw_num <- raw_zeros[,.(numcpue_mean = mean(num_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
-raw_num_med <- raw_zeros[,.(numcpue_median = median(num_cpue)), by=c("survey", "accepted_name", "year","startmonth")] 
+raw_num <- raw_zeros[,.(numcpue_mean = mean(num_cpue, na.rm=TRUE)), by=c("survey", "accepted_name", "year","startmonth")]  # there are no NAs in wgt_cpue but there are some in num_cpue 
+raw_num_med <- raw_zeros[,.(numcpue_median = median(num_cpue, na.rm=TRUE)), by=c("survey", "accepted_name", "year","startmonth")] # there are no NAs in wgt_cpue but there are some in num_cpue 
 raw_depth <- raw_zeros[,.(depth_mean = weighted.mean(depth, w=wgt_cpue, na.rm=TRUE)), by=c("survey", "accepted_name", "year","startmonth")] # note that this will be NA for species never observed in that year 
 
 raw_cpue <- raw_cpue %>% 
