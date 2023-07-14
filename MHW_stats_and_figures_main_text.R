@@ -397,7 +397,7 @@ survey_summary %>%
 # regression slope for figure caption
 summary(lm(wt_mt_log ~ anom_sev, data=survey_summary))
 
-ggsave(margplot, scale=0.8, filename=here("figures","final_biomass_point.png"), width=170, height=110, units="mm")
+ggsave(margplot, scale=0.8, filename=here("figures","final_biomass_point.pdf"), width=170, height=110, units="mm")
 
 gg_mhw_biomass_point_abs <- survey_summary %>% 
   mutate(wt_mt_log_abs = abs(wt_mt_log)) %>% 
@@ -420,7 +420,7 @@ margplot_abs
 summary(lm(wt_mt_log_abs ~ anom_sev, data=survey_summary %>% 
              mutate(wt_mt_log_abs = abs(wt_mt_log))))
 
-ggsave(margplot_abs, scale=0.8, filename=here("figures","final_biomass_point_abs.png"), width=170, height=110, units="mm")
+ggsave(margplot_abs, scale=0.8, filename=here("figures","final_biomass_point_abs.pdf"), width=170, height=110, units="mm")
 
 
 # time-series of NE Pacific surveys
@@ -481,9 +481,9 @@ gg_nep_bray <- nep %>%
     legend.title = element_blank()) +
   guides(fill=guide_legend(nrow=2))
 gg_nep_bray
-ggsave(gg_nep_wt, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_biomass.png"), scale=1.5)
-ggsave(gg_nep_cti, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_cti.png"), scale=1.5)
-ggsave(gg_nep_bray, width=70, height=42, units="mm", dpi=300, filename=here("figures","nepacific_bray.png"), scale=1.5)
+ggsave(gg_nep_wt, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_biomass.pdf"), scale=1.5)
+ggsave(gg_nep_cti, width=70, height=30, units="mm", dpi=300, filename=here("figures","nepacific_cti.pdf"), scale=1.5)
+ggsave(gg_nep_bray, width=70, height=42, units="mm", dpi=300, filename=here("figures","nepacific_bray.pdf"), scale=1.5)
 
 #delete if NA for longitude or latitude
 haul_info_map.r <- haul_info_map[complete.cases(haul_info_map[,.(longitude, latitude)])]
@@ -686,7 +686,7 @@ for(reg in survey_names$survey) {
     ) +
     NULL
   }
-  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".png")), height=2.5, width=5, scale=0.7, dpi=160)
+  ggsave(tmpplot, filename=here("figures",paste0("inset_timeseries_",reg,".pdf")), height=2.5, width=5, scale=0.7, dpi=160)
   # plot_crop(here(“figures”,paste0(“inset_timeseries_“,reg,“.png”)))
 }
 
@@ -730,7 +730,7 @@ gg_mhw_biomass_point_spp <- survey_spp_summary %>%
         legend.margin=margin(t=-10)) +
   NULL
 gg_mhw_biomass_point_spp
-ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.png"), width=80, height=70, units="mm", dpi=300)
+ggsave(gg_mhw_biomass_point_spp, scale=0.9, filename=here("figures","final_sti_cti.pdf"), width=80, height=70, units="mm", dpi=300)
 
 # make Fig 4B
 
@@ -740,10 +740,11 @@ gg_mhw_cti_hist <- survey_summary %>%
   geom_freqpoly(binwidth=0.5, alpha=0.8, size=1.5) +
   scale_color_manual(values=c("#E31A1C","#1F78B4")) +
   scale_fill_manual(values=c("#E31A1C","#1F78B4")) +
+  scale_x_continuous(breaks=c(-6, -3, 0, 3, 6), limits=c(-6.1, 6.1)) +
   theme_bw() + 
   labs(x="CTI difference", y="Frequency") +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         legend.position = "none")
 gg_mhw_cti_hist
-ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.png"), width=50, height=50, units="mm")
+ggsave(gg_mhw_cti_hist, scale=0.9, filename=here("figures","final_cti_hist.pdf"), width=50, height=50, units="mm")
