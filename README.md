@@ -2,7 +2,7 @@
 
 *Alexa L. Fredston, William W. L. Cheung, Thomas L. Frölicher, Zoë J. Kitchel, Aurore A. Maureaud, James T. Thorson, Arnaud Auber, Bastien Mérigot, Juliano Palacios-Abrantes, Maria Lourdes D. Palomares, Laurène Pecuchet, Nancy Shackell, Malin L. Pinsky*
 
-Please contact [A. Fredston](https://www.alexafredston.com/) with questions about this project. Please cite the manuscript for all references to this project and its results, as well as the OSF DOI if data or code are reused. The results are fully reproducible from the scripts and all data files are either in this GitHub repository or (if they are too large) hosted on [OSF](https://osf.io/) (as described below). 
+Please contact [A. Fredston](https://www.alexafredston.com/) with questions about this project. Please cite [the manuscript](https://doi.org/10.1038/s41586-023-06449-y) for all references to this project and its results, as well as the OSF DOI if data or code are reused. The results are fully reproducible from the scripts and all data files are either in this GitHub repository or (if they are too large) hosted on [OSF](https://osf.io/) (as described below). 
 
 ## Where do the raw data come from?
 
